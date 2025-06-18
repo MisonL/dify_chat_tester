@@ -111,14 +111,11 @@ python dify_chat_tester.py
 
 ## 📜 许可证
 
-本项目采用 [MIT 许可证](LICENSE)
-[查看中文版许可证](LICENSE-CN)
+- **许可证类型**: [MIT 许可证](LICENSE)
+- **中文版本**: [查看中文版许可证](LICENSE-CN)
 
 ## 👤 作者
 
-**Mison**
-📧 1360962086@qq.com
-
-<div align="center">
-  <sub>用 ❤️ 构建 | 使用 Python 强力驱动</sub>
-</div>
+- **姓名**: Mison
+- **邮箱**: 1360962086@qq.com
+- **GitHub**: [MisonL](https://github.com/MisonL)
