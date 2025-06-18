@@ -1,4 +1,6 @@
-# 🚀 Dify 聊天客户端测试工具
+<div align="center">
+  # 🚀 Dify 聊天客户端测试工具
+</div>
 
 <div align="center">
   <img src="https://img.shields.io/badge/Python-3.8+-blue?logo=python" alt="Python版本">
