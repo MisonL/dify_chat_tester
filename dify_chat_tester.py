@@ -457,13 +457,12 @@ def run_batch_query(base_url, api_key, app_id, selected_role):
 
     print("\n开始批量询问...")
     for row_idx in range(2, batch_worksheet.max_row + 1): # 从第二行开始读取数据
-        total_queries += 1
         question_cell_value = batch_worksheet.cell(row=row_idx, column=question_col_index + 1).value
         question = str(question_cell_value) if question_cell_value is not None else "" # 确保转换为字符串
         
         if not question.strip(): # 检查问题是否为空或只包含空格
             print(f"警告: 第 {row_idx} 行问题为空，跳过。", file=sys.stderr)
-            failed_queries += 1
+            failed_queries += 1 # 空问题也算作失败
             log_to_excel(output_worksheet, [
                 datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                 selected_role,
@@ -476,8 +475,9 @@ def run_batch_query(base_url, api_key, app_id, selected_role):
             ])
             # 在原始文件中也标记为空
             write_cell_safely(batch_worksheet, row_idx, answer_col_index + 1, "[问题为空]")
-            continue
+            continue # 跳过当前循环的剩余部分
 
+        total_queries += 1 # 只有非空问题才计入总数
         print(f"\n处理问题 (第 {total_queries} 个): {question[:50]}...") # 打印问题，并换行
         
         response, success, error, conversation_id = send_to_dify(
