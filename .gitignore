@@ -29,3 +29,6 @@ chat_log.xlsx
 # Excel files (except template)
 *.xlsx
 !dify_chat_tester_template.xlsx
+
+# uv lock files (keep only in root)
+dify_chat_tester/uv.lock
