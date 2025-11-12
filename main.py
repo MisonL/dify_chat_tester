@@ -189,6 +189,17 @@ def run_interactive_chat(provider: AIProvider, selected_role: str, provider_name
         if user_input.lower() in ["/exit", "/quit"]:
             console.print()
             print_info("正在返回主菜单...")
+            # 保存对话日志
+            if conversation_round > 0:  # 只有当有对话内容时才保存
+                try:
+                    workbook.save(CHAT_LOG_FILE_NAME)
+                    workbook.close()
+                    print_success(f"对话已保存到 {CHAT_LOG_FILE_NAME} (共 {conversation_round} 轮对话)")
+                except PermissionError:
+                    print_error(f"无法保存日志文件：{CHAT_LOG_FILE_NAME}")
+                    print_error("请确保文件未被其他程序打开（如 Excel）")
+                except Exception as e:
+                    print_error(f"保存日志文件时出错：{e}")
             return  # 返回到主菜单，而不是退出程序
 
         # 处理开启新对话命令
@@ -232,17 +243,7 @@ def run_interactive_chat(provider: AIProvider, selected_role: str, provider_name
             ]
         )
 
-    # 保存并关闭 Excel
-    try:
-        workbook.save(CHAT_LOG_FILE_NAME)
-        workbook.close()  # 显式关闭工作簿
-        console.print()
-        print_success(f"对话已保存到 {CHAT_LOG_FILE_NAME} (共 {conversation_round} 轮对话)")
-    except PermissionError:
-        print_error(f"无法保存日志文件：{CHAT_LOG_FILE_NAME}")
-        print_error("请确保文件未被其他程序打开（如 Excel）")
-    except Exception as e:
-        print_error(f"保存日志文件时出错：{e}")
+    # 注意：日志保存已在退出时处理
 
 def run_batch_query(provider: AIProvider, selected_role: str, provider_name: str, selected_model: str):
     """运行批量询问模式"""
