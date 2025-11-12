@@ -278,18 +278,16 @@ def run_batch_query(provider: AIProvider, selected_role: str, provider_name: str
     # 让用户通过序号选择问题列
     question_col_index = select_column_by_index(column_names, "请选择问题所在列的序号")
 
-    # 自动处理回答列
-    answer_col_name = "回答"
+    # 自动处理回答列（用于存储AI的回答）
+    answer_col_name = f"{provider_name}响应"  # 使用动态列名
     if answer_col_name in column_names:
-        # 如果存在"回答"列，使用它
+        # 如果已存在同名列，使用它
         answer_col_index = column_names.index(answer_col_name)
-        print_success(f"已找到回答列: {answer_col_name}")
     else:
-        # 如果不存在，创建"回答"列
+        # 如果不存在，创建新的回答列
         column_names.append(answer_col_name)
         write_cell_safely(batch_worksheet, 1, len(column_names), answer_col_name)
         answer_col_index = len(column_names) - 1
-        print_success(f"已新增回答列: {answer_col_name}")
 
     # 询问是否显示每个问题的回答内容
     display_response_choice = print_input_prompt("是否在控制台显示每个问题的回答内容？ (y/N)")
