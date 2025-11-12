@@ -1,0 +1,14 @@
+# uv 项目级配置文件
+# 用于指定本项目使用的 PyPI 镜像源
+
+index-url = "https://mirrors.aliyun.com/pypi/simple/"
+
+# 可选：指定额外索引 URL（如果需要）
+# extra-index-url = [
+#     "https://pypi.org/simple/"
+# ]
+
+# 可选：信任的主机（某些镜像源需要）
+# trusted-host = [
+#     "mirrors.aliyun.com"
+# ]

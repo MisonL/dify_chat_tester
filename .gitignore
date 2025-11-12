@@ -13,12 +13,19 @@ env/
 .vscode/
 .idea/
 
-# Environment variables
+# Environment variables and configuration files
 .env
 .env.local
+config.env
 
 # Logs
 *.log
+batch_query_log_*.xlsx
+chat_log.xlsx
 
 # System files
 .DS_Store
+
+# Excel files (except template)
+*.xlsx
+!dify_chat_tester_template.xlsx
