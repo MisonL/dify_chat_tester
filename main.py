@@ -125,9 +125,42 @@ def init_excel_log(file_name, headers):
     
     return workbook, worksheet
 
+def clean_excel_text(text):
+    """清理文本中的 Excel 非法字符
+    
+    Excel 不允许以下控制字符：
+    - 0x00, 0x01, ..., 0x08
+    - 0x0B, 0x0C, 0x0D, 0x0E, ..., 0x1F
+    - 0x7F
+    """
+    if text is None:
+        return ""
+    
+    # 将文本转换为字符串（如果不是的话）
+    text = str(text)
+    
+    # 移除非法字符
+    # 保留 \t (0x09), \n (0x0A), \r (0x0D)
+    illegal_chars = [
+        '\x00', '\x01', '\x02', '\x03', '\x04', '\x05', '\x06', '\x07', '\x08',
+        '\x0B', '\x0C', '\x0E', '\x0F', '\x10', '\x11', '\x12', '\x13', '\x14',
+        '\x15', '\x16', '\x17', '\x18', '\x19', '\x1A', '\x1B', '\x1C', '\x1D',
+        '\x1E', '\x1F', '\x7F'
+    ]
+    
+    for char in illegal_chars:
+        text = text.replace(char, '')
+    
+    return text
+
 def log_to_excel(worksheet, row_data):
-    """记录到 Excel"""
-    worksheet.append(row_data)
+    """记录到 Excel（清理非法字符）"""
+    # 清理每行数据中的非法字符
+    cleaned_data = []
+    for item in row_data:
+        cleaned_data.append(clean_excel_text(item))
+    
+    worksheet.append(cleaned_data)
 
 def run_interactive_chat(provider: AIProvider, selected_role: str, provider_name: str, selected_model: str):
     """运行会话模式"""
