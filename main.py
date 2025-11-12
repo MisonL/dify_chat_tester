@@ -627,6 +627,11 @@ def main():
     else:
         # 显示所有可用模型
         print_info("可用的模型:")
+        for i, model in enumerate(available_models, 1):
+            console.print(f"  {i}. {model}", style="white")
+        # 添加自定义模型选项
+        console.print(f"  {len(available_models) + 1}. 自定义模型", style="cyan")
+        console.print()
 
         while True:
             model_choice = print_input_prompt(f"请选择模型（输入 1-{len(available_models) + 1}）或直接输入模型名")
