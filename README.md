@@ -48,7 +48,6 @@ cp config.env.example config.env
 ## 🎯 支持的AI供应商
 
 ### 1. Dify
-<div align="center">
 
 | 特性 | 说明 |
 |------|------|
@@ -57,10 +56,7 @@ cp config.env.example config.env
 | 🔑 **API格式** | `app-xxxxx` |
 | 🌐 **官网** | [https://cloud.dify.ai](https://cloud.dify.ai) |
 
-</div>
-
 ### 2. OpenAI 兼容接口
-<div align="center">
 
 | 特性 | 说明 |
 |------|------|
@@ -69,10 +65,7 @@ cp config.env.example config.env
 | 🤖 **模型支持** | 支持自定义模型名称 |
 | 📡 **API格式** | 标准 OpenAI Chat Completions |
 
-</div>
-
 ### 3. iFlow
-<div align="center">
 
 | 特性 | 说明 |
 |------|------|
@@ -80,8 +73,6 @@ cp config.env.example config.env
 | 🔗 **预设URL** | `https://apis.iflow.cn/v1` |
 | 🎯 **内置模型** | qwen3-max, kimi-k2-0905, glm-4.6, deepseek-v3.2 |
 | 📱 **获取密钥** | [iFlow控制台](https://platform.iflow.cn) |
-
-</div>
 
 ## 💻 运行模式
 
