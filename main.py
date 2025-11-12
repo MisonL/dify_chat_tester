@@ -189,17 +189,13 @@ def run_interactive_chat(provider: AIProvider, selected_role: str, provider_name
         if user_input.lower() in ["/exit", "/quit"]:
             console.print()
             print_info("正在返回主菜单...")
-            # 保存对话日志
-            if conversation_round > 0:  # 只有当有对话内容时才保存
-                try:
-                    workbook.save(CHAT_LOG_FILE_NAME)
-                    workbook.close()
+            # 关闭工作簿（日志已实时保存）
+            try:
+                workbook.close()
+                if conversation_round > 0:  # 只有当有对话内容时才显示消息
                     print_success(f"对话已保存到 {CHAT_LOG_FILE_NAME} (共 {conversation_round} 轮对话)")
-                except PermissionError:
-                    print_error(f"无法保存日志文件：{CHAT_LOG_FILE_NAME}")
-                    print_error("请确保文件未被其他程序打开（如 Excel）")
-                except Exception as e:
-                    print_error(f"保存日志文件时出错：{e}")
+            except Exception as e:
+                print_error(f"关闭日志文件时出错：{e}")
             return  # 返回到主菜单，而不是退出程序
 
         # 处理开启新对话命令
@@ -242,6 +238,14 @@ def run_interactive_chat(provider: AIProvider, selected_role: str, provider_name
                 conversation_id or ""  # 确保传递字符串（None时用空字符串）
             ]
         )
+
+        # 实时保存日志（每轮对话后都保存）
+        try:
+            workbook.save(CHAT_LOG_FILE_NAME)
+        except PermissionError:
+            print_error(f"警告：无法实时保存日志文件 '{CHAT_LOG_FILE_NAME}'。请确保文件未被其他程序打开。")
+        except Exception as e:
+            print_error(f"警告：保存日志时出错：{e}")
 
     # 注意：日志保存已在退出时处理
 
