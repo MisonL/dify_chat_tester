@@ -139,7 +139,7 @@ def run_interactive_chat(provider: AIProvider, selected_role: str, provider_name
     print_success(f"已选择模型: {selected_model}")
     console.print()
     console.print(f"{Icons.INFO} 命令说明:", style="bold cyan")
-    console.print(f"  {Icons.USER} 输入 'exit' 退出程序", style="white")
+    console.print(f"  {Icons.USER} 输入 '/exit' 或 '/quit' 返回主菜单", style="white")
     console.print(f"  {Icons.USER} 输入 '/new' 开启新的对话（重置上下文）", style="white")
     console.print()
 
@@ -152,9 +152,11 @@ def run_interactive_chat(provider: AIProvider, selected_role: str, provider_name
         user_input = print_input_prompt(f"{Icons.USER} 你")
         user_input = user_input.strip()
 
-        # 处理退出命令
-        if user_input.lower() == "exit":
-            break
+        # 处理退出命令 - 返回主菜单
+        if user_input.lower() in ["/exit", "/quit"]:
+            console.print()
+            print_info("正在返回主菜单...")
+            return  # 返回到主菜单，而不是退出程序
 
         # 处理开启新对话命令
         if user_input == "/new":
@@ -676,17 +678,30 @@ def main():
             sys.exit(0)
 
     # 模式选择
-    print_info("请选择运行模式:")
-    console.print("1. 会话模式 (实时对话)", style="bold white")
-    console.print("2. 批量询问模式 (通过 Excel 文件批量询问)", style="bold white")
-    mode_choice = print_input_prompt("请输入模式序号")
+    # 主循环 - 允许用户多次选择模式
+    while True:
+        print_info("请选择运行模式:")
+        console.print("1. 会话模式 (实时对话)", style="bold white")
+        console.print("2. 批量询问模式 (通过 Excel 文件批量询问)", style="bold white")
+        console.print("3. 退出程序", style="bold white")
+        console.print()
+        mode_choice = print_input_prompt("请输入模式序号")
 
-    if mode_choice == '1':
-        run_interactive_chat(provider, selected_role, provider_name, selected_model)
-    elif mode_choice == '2':
-        run_batch_query(provider, selected_role, provider_name, selected_model)
-    else:
-        print_error("无效的模式选择，程序退出。")
+        if mode_choice == '1':
+            run_interactive_chat(provider, selected_role, provider_name, selected_model)
+        elif mode_choice == '2':
+            run_batch_query(provider, selected_role, provider_name, selected_model)
+        elif mode_choice == '3':
+            print_info("感谢使用，再见！")
+            break
+        else:
+            print_error("无效的模式选择，请重新输入。")
+            console.print()
+            continue
+        
+        console.print()
+        print_success("已返回主菜单")
+        console.print()
 
 if __name__ == "__main__":
     try:
