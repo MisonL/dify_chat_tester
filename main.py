@@ -233,9 +233,16 @@ def run_interactive_chat(provider: AIProvider, selected_role: str, provider_name
         )
 
     # 保存并关闭 Excel
-    workbook.save(CHAT_LOG_FILE_NAME)
-    console.print()
-    print_success(f"对话已保存到 {CHAT_LOG_FILE_NAME} (共 {conversation_round} 轮对话)")
+    try:
+        workbook.save(CHAT_LOG_FILE_NAME)
+        workbook.close()  # 显式关闭工作簿
+        console.print()
+        print_success(f"对话已保存到 {CHAT_LOG_FILE_NAME} (共 {conversation_round} 轮对话)")
+    except PermissionError:
+        print_error(f"无法保存日志文件：{CHAT_LOG_FILE_NAME}")
+        print_error("请确保文件未被其他程序打开（如 Excel）")
+    except Exception as e:
+        print_error(f"保存日志文件时出错：{e}")
 
 def run_batch_query(provider: AIProvider, selected_role: str, provider_name: str, selected_model: str):
     """运行批量询问模式"""
