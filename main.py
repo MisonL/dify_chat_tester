@@ -360,8 +360,6 @@ def run_batch_query(provider: AIProvider, selected_role: str, provider_name: str
                 0,
                 ""
             ])
-            # 在原始文件中也标记为空
-            write_cell_safely(batch_worksheet, row_idx, answer_col_index + 1, "[问题为空]")
             continue  # 跳过当前循环的剩余部分
 
         total_queries += 1  # 只有非空问题才计入总数
@@ -381,13 +379,9 @@ def run_batch_query(provider: AIProvider, selected_role: str, provider_name: str
         if success:
             successful_queries += 1
             print(f"问题 (第 {total_queries} 个) 处理完成。")  # 简洁提示
-            # 将AI响应写入原始Excel文件的指定列
-            write_cell_safely(batch_worksheet, row_idx, answer_col_index + 1, response)
         else:
             failed_queries += 1
             print(f"问题 (第 {total_queries} 个) 处理失败。错误: {error}")  # 简洁提示
-            # 将错误信息写入原始Excel文件的指定列
-            write_cell_safely(batch_worksheet, row_idx, answer_col_index + 1, f"[错误]: {error}")
 
         # 记录详细日志到新的Excel文件
         log_to_excel(output_worksheet, [
@@ -401,11 +395,7 @@ def run_batch_query(provider: AIProvider, selected_role: str, provider_name: str
             conversation_id or ""
         ])
 
-        # 每完成一个问题后保存原始Excel文件，以免丢失
-        try:
-            batch_workbook.save(excel_file_path)
-        except Exception as e:
-            print(f"警告: 无法保存原始 Excel 文件 '{excel_file_path}'。请确保文件未被占用。错误信息: {e}", file=sys.stderr)
+        # 原始文件保持不变，只记录到日志文件
 
         time.sleep(request_interval)  # 间隔时间
 
