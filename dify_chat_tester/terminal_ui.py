@@ -202,11 +202,11 @@ def print_welcome():
     console.print()
     
     # 副标题
-    console.print("                     支持多AI供应商的智能对话测试平台", style="dim bright_white")
+    console.print("               支持多AI供应商的智能对话测试平台", style="bright_white")
     console.print()
     
-    # 装饰线
-    console.print("═══════════════════════════════════════════════════════════════════════════════════════", style="bright_magenta")
+    # 装饰线 - 与 Dify Chat 字样长度相同
+    console.print("═══════════════════════════════════════════════════════════════", style="bright_magenta")
     console.print()
 
 def print_api_key_confirmation(hidden_key: str) -> bool:
