@@ -197,6 +197,8 @@ Thumbs.db
 
 # Build and release directories
 release/
+release_macos/
+release_windows/
 *.tar.gz
 *.zip
 *.dmg
