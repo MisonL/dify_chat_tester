@@ -22,6 +22,11 @@ if sys.platform == 'win32':
         from dify_chat_tester.windows_console import enable_console_paste
     except ImportError:
         pass
+    try:
+        from dify_chat_tester.console_background import set_console_background
+        set_console_background()
+    except ImportError:
+        pass
 
 from dify_chat_tester.ai_providers import get_provider, AIProvider
 from dify_chat_tester.config_loader import get_config

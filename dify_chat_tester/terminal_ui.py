@@ -15,32 +15,11 @@ import sys
 # 初始化 colorama（Windows 兼容）
 colorama.init(autoreset=True)
 
-# 设置控制台颜色（Windows）
+# 设置控制台窗口标题（Windows）
 if sys.platform == 'win32':
     try:
         import ctypes
-        from ctypes import wintypes
-        
-        # 设置控制台背景色为深灰色
-        kernel32 = ctypes.windll.kernel32
-        hStdout = kernel32.GetStdHandle(-11)  # STD_OUTPUT_HANDLE
-        
-        if hStdout and hStdout != -1:
-            # 获取当前控制台屏幕缓冲区信息
-            csbi = wintypes._CONSOLE_SCREEN_BUFFER_INFO()
-            if kernel32.GetConsoleScreenBufferInfo(hStdout, ctypes.byref(csbi)):
-                # 设置背景和前景色
-                # 背景色：深灰色 (0x0080 -> 背景深灰)
-                # 前景色：亮白色 (0x000F -> 前景亮白)
-                kernel32.SetConsoleTextAttribute(hStdout, 0x8F)  # 深灰底亮白字
-                
-                # 设置控制台窗口标题
-                import ctypes
-                ctypes.windll.kernel32.SetConsoleTitleW("dify_chat_tester - AI聊天测试工具")
-                
-                # 清屏并应用新颜色
-                import os
-                os.system('cls')
+        ctypes.windll.kernel32.SetConsoleTitleW("dify_chat_tester - AI聊天测试工具")
     except:
         pass
 
