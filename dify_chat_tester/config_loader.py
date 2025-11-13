@@ -21,13 +21,35 @@ class ConfigLoader:
 
     def load_config(self):
         """加载配置文件"""
-        if not os.path.exists(self.env_file):
+        # 获取配置文件的完整路径
+        config_file_path = self._get_config_file_path()
+        
+        if not os.path.exists(config_file_path):
             print(f"警告: 配置文件 '{self.env_file}' 不存在，正在创建默认配置...", file=sys.stderr)
             self._create_default_config_file()
-            self._load_defaults()
+            # 重新获取配置文件路径
+            config_file_path = self._get_config_file_path()
+            if os.path.exists(config_file_path):
+                # 加载刚创建的配置文件
+                with open(config_file_path, 'r', encoding='utf-8') as f:
+                    for line in f:
+                        line = line.strip()
+                        # 跳过注释和空行
+                        if not line or line.startswith('#'):
+                            continue
+
+                        # 解析键值对
+                        if '=' in line:
+                            key, value = line.split('=', 1)
+                            key = key.strip()
+                            value = value.strip()
+                            self.config[key] = value
+            else:
+                # 如果创建失败，使用默认配置
+                self._load_defaults()
             return
 
-        with open(self.env_file, 'r', encoding='utf-8') as f:
+        with open(config_file_path, 'r', encoding='utf-8') as f:
             for line in f:
                 line = line.strip()
                 # 跳过注释和空行
@@ -41,12 +63,40 @@ class ConfigLoader:
                     value = value.strip()
                     self.config[key] = value
 
+    def _get_config_file_path(self):
+        """获取配置文件的完整路径"""
+        # 如果是打包后的程序
+        if getattr(sys, 'frozen', False):
+            # 配置文件在程序所在目录
+            return os.path.join(os.path.dirname(sys.executable), self.env_file)
+        else:
+            # 开发环境，配置文件在项目根目录
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            project_dir = os.path.dirname(current_dir)
+            return os.path.join(project_dir, self.env_file)
+
     def _create_default_config_file(self):
         """创建默认配置文件"""
-        # 获取 config.env.example 的路径
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        project_dir = os.path.dirname(current_dir)
-        example_file = os.path.join(project_dir, 'config.env.example')
+        # 获取程序运行目录（对于打包后的程序，这是程序所在目录）
+        if getattr(sys, 'frozen', False):
+            # PyInstaller 打包后的程序
+            base_dir = os.path.dirname(sys.executable)
+        else:
+            # 开发环境
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            base_dir = os.path.dirname(current_dir)
+        
+        # 优先从程序目录查找 config.env.example
+        example_file = os.path.join(base_dir, 'config.env.example')
+        
+        # 如果程序目录没有，尝试从源码目录查找
+        if not os.path.exists(example_file) and not getattr(sys, 'frozen', False):
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            project_dir = os.path.dirname(current_dir)
+            example_file = os.path.join(project_dir, 'config.env.example')
+        
+        # 配置文件创建在程序运行目录
+        config_file_path = os.path.join(base_dir, self.env_file)
         
         # 如果 config.env.example 存在，复制它作为默认配置
         if os.path.exists(example_file):
@@ -54,8 +104,6 @@ class ConfigLoader:
                 with open(example_file, 'r', encoding='utf-8') as src:
                     content = src.read()
                 
-                # 确保在项目根目录创建 config.env
-                config_file_path = os.path.join(project_dir, self.env_file)
                 with open(config_file_path, 'w', encoding='utf-8') as dst:
                     dst.write(content)
                 
@@ -65,12 +113,11 @@ class ConfigLoader:
                 print("将使用内置默认配置", file=sys.stderr)
         else:
             # 如果模板文件不存在，创建一个基本的配置文件
-            self._create_basic_config_file()
+            self._create_basic_config_file(base_dir)
 
-    def _create_basic_config_file(self):
+    def _create_basic_config_file(self, base_dir):
         """创建基本的配置文件（当模板文件不存在时）"""
-        project_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        config_file_path = os.path.join(project_dir, self.env_file)
+        config_file_path = os.path.join(base_dir, self.env_file)
         
         default_config = """# AI 聊天客户端测试工具 - 配置文件
 # 复制此文件为 config.env 并根据需要修改配置
