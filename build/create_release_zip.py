@@ -1,6 +1,7 @@
 import zipfile
 import os
 import datetime
+import shutil
 
 def create_zip():
     now = datetime.datetime.now()
@@ -13,10 +14,39 @@ def create_zip():
     source_dir = os.path.join(project_dir, 'release_windows')
     zip_path = os.path.join(project_dir, zip_filename)
     
-    if not os.path.exists(source_dir):
-        print(f"Error: Source directory '{source_dir}' not found")
-        return False
+    print(f"Script dir: {script_dir}")
+    print(f"Project dir: {project_dir}")
+    print(f"Source dir: {source_dir}")
+    print(f"Zip path: {zip_path}")
     
+    # Always create release directory and copy files
+    print(f"Creating release directory and copying files...")
+    os.makedirs(source_dir, exist_ok=True)
+    
+    # Copy files to release directory
+    dist_dir = os.path.join(project_dir, 'dist')
+    exe_file = os.path.join(dist_dir, 'dify_chat_tester.exe')
+    
+    # Copy executable
+    if os.path.exists(exe_file):
+        shutil.copy2(exe_file, os.path.join(source_dir, 'dify_chat_tester.exe'))
+        print("Copied executable")
+    
+    # Copy config template
+    config_file = os.path.join(project_dir, 'config.env.example')
+    if os.path.exists(config_file):
+        shutil.copy2(config_file, os.path.join(source_dir, 'config.env.example'))
+        print("Copied config template")
+    
+    # Copy Excel template
+    excel_file = os.path.join(project_dir, 'dify_chat_tester_template.xlsx')
+    if os.path.exists(excel_file):
+        shutil.copy2(excel_file, os.path.join(source_dir, 'dify_chat_tester_template.xlsx'))
+        print("Copied Excel template")
+    
+    # Windows exe can be run directly, no need for run.bat script
+    
+    # Create ZIP
     with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
         for root, dirs, files in os.walk(source_dir):
             for file in files:

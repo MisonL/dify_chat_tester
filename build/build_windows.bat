@@ -61,15 +61,12 @@ if exist "%PROJECT_DIR%\build\dify_chat_tester.build\" (
     rmdir /s /q "%PROJECT_DIR%\build\dify_chat_tester.build\" 2>nul
 )
 
-REM Use spec file from project root directory first
-set SPEC_FILE=%PROJECT_DIR%\dify_chat_tester.spec
+REM Use spec file from build directory (where it should be)
+set SPEC_FILE=%SCRIPT_DIR%\dify_chat_tester.spec
 if not exist "%SPEC_FILE%" (
-    set SPEC_FILE=%SCRIPT_DIR%\dify_chat_tester.spec
-    if not exist "%SPEC_FILE%" (
-        echo Error: Spec file not found
-        pause
-        exit /b 1
-    )
+    echo Error: Spec file not found at %SPEC_FILE%
+    pause
+    exit /b 1
 )
 
 echo Using spec file: %SPEC_FILE%
@@ -86,13 +83,27 @@ if exist "%PROJECT_DIR%\dist\dify_chat_tester.exe" (
     
     REM Create release package
     set RELEASE_DIR=%PROJECT_DIR%\release_windows
-    if not exist "%RELEASE_DIR%" mkdir "%RELEASE_DIR%"
+    if not exist "%RELEASE_DIR%" (
+        echo Creating release directory...
+        cd /d "%PROJECT_DIR%"
+        mkdir release_windows
+    )
     
     REM Copy executable and necessary files
-    copy "%PROJECT_DIR%\dist\dify_chat_tester.exe" "%RELEASE_DIR%\" >nul
-    copy "%PROJECT_DIR%\config.env.example" "%RELEASE_DIR%\" >nul
-    copy "%PROJECT_DIR%\dify_chat_tester_template.xlsx" "%RELEASE_DIR%\" >nul
-    if exist "%PROJECT_DIR%\README.md" copy "%PROJECT_DIR%\README.md" "%RELEASE_DIR%\" >nul
+    echo Copying executable...
+    copy "%PROJECT_DIR%\dist\dify_chat_tester.exe" "%RELEASE_DIR%\"
+    echo Copying config template...
+    copy "%PROJECT_DIR%\config.env.example" "%RELEASE_DIR%\"
+    echo Copying Excel template...
+    copy "%PROJECT_DIR%\dify_chat_tester_template.xlsx" "%RELEASE_DIR%\"
+    if exist "%PROJECT_DIR%\README.md" (
+        echo Copying README...
+        copy "%PROJECT_DIR%\README.md" "%RELEASE_DIR%\"
+    )
+    if exist "%PROJECT_DIR%\用户使用指南.md" (
+        echo Copying user guide...
+        copy "%PROJECT_DIR%\用户使用指南.md" "%RELEASE_DIR%\"
+    )
     
     REM Create startup script
     echo @echo off > "%RELEASE_DIR%\run.bat"
@@ -103,23 +114,12 @@ if exist "%PROJECT_DIR%\dist\dify_chat_tester.exe" (
     REM Create compressed package
     echo Creating compressed package...
     
-    REM Get timestamp for filename
-    for /f "tokens=2 delims==" %%a in ('wmic OS Get localdatetime /value') do set "dt=%%a"
-    set "YYYY=%dt:~0,4%"
-    set "MM=%dt:~4,2%"
-    set "DD=%dt:~6,2%"
-    set "HH=%dt:~8,2%"
-    set "Min=%dt:~10,2%"
-    set "Sec=%dt:~12,2%"
-    set "datestamp=%YYYY%%MM%%DD%_%HH%%Min%%Sec%"
+    REM Get timestamp for filename (alternative method for systems without wmic)
+    for /f "tokens=2 delims==" %%a in ('powershell -Command "Get-Date -Format yyyyMMdd_HHmmss"') do set "datestamp=%%a"
     
     cd /d "%PROJECT_DIR%"
     
-    REM Try to create TAR archive (built-in in Windows 10/11)
-    echo Creating TAR archive...
-    tar -c -f "dify_chat_tester_windows_%datestamp%.tar" -C release_windows .
-    
-    REM If Python is available, also create ZIP
+    REM Create ZIP archive
     echo Creating ZIP archive...
     py "%SCRIPT_DIR%create_release_zip.py"
     
@@ -128,7 +128,7 @@ if exist "%PROJECT_DIR%\dist\dify_chat_tester.exe" (
     echo 1. Extract dify_chat_tester_windows_*.zip
     echo 2. Copy config.env.example to config.env
     echo 3. Edit config.env to configure API information
-    echo 4. Double-click run.bat to start the program
+    echo 4. Double-click dify_chat_tester.exe to start the program
     echo.
     echo Packaging complete!
 ) else (
