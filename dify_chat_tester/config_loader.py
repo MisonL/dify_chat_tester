@@ -22,7 +22,8 @@ class ConfigLoader:
     def load_config(self):
         """加载配置文件"""
         if not os.path.exists(self.env_file):
-            print(f"警告: 配置文件 '{self.env_file}' 不存在，使用默认配置", file=sys.stderr)
+            print(f"警告: 配置文件 '{self.env_file}' 不存在，正在创建默认配置...", file=sys.stderr)
+            self._create_default_config_file()
             self._load_defaults()
             return
 
@@ -39,6 +40,72 @@ class ConfigLoader:
                     key = key.strip()
                     value = value.strip()
                     self.config[key] = value
+
+    def _create_default_config_file(self):
+        """创建默认配置文件"""
+        # 获取 config.env.example 的路径
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        project_dir = os.path.dirname(current_dir)
+        example_file = os.path.join(project_dir, 'config.env.example')
+        
+        # 如果 config.env.example 存在，复制它作为默认配置
+        if os.path.exists(example_file):
+            try:
+                with open(example_file, 'r', encoding='utf-8') as src:
+                    content = src.read()
+                
+                # 确保在项目根目录创建 config.env
+                config_file_path = os.path.join(project_dir, self.env_file)
+                with open(config_file_path, 'w', encoding='utf-8') as dst:
+                    dst.write(content)
+                
+                print(f"✅ 已从模板创建配置文件: {config_file_path}", file=sys.stderr)
+            except Exception as e:
+                print(f"❌ 创建配置文件失败: {e}", file=sys.stderr)
+                print("将使用内置默认配置", file=sys.stderr)
+        else:
+            # 如果模板文件不存在，创建一个基本的配置文件
+            self._create_basic_config_file()
+
+    def _create_basic_config_file(self):
+        """创建基本的配置文件（当模板文件不存在时）"""
+        project_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        config_file_path = os.path.join(project_dir, self.env_file)
+        
+        default_config = """# AI 聊天客户端测试工具 - 配置文件
+# 复制此文件为 config.env 并根据需要修改配置
+
+# 日志文件名
+CHAT_LOG_FILE_NAME=chat_log.xlsx
+
+# 默认角色列表（逗号分隔）
+ROLES=员工,门店
+
+# AI 供应商配置（格式：序号:名称:ID;序号:名称:ID）
+AI_PROVIDERS=1:Dify:dify;2:OpenAI 兼容接口:openai;3:iFlow:iflow
+
+# 批量询问配置
+BATCH_REQUEST_INTERVAL=1.0
+BATCH_DEFAULT_SHOW_RESPONSE=false
+
+# iFlow 模型列表
+IFLOW_MODELS=qwen3-max,kimi-k2-0905,glm-4.6,deepseek-v3.2
+
+# OpenAI 模型列表
+OPENAI_MODELS=gpt-4o,gpt-4o-mini,gpt-4-turbo,gpt-3.5-turbo,custom-model
+
+# 等待动画配置
+WAITING_INDICATORS=⣾,⣽,⣻,⢿,⡿,⣟,⣯,⣷
+WAITING_TEXT=正在思考
+WAITING_DELAY=0.1
+"""
+        
+        try:
+            with open(config_file_path, 'w', encoding='utf-8') as f:
+                f.write(default_config)
+            print(f"✅ 已创建基本配置文件: {config_file_path}", file=sys.stderr)
+        except Exception as e:
+            print(f"❌ 创建配置文件失败: {e}", file=sys.stderr)
 
     def _load_defaults(self):
         """加载默认配置（当配置文件不存在时）"""
