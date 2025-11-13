@@ -7,7 +7,7 @@ import sys
 import os
 
 def set_console_background():
-    """设置控制台背景色（跨平台）"""
+    """设置控制台背景色（白底黑字）"""
     if sys.platform == 'win32':
         # Windows平台
         try:
@@ -24,9 +24,9 @@ def set_console_background():
             
             # 设置颜色表（16色）
             # 索引0-7是标准色，8-15是高亮色
-            # 我们要修改背景色（索引0）为深灰色
+            # 白底黑字：背景白色(7)，前景黑色(0)
             color_table = [
-                0x00282828,  # 0: 黑色 -> 深灰色 (#282828)
+                0x00000000,  # 0: 黑色
                 0x000000FF,  # 1: 蓝色
                 0x0000FF00,  # 2: 绿色
                 0x0000FFFF,  # 3: 青色
@@ -50,8 +50,8 @@ def set_console_background():
             
             # 设置屏幕背景色和文字色
             # 属性位：背景色(高4位) + 前景色(低4位)
-            # 背景色=0(深灰), 前景色=7(白色) -> 0x07
-            winreg.SetValueEx(key, 'ScreenColors', 0, winreg.REG_DWORD, 0x07)
+            # 背景色=7(白色), 前景色=0(黑色) -> 0x70
+            winreg.SetValueEx(key, 'ScreenColors', 0, winreg.REG_DWORD, 0x70)
             
             winreg.CloseKey(key)
             
@@ -62,31 +62,29 @@ def set_console_background():
             # 如果注册表方法失败，使用PowerShell
             try:
                 # 使用PowerShell设置当前窗口的背景色
-                os.system('powershell -Command "$Host.UI.RawUI.BackgroundColor = 'Black'; Clear-Host"')
+                os.system('powershell -Command "$Host.UI.RawUI.BackgroundColor = 'White'; $Host.UI.RawUI.ForegroundColor = 'Black'; Clear-Host"')
             except:
                 # 最后的备用方案：使用ANSI转义序列
-                print('\033[48;5;235m\033[37m', end='', flush=True)  # 深灰底白字
+                print('\033[47m\033[30m', end='', flush=True)  # 白底黑字
                 os.system('cls')
                 
     elif sys.platform == 'darwin':
         # macOS平台
         try:
-            # 方法1: 使用ANSI转义序列设置背景色
-            # 先尝试设置Terminal窗口的背景色
-            print('\033]50;SetProfile=Dark Mode\a', end='', flush=True)
+            # 使用ANSI转义序列设置背景色
+            # 方法1: 使用OSC 11设置背景色
+            print('\033]11;rgb:ff/ff/ff\033', end='', flush=True)  # 白色背景
             
-            # 方法2: 使用OSC 11设置背景色
-            print('\033]11;rgb:1e/1e/1e\033\\', end='', flush=True)  # #1e1e1e
-            
-            # 方法3: 使用标准ANSI颜色
-            print('\033[48;2;30;30;30m', end='', flush=True)  # RGB(30,30,30) 深灰色
+            # 方法2: 使用标准ANSI颜色
+            print('\033[107m\033[30m', end='', flush=True)  # 白底黑字
             
             # 清屏
             os.system('clear')
             
             # 额外尝试：使用osascript设置Terminal背景（仅对macOS Terminal.app有效）
             try:
-                os.system('''osascript -e 'tell application "Terminal" to set background color of window 1 to {30222, 30222, 30222}' ''')
+                os.system('''osascript -e 'tell application "Terminal" to set background color of window 1 to {65535, 65535, 65535}' ''')
+                os.system('''osascript -e 'tell application "Terminal" to set normal text color of window 1 to {0, 0, 0}' ''')
             except:
                 pass
                 
@@ -98,7 +96,7 @@ def set_console_background():
         # Linux平台
         try:
             # 使用ANSI转义序列
-            print('\033[48;2;30;30;30m', end='', flush=True)  # RGB(30,30,30) 深灰色
+            print('\033[107m\033[30m', end='', flush=True)  # 白底黑字
             os.system('clear')
         except:
             os.system('clear')
