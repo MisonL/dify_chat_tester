@@ -51,7 +51,7 @@ def hide_api_key(key: str) -> str:
 # input_api_key 函数已移动到 terminal_ui.py 模块中
 
 # 显示版本信息
-console.print(f"[dim]dify_chat_tester v{__version__}[/dim]", justify="center")
+console.print(f"[cyan]dify_chat_tester v{__version__}[/cyan]")
 console.print()
 
 # 加载配置
