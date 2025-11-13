@@ -50,6 +50,9 @@ def hide_api_key(key: str) -> str:
 
 # input_api_key 函数已移动到 terminal_ui.py 模块中
 
+# 显示版本信息
+console.print(f"[dim]dify_chat_tester v{__version__}[/dim]", justify="center")
+console.print()
 
 # 加载配置
 config = get_config()
@@ -456,10 +459,6 @@ def run_batch_query(provider: AIProvider, selected_role: str, provider_name: str
 
 def main():
     """主函数"""
-    # 打印版本信息
-    console.print(f"[dim]版本: {__version__}[/dim]", justify="right")
-    console.print()
-    
     # 打印欢迎信息
     print_welcome()
 
