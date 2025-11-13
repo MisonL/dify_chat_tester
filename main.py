@@ -56,7 +56,8 @@ version_panel = Panel(
     version_text,
     box=box.ROUNDED,
     padding=(0, 1),
-    border_style="cyan"
+    border_style="cyan",
+    width=78  # 与艺术字宽度匹配
 )
 console.print(version_panel)
 
@@ -78,7 +79,8 @@ info_panel = Panel(
     info_text,
     box=box.ROUNDED,
     padding=(0, 1),
-    border_style="dim"
+    border_style="dim",
+    width=78  # 与艺术字宽度匹配
 )
 console.print(info_panel)
 console.print()
