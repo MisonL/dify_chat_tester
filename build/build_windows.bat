@@ -84,12 +84,6 @@ if exist "%PROJECT_DIR%\release_windows\dify_chat_tester.exe" (
     echo Build successful!
     echo Executable location: %PROJECT_DIR%\release_windows\dify_chat_tester.exe
     
-    REM Create startup script
-    echo @echo off > "%PROJECT_DIR%\release_windows\run.bat"
-    echo cd /d "%%~dp0" >> "%PROJECT_DIR%\release_windows\run.bat"
-    echo dify_chat_tester.exe >> "%PROJECT_DIR%\release_windows\run.bat"
-    echo pause >> "%PROJECT_DIR%\release_windows\run.bat"
-    
     REM Create compressed package
     echo Creating compressed package...
     
@@ -107,7 +101,7 @@ if exist "%PROJECT_DIR%\release_windows\dify_chat_tester.exe" (
     echo 1. Extract dify_chat_tester_windows_*.zip
     echo 2. Copy config.env.example to config.env
     echo 3. Edit config.env to configure API information
-    echo 4. Double-click run.bat to start the program
+    echo 4. Double-click dify_chat_tester.exe to start the program
     echo.
     echo Packaging complete!
 ) else (
