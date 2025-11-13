@@ -159,5 +159,4 @@ exe = EXE(
     codesign_identity=None,
     entitlements_file=None,
     icon=None,
-    path=release_dir,  # 直接输出到 release_windows 目录
 )

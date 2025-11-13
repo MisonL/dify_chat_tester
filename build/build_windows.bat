@@ -51,6 +51,9 @@ echo Cleaning previous build...
 if exist "%PROJECT_DIR%\dist\" (
     rmdir /s /q "%PROJECT_DIR%\dist\" 2>nul
 )
+if exist "%PROJECT_DIR%\release_windows\" (
+    rmdir /s /q "%PROJECT_DIR%\release_windows\" 2>nul
+)
 if exist "%PROJECT_DIR%\build\dify_chat_tester\" (
     rmdir /s /q "%PROJECT_DIR%\build\dify_chat_tester\" 2>nul
 )
@@ -73,7 +76,8 @@ echo Using spec file: %SPEC_FILE%
 
 REM Run PyInstaller
 echo Starting packaging...
-py -m uv run pyinstaller "%SPEC_FILE%"
+REM 设置输出目录到 release_windows
+py -m uv run pyinstaller --distpath "%PROJECT_DIR%\release_windows" "%SPEC_FILE%"
 
 REM Check build result
 if exist "%PROJECT_DIR%\release_windows\dify_chat_tester.exe" (
