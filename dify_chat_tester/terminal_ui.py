@@ -23,29 +23,21 @@ if sys.platform == 'win32':
     except:
         pass
 
-# 创建全局控制台对象，设置样式
-console = Console(
-    style="black",  # 黑色文字，白底
-    file=None,
-    force_terminal=True,
-    force_jupyter=False,
-    soft_wrap=True,
-    no_color=False,
-    legacy_windows=False,
-)
+# 创建全局控制台对象
+console = Console()
 
 # 自定义颜色主题
 class Colors:
-    """自定义颜色方案（适合白底黑字）"""
-    BACKGROUND = "#ffffff"  # 白色背景
-    PRIMARY = "#0066cc"    # 深蓝色
-    SUCCESS = "#008800"    # 深绿色
-    WARNING = "#cc8800"    # 深橙色
-    ERROR = "#cc0000"      # 深红色
-    INFO = "#0066cc"       # 深蓝色
-    ACCENT = "#6600cc"     # 深紫色
-    TEXT = "#000000"       # 主文本色（黑色）
-    MUTED = "#666666"      # 次要文本色（灰色）
+    """自定义颜色方案"""
+    BACKGROUND = "#000000"  # 黑色背景
+    PRIMARY = "#61dafb"    # React蓝
+    SUCCESS = "#4ade80"    # 绿色
+    WARNING = "#fbbf24"    # 黄色
+    ERROR = "#f87171"      # 红色
+    INFO = "#60a5fa"       # 信息蓝
+    ACCENT = "#c084fc"     # 紫色
+    TEXT = "#f3f4f6"       # 主文本色
+    MUTED = "#9ca3af"      # 次要文本色
 
 # 图标定义
 class Icons:
@@ -125,9 +117,9 @@ def print_input_prompt(message: str) -> str:
     """打印输入提示（美化的）"""
     # 使用标准输入以避免退格键问题
     text = Text()
-    text.append(f"{Icons.GEAR} ", style=f"bold {Colors.PRIMARY}")
+    text.append(f"{Icons.GEAR} ", style=f"bold {Colors.ACCENT}")
     text.append(message, style=Colors.TEXT)
-    text.append(": ", style=Colors.PRIMARY)
+    text.append(": ", style=Colors.ACCENT)
     
     # 打印提示符但不换行
     console.print(text, end="")
