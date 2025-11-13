@@ -38,10 +38,8 @@ uv sync
 echo "🔧 安装 PyInstaller..."
 uv add --dev pyinstaller
 
-# 清理之前的构建（只清理dist目录，保留build目录下的spec文件）
+# 清理之前的构建（只清理build目录下的临时文件，保留spec文件）
 echo "🧹 清理之前的构建..."
-rm -rf "$PROJECT_DIR/dist/"* 2>/dev/null || true
-# 清理build目录下的PyInstaller输出，但保留spec文件
 rm -rf "$PROJECT_DIR/build/dify_chat_tester" 2>/dev/null || true
 rm -rf "$PROJECT_DIR/build/dify_chat_tester.dist" 2>/dev/null || true
 rm -rf "$PROJECT_DIR/build/dify_chat_tester.build" 2>/dev/null || true
@@ -63,23 +61,12 @@ echo "🚀 开始打包..."
 uv run pyinstaller "$SPEC_FILE"
 
 # 检查打包结果
-if [ -f "$PROJECT_DIR/dist/dify_chat_tester" ]; then
+if [ -f "$PROJECT_DIR/release_macos/dify_chat_tester" ]; then
     echo "✅ 打包成功！"
-    echo "📁 可执行文件位置: $PROJECT_DIR/dist/dify_chat_tester"
-    
-    # 创建发布包（使用平台特定的目录）
-    RELEASE_DIR="$PROJECT_DIR/release_macos"
-    mkdir -p "$RELEASE_DIR"
-    
-    # 复制可执行文件和必要文件到发布目录
-    cp "$PROJECT_DIR/dist/dify_chat_tester" "$RELEASE_DIR/"
-    cp "$PROJECT_DIR/config.env.example" "$RELEASE_DIR/"
-    cp "$PROJECT_DIR/dify_chat_tester_template.xlsx" "$RELEASE_DIR/"
-    cp "$PROJECT_DIR/README.md" "$RELEASE_DIR/" 2>/dev/null || true
-    cp "$PROJECT_DIR/用户使用指南.md" "$RELEASE_DIR/" 2>/dev/null || true
+    echo "📁 可执行文件位置: $PROJECT_DIR/release_macos/dify_chat_tester"
     
     # 创建启动脚本
-    cat > "$RELEASE_DIR/run.sh" << 'EOF'
+    cat > "$PROJECT_DIR/release_macos/run.sh" << 'EOF'
 #!/bin/bash
 # 获取脚本所在目录
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -87,7 +74,7 @@ DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$DIR"
 ./dify_chat_tester
 EOF
-    chmod +x "$RELEASE_DIR/run.sh"
+    chmod +x "$PROJECT_DIR/release_macos/run.sh"
     
     # 压缩发布包
     cd "$PROJECT_DIR"
