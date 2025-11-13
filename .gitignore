@@ -4,7 +4,11 @@ __pycache__/
 *$py.class
 *.so
 .Python
-build/
+# Build directories (keep scripts, ignore outputs)
+build/dist/
+build/dify_chat_tester/
+build/dify_chat_tester.build/
+build/dify_chat_tester.dist/
 develop-eggs/
 dist/
 downloads/
