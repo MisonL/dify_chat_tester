@@ -25,7 +25,7 @@ if sys.platform == 'win32':
 
 # 创建全局控制台对象，设置样式
 console = Console(
-    style="bright_white on #1e1e1e",  # 亮白色文字，VS Code风格深灰背景
+    style="bright_white",  # 亮白色文字，背景由系统控制
     file=None,
     force_terminal=True,
     force_jupyter=False,
