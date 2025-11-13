@@ -80,13 +80,18 @@ class AIProvider(ABC):
         """显示等待状态指示器"""
         indicators = self.WAITING_INDICATORS
         idx = 0
+        # 使用固定长度的字符串来避免截断
         while not stop_event.is_set():
-            sys.stdout.write(f"\rAI: {self.WAITING_TEXT} {indicators[idx]} ")
+            # 构建完整的等待信息，确保长度一致
+            waiting_text = f"AI: {self.WAITING_TEXT} {indicators[idx]}"
+            # 添加足够的空格来覆盖之前的文本
+            padding = " " * (50 - len(waiting_text))
+            sys.stdout.write(f"\r{waiting_text}{padding}")
             sys.stdout.flush()
             idx = (idx + 1) % len(indicators)
             time.sleep(self.WAITING_DELAY)
-        # 清除等待指示器
-        sys.stdout.write("\r" + " " * 30 + "\r")
+        # 清除整行
+        sys.stdout.write("\r" + " " * 50 + "\r")
         sys.stdout.flush()
 
 
@@ -160,16 +165,21 @@ class DifyProvider(AIProvider):
         response = None
         
         try:
-            if show_indicator:
-                waiting_thread = threading.Thread(target=self.show_waiting_indicator, args=(stop_event,))
-                waiting_thread.daemon = True
-                waiting_thread.start()
-
+            # 初始化等待线程
+            waiting_thread = None
+            
             # 尝试所有可能的 URL
-            for url in possible_urls:
+            for i, url in enumerate(possible_urls):
                 try:
-                    if show_indicator:
-                        print(f"\r[INFO] 尝试 URL: {url}", end="", file=sys.stderr)
+                    # 只在第一次尝试时显示URL信息
+                    if i == 0 and show_indicator:
+                        print(f"[INFO] 正在连接: {url}", file=sys.stderr)
+                    
+                    # 启动等待动画（如果需要）
+                    if show_indicator and waiting_thread is None:
+                        waiting_thread = threading.Thread(target=self.show_waiting_indicator, args=(stop_event,))
+                        waiting_thread.daemon = True
+                        waiting_thread.start()
 
                     response = requests.post(url, headers=headers, json=payload, stream=stream, timeout=30, allow_redirects=False)
                     
