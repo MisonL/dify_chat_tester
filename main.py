@@ -16,6 +16,13 @@ import time
 import re
 import urllib.parse
 
+# Windows 控制台支持（必须在其他导入之前）
+if sys.platform == 'win32':
+    try:
+        from dify_chat_tester.windows_console import enable_console_paste
+    except ImportError:
+        pass
+
 from dify_chat_tester.ai_providers import get_provider, AIProvider
 from dify_chat_tester.config_loader import get_config
 from dify_chat_tester.terminal_ui import (
