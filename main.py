@@ -24,6 +24,7 @@ from dify_chat_tester.terminal_ui import (
     print_statistics, print_welcome, print_api_key_confirmation, print_file_list,
     select_column_by_index, Icons, console, Text, Panel, box, input_api_key
 )
+from dify_chat_tester import __version__
 from rich.prompt import Confirm
 import requests
 
@@ -455,6 +456,10 @@ def run_batch_query(provider: AIProvider, selected_role: str, provider_name: str
 
 def main():
     """主函数"""
+    # 打印版本信息
+    console.print(f"[dim]版本: {__version__}[/dim]", justify="right")
+    console.print()
+    
     # 打印欢迎信息
     print_welcome()
 
