@@ -76,7 +76,6 @@ echo Using spec file: %SPEC_FILE%
 
 REM Run PyInstaller
 echo Starting packaging...
-REM 设置输出目录到 release_windows
 py -m uv run pyinstaller --distpath "%PROJECT_DIR%\release_windows" "%SPEC_FILE%"
 
 REM Check build result
