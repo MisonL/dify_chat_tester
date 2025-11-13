@@ -76,45 +76,21 @@ echo Starting packaging...
 py -m uv run pyinstaller "%SPEC_FILE%"
 
 REM Check build result
-if exist "%PROJECT_DIR%\dist\dify_chat_tester.exe" (
+if exist "%PROJECT_DIR%\release_windows\dify_chat_tester.exe" (
     echo.
     echo Build successful!
-    echo Executable location: %PROJECT_DIR%\dist\dify_chat_tester.exe
-    
-    REM Create release package
-    set RELEASE_DIR=%PROJECT_DIR%\release_windows
-    if not exist "%RELEASE_DIR%" (
-        echo Creating release directory...
-        cd /d "%PROJECT_DIR%"
-        mkdir release_windows
-    )
-    
-    REM Copy executable and necessary files
-    echo Copying executable...
-    copy "%PROJECT_DIR%\dist\dify_chat_tester.exe" "%RELEASE_DIR%\"
-    echo Copying config template...
-    copy "%PROJECT_DIR%\config.env.example" "%RELEASE_DIR%\"
-    echo Copying Excel template...
-    copy "%PROJECT_DIR%\dify_chat_tester_template.xlsx" "%RELEASE_DIR%\"
-    if exist "%PROJECT_DIR%\README.md" (
-        echo Copying README...
-        copy "%PROJECT_DIR%\README.md" "%RELEASE_DIR%\"
-    )
-    if exist "%PROJECT_DIR%\用户使用指南.md" (
-        echo Copying user guide...
-        copy "%PROJECT_DIR%\用户使用指南.md" "%RELEASE_DIR%\"
-    )
+    echo Executable location: %PROJECT_DIR%\release_windows\dify_chat_tester.exe
     
     REM Create startup script
-    echo @echo off > "%RELEASE_DIR%\run.bat"
-    echo cd /d "%%~dp0" >> "%RELEASE_DIR%\run.bat"
-    echo dify_chat_tester.exe >> "%RELEASE_DIR%\run.bat"
-    echo pause >> "%RELEASE_DIR%\run.bat"
+    echo @echo off > "%PROJECT_DIR%\release_windows\run.bat"
+    echo cd /d "%%~dp0" >> "%PROJECT_DIR%\release_windows\run.bat"
+    echo dify_chat_tester.exe >> "%PROJECT_DIR%\release_windows\run.bat"
+    echo pause >> "%PROJECT_DIR%\release_windows\run.bat"
     
     REM Create compressed package
     echo Creating compressed package...
     
-    REM Get timestamp for filename (alternative method for systems without wmic)
+    REM Get timestamp for filename
     for /f "tokens=2 delims==" %%a in ('powershell -Command "Get-Date -Format yyyyMMdd_HHmmss"') do set "datestamp=%%a"
     
     cd /d "%PROJECT_DIR%"
@@ -128,7 +104,7 @@ if exist "%PROJECT_DIR%\dist\dify_chat_tester.exe" (
     echo 1. Extract dify_chat_tester_windows_*.zip
     echo 2. Copy config.env.example to config.env
     echo 3. Edit config.env to configure API information
-    echo 4. Double-click dify_chat_tester.exe to start the program
+    echo 4. Double-click run.bat to start the program
     echo.
     echo Packaging complete!
 ) else (

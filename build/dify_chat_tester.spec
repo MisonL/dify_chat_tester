@@ -22,7 +22,7 @@ else:
 main_script = os.path.join(project_root, 'main.py')
 
 # 获取发布目录
-release_dir = os.path.join(project_root, 'release_macos')
+release_dir = os.path.join(project_root, 'release_windows')
 
 # 收集数据文件
 datas = [
@@ -135,7 +135,6 @@ for exclude in ['api-ms-win-*.dll', 'ucrtbase.dll', 'msvcp*.dll', 'vcruntime*.dl
 
 pyz = PYZ(a.pure, a.zipped_data, cipher=None)
 
-# 设置输出目录为 release_macos
 exe = EXE(
     pyz,
     a.scripts,
@@ -157,5 +156,5 @@ exe = EXE(
     codesign_identity=None,
     entitlements_file=None,
     icon=None,
-    path=release_dir,  # 直接输出到 release_macos 目录
+    path=release_dir,  # 直接输出到 release_windows 目录
 )
