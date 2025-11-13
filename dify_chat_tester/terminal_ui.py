@@ -15,8 +15,58 @@ import sys
 # 初始化 colorama（Windows 兼容）
 colorama.init(autoreset=True)
 
-# 创建全局控制台对象
-console = Console()
+# 设置控制台颜色（Windows）
+if sys.platform == 'win32':
+    try:
+        import ctypes
+        from ctypes import wintypes
+        
+        # 设置控制台背景色为深灰色
+        kernel32 = ctypes.windll.kernel32
+        hStdout = kernel32.GetStdHandle(-11)  # STD_OUTPUT_HANDLE
+        
+        if hStdout and hStdout != -1:
+            # 获取当前控制台屏幕缓冲区信息
+            csbi = wintypes._CONSOLE_SCREEN_BUFFER_INFO()
+            if kernel32.GetConsoleScreenBufferInfo(hStdout, ctypes.byref(csbi)):
+                # 设置背景和前景色
+                # 背景色：深灰色 (0x0080 -> 背景深灰)
+                # 前景色：亮白色 (0x000F -> 前景亮白)
+                kernel32.SetConsoleTextAttribute(hStdout, 0x8F)  # 深灰底亮白字
+                
+                # 设置控制台窗口标题
+                import ctypes
+                ctypes.windll.kernel32.SetConsoleTitleW("dify_chat_tester - AI聊天测试工具")
+                
+                # 清屏并应用新颜色
+                import os
+                os.system('cls')
+    except:
+        pass
+
+# 创建全局控制台对象，设置样式
+console = Console(
+    style="bright_white on #1e1e1e",  # 亮白色文字，VS Code风格深灰背景
+    file=None,
+    force_terminal=True,
+    force_jupyter=False,
+    soft_wrap=True,
+    no_color=False,
+    legacy_windows=False,
+)
+
+# 自定义颜色主题
+class Colors:
+    """自定义颜色方案"""
+    BACKGROUND = "#1e1e1e"  # VS Code深灰背景
+    PRIMARY = "#61dafb"    # React蓝
+    SUCCESS = "#4ade80"    # 绿色
+    WARNING = "#fbbf24"    # 黄色
+    ERROR = "#f87171"      # 红色
+    INFO = "#60a5fa"       # 信息蓝
+    ACCENT = "#c084fc"     # 紫色
+    TEXT = "#f3f4f6"       # 主文本色
+    MUTED = "#9ca3af"      # 次要文本色
 
 # 图标定义
 class Icons:
@@ -43,11 +93,11 @@ class Icons:
 def print_success(message: str):
     """打印成功信息"""
     success_text = Text()
-    success_text.append(f"✅ {message}", style="bold green")
+    success_text.append(f"✅ {message}", style=f"bold {Colors.SUCCESS}")
     
     success_panel = Panel(
         success_text,
-        border_style="green",
+        border_style=Colors.SUCCESS,
         box=box.ROUNDED,
         padding=(0, 1)
     )
@@ -56,11 +106,11 @@ def print_success(message: str):
 def print_error(message: str):
     """打印错误信息"""
     error_text = Text()
-    error_text.append(f"❌ {message}", style="bold red")
+    error_text.append(f"❌ {message}", style=f"bold {Colors.ERROR}")
     
     error_panel = Panel(
         error_text,
-        border_style="red",
+        border_style=Colors.ERROR,
         box=box.ROUNDED,
         padding=(0, 1)
     )
@@ -69,11 +119,11 @@ def print_error(message: str):
 def print_warning(message: str):
     """打印警告信息"""
     warning_text = Text()
-    warning_text.append(f"⚠️ {message}", style="bold orange_red1")
+    warning_text.append(f"⚠️ {message}", style=f"bold {Colors.WARNING}")
     
     warning_panel = Panel(
         warning_text,
-        border_style="orange_red1",
+        border_style=Colors.WARNING,
         box=box.ROUNDED,
         padding=(0, 1)
     )
@@ -82,11 +132,11 @@ def print_warning(message: str):
 def print_info(message: str):
     """打印信息"""
     info_text = Text()
-    info_text.append(f"ℹ️ {message}", style="bold bright_cyan")
+    info_text.append(f"ℹ️ {message}", style=f"bold {Colors.INFO}")
     
     info_panel = Panel(
         info_text,
-        border_style="bright_cyan",
+        border_style=Colors.INFO,
         box=box.ROUNDED,
         padding=(0, 1)
     )
@@ -96,9 +146,9 @@ def print_input_prompt(message: str) -> str:
     """打印输入提示（美化的）"""
     # 使用标准输入以避免退格键问题
     text = Text()
-    text.append(f"{Icons.GEAR} ", style="bold yellow")
-    text.append(message, style="bold white")
-    text.append(": ", style="bold yellow")
+    text.append(f"{Icons.GEAR} ", style=f"bold {Colors.ACCENT}")
+    text.append(message, style=Colors.TEXT)
+    text.append(": ", style=Colors.ACCENT)
     
     # 打印提示符但不换行
     console.print(text, end="")
