@@ -69,9 +69,11 @@ version_panel = Panel(
     box=box.ROUNDED,
     padding=(0, 1),
     border_style="cyan",
-    width=50  # 调整宽度
+    width=50,  # 调整宽度
+    expand=False  # 不扩展宽度
 )
-console.print(version_panel, justify="left")  # 靠左对齐
+# Panel内的文本默认居中，整个Panel靠左显示
+console.print(version_panel)
 
 # 显示项目信息
 info_text = Text()
@@ -89,9 +91,11 @@ info_panel = Panel(
     box=box.ROUNDED,
     padding=(0, 1),
     border_style="dim",
-    width=50  # 调整宽度
+    width=50,  # 调整宽度
+    expand=False  # 不扩展宽度
 )
-console.print(info_panel, justify="left")  # 靠左对齐
+# Panel内的文本默认左对齐，整个Panel靠左显示
+console.print(info_panel)
 console.print()
 
 # 加载配置
