@@ -62,6 +62,9 @@ def hide_api_key(key: str) -> str:
 
 # input_api_key 函数已移动到 terminal_ui.py 模块中
 
+# 打印欢迎信息（包含标题）
+print_welcome()
+
 # 显示项目信息（包含版本号）
 info_text = Text()
 info_text.append("v", style="bold cyan")
@@ -492,9 +495,6 @@ def run_batch_query(provider: AIProvider, selected_role: str, provider_name: str
 
 def main():
     """主函数"""
-    # 打印欢迎信息
-    print_welcome()
-
     # 选择 AI 供应商
     provider_choice = create_provider_menu(AI_PROVIDERS)
     provider_id = AI_PROVIDERS[provider_choice]["id"]
