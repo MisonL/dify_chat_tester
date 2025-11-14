@@ -212,8 +212,8 @@ def print_welcome():
     title.append("dify_chat_tester", style="bold bright_cyan")
     title.append(" - AI聊天测试工具", style="bright_white")
     
-    # 居中显示标题
-    console.print(title, justify="center")
+    # 靠左显示标题
+    console.print(title)
     console.print()
     
     # 简单分隔线

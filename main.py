@@ -71,7 +71,7 @@ version_panel = Panel(
     border_style="cyan",
     width=50  # 调整宽度
 )
-console.print(version_panel)
+console.print(version_panel, justify="left")  # 靠左对齐
 
 # 显示项目信息
 info_text = Text()
@@ -91,7 +91,7 @@ info_panel = Panel(
     border_style="dim",
     width=50  # 调整宽度
 )
-console.print(info_panel)
+console.print(info_panel, justify="left")  # 靠左对齐
 console.print()
 
 # 加载配置
