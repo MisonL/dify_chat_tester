@@ -61,9 +61,23 @@ echo "🚀 开始打包..."
 uv run pyinstaller "$SPEC_FILE"
 
 # 检查打包结果
-if [ -f "$PROJECT_DIR/release_macos/dify_chat_tester" ]; then
+if [ -f "$PROJECT_DIR/dist/dify_chat_tester" ]; then
     echo "✅ 打包成功！"
-    echo "📁 可执行文件位置: $PROJECT_DIR/release_macos/dify_chat_tester"
+    echo "📁 可执行文件位置: $PROJECT_DIR/dist/dify_chat_tester"
+    
+    # 创建发布目录
+    mkdir -p "$PROJECT_DIR/release_macos"
+    
+    # 复制文件到发布目录
+    cp "$PROJECT_DIR/dist/dify_chat_tester" "$PROJECT_DIR/release_macos/"
+    
+    # 复制必要的配置文件
+    cp "$PROJECT_DIR/config.env.example" "$PROJECT_DIR/release_macos/"
+    cp "$PROJECT_DIR/dify_chat_tester_template.xlsx" "$PROJECT_DIR/release_macos/"
+    
+    # 复制文档文件（如果存在）
+    [ -f "$PROJECT_DIR/README.md" ] && cp "$PROJECT_DIR/README.md" "$PROJECT_DIR/release_macos/"
+    [ -f "$PROJECT_DIR/用户使用指南.md" ] && cp "$PROJECT_DIR/用户使用指南.md" "$PROJECT_DIR/release_macos/"
     
     # 创建启动脚本
     cat > "$PROJECT_DIR/release_macos/run.sh" << 'EOF'
