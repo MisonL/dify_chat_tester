@@ -69,7 +69,7 @@ version_panel = Panel(
     box=box.ROUNDED,
     padding=(0, 1),
     border_style="cyan",
-    width=78  # 与艺术字宽度匹配
+    width=50  # 调整宽度
 )
 console.print(version_panel)
 
@@ -80,19 +80,16 @@ info_text.append("Mison", style="white")
 info_text.append("  | ", style="dim")
 info_text.append("许可证: ", style="bold")
 info_text.append("MIT", style="green")
-info_text.append("  | ", style="dim")
+info_text.append("\n", style="dim")
 info_text.append("邮箱: ", style="bold")
 info_text.append("1360962086@qq.com", style="blue")
-info_text.append("\n", style="dim")
-info_text.append("项目地址: ", style="bold")
-info_text.append("https://github.com/MisonL/dify_chat_tester", style="blue underline")
 
 info_panel = Panel(
     info_text,
     box=box.ROUNDED,
     padding=(0, 1),
     border_style="dim",
-    width=78  # 与艺术字宽度匹配
+    width=50  # 调整宽度
 )
 console.print(info_panel)
 console.print()

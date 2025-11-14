@@ -203,31 +203,21 @@ def print_statistics(total: int, success: int, failed: int, duration: float):
     console.print()
 
 def print_welcome():
-    """打印欢迎信息 - ASCII艺术字样式"""
+    """打印欢迎信息 - 简洁版"""
     console.print()
     
-    # ASCII艺术字标题 - Dify Chat
-    console.print(r"QQQQQ   QQQQQ   QQQQQ   Q   Q      QQQQ   Q    Q   QQQQ   QQQQQ ", style="bright_cyan")
-    console.print(r"Q    Q    Q     Q       Q   Q     Q    Q  Q    Q  Q    Q    Q   ", style="cyan")
-    console.print(r"Q    Q    Q     QQQQ     QQQ      Q       QQQQQQ  QQQQQQ    Q   ", style="bright_cyan")
-    console.print(r"Q    Q    Q     Q         Q       Q    Q  Q    Q  Q    Q    Q   ", style="cyan")
-    console.print(r"QQQQQ   QQQQQ   Q         Q        QQQQ   Q    Q  Q    Q    Q   ", style="bright_cyan")
-    console.print()
-
-    # ASCII艺术字标题 - Tester
-    console.print(r"          TTTTT  TTTTT  TTTTT  TTTTT  TTTTT  TTTTT", style="bright_magenta")
-    console.print(r"            T    T      T        T    T      T   T", style="magenta")
-    console.print(r"            T    TTTT   TTTTT    T    TTTT   TTTT ", style="bright_magenta")
-    console.print(r"            T    T          T    T    T      T  T ", style="magenta")
-    console.print(r"            T    TTTTT  TTTTT    T    TTTTT  T   T", style="bright_magenta")
+    # 简洁标题
+    title = Text()
+    title.append("🤖 ", style="bright_cyan")
+    title.append("dify_chat_tester", style="bold bright_cyan")
+    title.append(" - AI聊天测试工具", style="bright_white")
+    
+    # 居中显示标题
+    console.print(title, justify="center")
     console.print()
     
-    # 副标题
-    console.print("               支持多AI供应商的智能对话测试平台", style="bright_white")
-    console.print()
-    
-    # 装饰线 - 与 Dify Chat 字样长度相同
-    console.print("═══════════════════════════════════════════════════════════════", style="bright_magenta")
+    # 简单分隔线
+    console.print("─" * 50, style="dim")
     console.print()
 
 def print_api_key_confirmation(hidden_key: str) -> bool:
