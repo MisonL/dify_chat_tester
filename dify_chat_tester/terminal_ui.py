@@ -207,17 +207,21 @@ def print_welcome():
     console.print()
     
     # 简洁标题
-    title = Text()
-    title.append("🤖 ", style="bright_cyan")
-    title.append("dify_chat_tester", style="bold bright_cyan")
-    title.append(" - AI聊天测试工具", style="bold bright_white")  # 加粗并改为亮白色
+    title_text = Text()
+    title_text.append("🤖 ", style="bright_cyan")
+    title_text.append("dify_chat_tester", style="bold bright_cyan")
+    title_text.append(" - AI聊天测试工具", style="bold bright_white")  # 加粗并改为亮白色
     
-    # 靠左显示标题
-    console.print(title)
-    console.print()
-    
-    # 简单分隔线
-    console.print("─" * 50, style="dim")
+    # 使用Panel框起来，与版本号和作者信息保持一致的风格
+    title_panel = Panel(
+        title_text,
+        box=box.ROUNDED,
+        padding=(0, 1),
+        border_style="bright_cyan",
+        width=50,  # 与其他面板保持一致的宽度
+        expand=False  # 不扩展宽度
+    )
+    console.print(title_panel)
     console.print()
 
 def print_api_key_confirmation(hidden_key: str) -> bool:
