@@ -28,16 +28,16 @@ console = Console()
 
 # 自定义颜色主题
 class Colors:
-    """自定义颜色方案"""
+    """自定义颜色方案（适配黑色背景）"""
     BACKGROUND = "#000000"  # 黑色背景
-    PRIMARY = "#61dafb"    # React蓝
+    PRIMARY = "#33d4ff"    # 亮蓝色
     SUCCESS = "#4ade80"    # 绿色
     WARNING = "#fbbf24"    # 黄色
     ERROR = "#f87171"      # 红色
     INFO = "#60a5fa"       # 信息蓝
     ACCENT = "#c084fc"     # 紫色
-    TEXT = "#f3f4f6"       # 主文本色
-    MUTED = "#9ca3af"      # 次要文本色
+    TEXT = "#ffffff"       # 主文本色（纯白）
+    MUTED = "#9ca3af"      # 次要文本色（浅灰）
 
 # 图标定义
 class Icons:

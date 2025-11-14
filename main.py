@@ -67,16 +67,16 @@ print_welcome()
 
 # 显示项目信息（包含版本号）
 info_text = Text()
-info_text.append("v", style="bold cyan")
-info_text.append(f"{__version__}  |  ", style="bold cyan")
+info_text.append("v", style="bold bright_cyan")
+info_text.append(f"{__version__}  |  ", style="bold bright_cyan")
 info_text.append("作者: ", style="bold")
-info_text.append("Mison", style="white")
-info_text.append("  | ", style="dim")
+info_text.append("Mison", style="bright_white")
+info_text.append("  | ", style="bright_black")
 info_text.append("许可证: ", style="bold")
-info_text.append("MIT", style="green")
-info_text.append("\n", style="dim")
+info_text.append("MIT", style="bright_green")
+info_text.append("\n", style="bright_black")
 info_text.append("邮箱: ", style="bold")
-info_text.append("1360962086@qq.com", style="blue")
+info_text.append("1360962086@qq.com", style="bright_blue")
 
 info_panel = Panel(
     info_text,
@@ -658,9 +658,9 @@ def main():
         # 显示所有可用模型
         print_info("可用的模型:")
         for i, model in enumerate(available_models, 1):
-            console.print(f"  {i}. {model}", style="bright_white")
+            console.print(f"  {i}. {model}")
         # 添加自定义模型选项
-        console.print(f"  {len(available_models) + 1}. 自定义模型", style="bright_white")
+        console.print(f"  {len(available_models) + 1}. 自定义模型")
         console.print()
 
         while True:
@@ -699,8 +699,8 @@ def main():
     # 角色选择
     print_info("可用角色:")
     for i, role in enumerate(ROLES, 1):
-        console.print(f"  {i}. {role}", style="bold white")
-    console.print(f"  {len(ROLES) + 1}. 自定义角色", style="bold white")
+        console.print(f"  {i}. {role}")
+    console.print(f"  {len(ROLES) + 1}. 自定义角色")
     console.print()
 
     while True:
@@ -747,9 +747,9 @@ def main():
     # 主循环 - 允许用户多次选择模式
     while True:
         print_info("请选择运行模式:")
-        console.print("1. 会话模式 (实时对话)", style="bold white")
-        console.print("2. 批量询问模式 (通过 Excel 文件批量询问)", style="bold white")
-        console.print("3. 退出程序", style="bold white")
+        console.print("1. 会话模式 (实时对话)")
+        console.print("2. 批量询问模式 (通过 Excel 文件批量询问)")
+        console.print("3. 退出程序")
         console.print()
         mode_choice = print_input_prompt("请输入模式序号")
 
