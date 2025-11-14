@@ -619,8 +619,6 @@ class iFlowProvider(AIProvider):
                                             stop_event.set()
                                             if waiting_thread is not None:
                                                 waiting_thread.join(timeout=0.5)
-                                            sys.stdout.write("iFlow: ")
-                                            sys.stdout.flush()
                                             first_char_printed = True
 
                                         # 只有在启用显示时才输出到终端（但 always flush for real-time output）
