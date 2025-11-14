@@ -656,7 +656,7 @@ def main():
         print(f"自动选择模型: {selected_model}")
     else:
         # 显示所有可用模型
-        print_info("可用的模型:")
+        console.print("可用的模型:")
         for i, model in enumerate(available_models, 1):
             console.print(f"  {i}. {model}")
         # 添加自定义模型选项
@@ -697,7 +697,7 @@ def main():
                 print_error("请输入有效的数字或模型名称！")
 
     # 角色选择
-    print_info("可用角色:")
+    console.print("可用角色:")
     for i, role in enumerate(ROLES, 1):
         console.print(f"  {i}. {role}")
     console.print(f"  {len(ROLES) + 1}. 自定义角色")
@@ -746,7 +746,7 @@ def main():
     # 模式选择
     # 主循环 - 允许用户多次选择模式
     while True:
-        print_info("请选择运行模式:")
+        console.print("请选择运行模式:")
         console.print("1. 会话模式 (实时对话)")
         console.print("2. 批量询问模式 (通过 Excel 文件批量询问)")
         console.print("3. 退出程序")
