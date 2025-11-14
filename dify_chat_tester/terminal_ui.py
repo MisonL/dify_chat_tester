@@ -222,7 +222,6 @@ def print_welcome():
         expand=False  # 不扩展宽度
     )
     console.print(title_panel)
-    console.print()
 
 def print_api_key_confirmation(hidden_key: str) -> bool:
     """打印 API 密钥确认"""

@@ -83,12 +83,11 @@ info_panel = Panel(
     box=box.ROUNDED,
     padding=(0, 1),
     border_style="dim",
-    width=50,  # 调整宽度
+    width=50,  # 与标题面板保持一致的宽度
     expand=False  # 不扩展宽度
 )
 # Panel内的文本默认左对齐，整个Panel靠左显示
 console.print(info_panel)
-console.print()
 
 # 加载配置
 config = get_config()
