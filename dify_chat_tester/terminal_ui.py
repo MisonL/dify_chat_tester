@@ -210,7 +210,7 @@ def print_welcome():
     title = Text()
     title.append("🤖 ", style="bright_cyan")
     title.append("dify_chat_tester", style="bold bright_cyan")
-    title.append(" - AI聊天测试工具", style="bright_white")
+    title.append(" - AI聊天测试工具", style="bold bright_white")  # 加粗并改为亮白色
     
     # 靠左显示标题
     console.print(title)
