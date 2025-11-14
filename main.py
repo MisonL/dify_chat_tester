@@ -655,12 +655,12 @@ def main():
         print(f"自动选择模型: {selected_model}")
     else:
         # 显示所有可用模型
-        console.print("可用的模型:")
+        print("可用的模型:")
         for i, model in enumerate(available_models, 1):
-            # 使用默认样式避免语法高亮
-            console.print(f"  {i}. {model}")
+            # 使用原始print避免Rich的语法高亮
+            print(f"  {i}. {model}")
         # 添加自定义模型选项
-        console.print(f"  {len(available_models) + 1}. 自定义模型")
+        print(f"  {len(available_models) + 1}. 自定义模型")
         console.print()
 
         while True:
@@ -697,10 +697,10 @@ def main():
                 print_error("请输入有效的数字或模型名称！")
 
     # 角色选择
-    console.print("可用角色:")
+    print("可用角色:")
     for i, role in enumerate(ROLES, 1):
-        console.print(f"  {i}. {role}")
-    console.print(f"  {len(ROLES) + 1}. 自定义角色")
+        print(f"  {i}. {role}")
+    print(f"  {len(ROLES) + 1}. 自定义角色")
     console.print()
 
     while True:
@@ -746,10 +746,10 @@ def main():
     # 模式选择
     # 主循环 - 允许用户多次选择模式
     while True:
-        console.print("请选择运行模式:")
-        console.print("1. 会话模式 (实时对话)")
-        console.print("2. 批量询问模式 (通过 Excel 文件批量询问)")
-        console.print("3. 退出程序")
+        print("请选择运行模式:")
+        print("1. 会话模式 (实时对话)")
+        print("2. 批量询问模式 (通过 Excel 文件批量询问)")
+        print("3. 退出程序")
         console.print()
         mode_choice = print_input_prompt("请输入模式序号")
 
