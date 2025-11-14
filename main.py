@@ -669,9 +669,9 @@ def main():
         # 显示所有可用模型
         print_info("可用的模型:")
         for i, model in enumerate(available_models, 1):
-            console.print(f"  {i}. {model}", style="white")
+            console.print(f"  {i}. {model}", style="bright_white")
         # 添加自定义模型选项
-        console.print(f"  {len(available_models) + 1}. 自定义模型", style="cyan")
+        console.print(f"  {len(available_models) + 1}. 自定义模型", style="bright_white")
         console.print()
 
         while True:
