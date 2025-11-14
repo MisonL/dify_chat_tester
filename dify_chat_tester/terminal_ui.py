@@ -218,7 +218,7 @@ def print_welcome():
         box=box.ROUNDED,
         padding=(0, 1),
         border_style="bright_cyan",
-        width=50,  # 与其他面板保持一致的宽度
+        width=52,  # 增加宽度以匹配信息栏的长度
         expand=False  # 不扩展宽度
     )
     console.print(title_panel)
