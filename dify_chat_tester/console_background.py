@@ -2,8 +2,6 @@
 控制台背景设置模块（已禁用）
 """
 
-import sys
-import os
 
 def set_console_background():
     """不设置控制台背景色，使用系统默认"""

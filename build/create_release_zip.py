@@ -20,7 +20,7 @@ def create_zip():
     print(f"Zip path: {zip_path}")
     
     # Always create release directory and copy files
-    print(f"Creating release directory and copying files...")
+    print("Creating release directory and copying files...")
     os.makedirs(source_dir, exist_ok=True)
     
     # Copy files to release directory

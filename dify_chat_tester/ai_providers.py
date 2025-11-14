@@ -13,16 +13,18 @@ AI 供应商接口实现
 """
 
 import json
-import requests
-import threading
 import sys
+import threading
 import time
 from abc import ABC, abstractmethod
-from typing import Optional, List
+from typing import List, Optional
+
+import requests
 
 # 导入配置加载器
 try:
-    from config_loader import get_config
+    from dify_chat_tester.config_loader import get_config
+
     config = get_config()
 except ImportError:
     # 如果没有配置加载器，使用默认配置
@@ -43,9 +45,10 @@ class AIProvider(ABC):
         message: str,
         model: str,
         role: str = "员工",
-        conversation_id: Optional[str] = None,
+        history: Optional[List[dict]] = None,  # 新增：用于传递对话历史
+        conversation_id: Optional[str] = None,  # 保留：用于Dify
         stream: bool = True,
-        show_indicator: bool = True
+        show_indicator: bool = True,
     ) -> tuple:
         """
         发送消息到 AI 供应商
@@ -66,11 +69,11 @@ class AIProvider(ABC):
     # 等待指示器配置（可调整）
     # 从配置中获取，如果失败则使用默认值
     if config:
-        WAITING_INDICATORS = config.get_list('WAITING_INDICATORS', default=[
-            "⣾", "⣽", "⣻", "⢿", "⡿", "⣟", "⣯", "⣷"
-        ])
-        WAITING_TEXT = config.get_str('WAITING_TEXT', '正在思考')
-        WAITING_DELAY = config.get_float('WAITING_DELAY', 0.1)
+        WAITING_INDICATORS = config.get_list(
+            "WAITING_INDICATORS", default=["⣾", "⣽", "⣻", "⢿", "⡿", "⣟", "⣯", "⣷"]
+        )
+        WAITING_TEXT = config.get_str("WAITING_TEXT", "正在思考")
+        WAITING_DELAY = config.get_float("WAITING_DELAY", 0.1)
     else:
         WAITING_INDICATORS = ["⣾", "⣽", "⣻", "⢿", "⡿", "⣟", "⣯", "⣷"]
         WAITING_TEXT = "正在思考"
@@ -113,43 +116,35 @@ class DifyProvider(AIProvider):
         message: str,
         model: str,
         role: str = "员工",
+        history: Optional[List[dict]] = None,  # 新增：匹配基类签名
         conversation_id: Optional[str] = None,
         stream: bool = True,
-        show_indicator: bool = True
+        show_indicator: bool = True,
     ) -> tuple:
         """发送消息到 Dify API"""
         # 根据 Dify 官方文档，私有化部署使用 /v1/chat-messages 路径
         # base_url 应该是域名，程序会自动添加 /v1 前缀
 
-        # 构造所有可能的 API URL
-        possible_urls = []
+        # Ensure base_url ends with /v1
+        if not self.base_url.endswith("/v1"):
+            # If it ends with a slash, remove it before adding /v1
+            if self.base_url.endswith("/"):
+                self.base_url = self.base_url.rstrip("/") + "/v1"
+            else:
+                self.base_url += "/v1"
 
-        # 情况1: base_url 以 /v1 结尾 (如: http://your-domain.com/v1)
-        if self.base_url.endswith('/v1'):
-            # 标准 Dify API 路径
-            possible_urls.append(f"{self.base_url}/chat-messages")  # http://your-domain.com/v1/chat-messages
-        # 情况2: base_url 不以 /v1 结尾 (如: http://your-domain.com)
-        else:
-            possible_urls.append(f"{self.base_url}/v1/chat-messages")  # http://your-domain.com/v1/chat-messages
-
-        # 私有化部署可能的其他路径（作为备选）
-        base_domain = self.base_url.rstrip('/v1').rstrip('/')
-        possible_urls.extend([
-            f"{base_domain}/api/chat-messages",  # http://your-domain.com/api/chat-messages
-        ])
+        url = f"{self.base_url}/chat-messages"
 
         headers = {
             "Authorization": f"Bearer {self.api_key}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         }
 
         payload = {
-            "inputs": {
-                "role": role
-            },
+            "inputs": {"role": role},
             "query": message,
             "response_mode": "streaming" if stream else "blocking",
-            "user": "chat_tester"
+            "user": "chat_tester",
         }
 
         if conversation_id:
@@ -159,85 +154,46 @@ class DifyProvider(AIProvider):
         waiting_thread = None
         first_char_printed = False
         new_conversation_id = None
+        last_error = None # Initialize last_error here
 
-        # 初始化变量，确保在所有路径中都有值
-        last_error = None
-        response = None
-        
         try:
-            # 初始化等待线程
-            waiting_thread = None
-            
-            # 尝试所有可能的 URL
-            for i, url in enumerate(possible_urls):
-                try:
-                    # 只在第一次尝试时显示URL信息
-                    if i == 0 and show_indicator:
-                        print(f"[INFO] 正在连接: {url}", file=sys.stderr)
-                    
-                    # 启动等待动画（如果需要）
-                    if show_indicator and waiting_thread is None:
-                        waiting_thread = threading.Thread(target=self.show_waiting_indicator, args=(stop_event,))
-                        waiting_thread.daemon = True
-                        waiting_thread.start()
+            # 启动等待动画（如果需要）
+            if show_indicator:
+                waiting_thread = threading.Thread(
+                    target=self.show_waiting_indicator, args=(stop_event,)
+                )
+                waiting_thread.daemon = True
+                waiting_thread.start()
 
-                    response = requests.post(url, headers=headers, json=payload, stream=stream, timeout=30, allow_redirects=False)
-                    
-                    # 检查是否需要重定向
-                    if response.status_code in [301, 302, 307, 308]:
-                        redirect_url = response.headers.get('Location')
-                        if redirect_url:
-                            try:
-                                response = requests.post(redirect_url, headers=headers, json=payload, stream=stream, timeout=30, allow_redirects=False)
-                                response.raise_for_status()
-                                # 使用新的 response 对象继续处理
-                            except Exception as redirect_error:
-                                last_error = f"重定向失败: {str(redirect_error)}"
-                                continue
-                        else:
-                            # 没有 Location 头的重定向
-                            last_error = "重定向响应但缺少 Location 头"
-                            continue
-                    
-                    response.raise_for_status()
+            response = requests.post(
+                url,
+                headers=headers,
+                json=payload,
+                stream=stream,
+                timeout=30,
+                allow_redirects=False,
+            )
 
-                    # 处理响应
-                    break  # 成功，跳出循环
+            # 检查是否需要重定向
+            if response.status_code in [301, 302, 307, 308]:
+                redirect_url = response.headers.get("Location")
+                if redirect_url:
+                    response = requests.post(
+                        redirect_url,
+                        headers=headers,
+                        json=payload,
+                        stream=stream,
+                        timeout=30,
+                        allow_redirects=False,
+                    )
+                else:
+                    raise requests.exceptions.RequestException(
+                        "重定向响应但缺少 Location 头"
+                    )
 
-                except requests.exceptions.HTTPError as e:
-                    # 记录错误，如果是最后一个 URL 则抛出
-                    last_error = f"HTTP错误: {e.response.status_code} - {e.response.text}"
-                    
-                    # 处理重定向
-                    if e.response.status_code in [301, 302, 307, 308]:
-                        redirect_url = e.response.headers.get('Location')
-                        if redirect_url:
-                            # 如果是重定向，尝试使用重定向后的 URL
-                            try:
-                                response = requests.post(redirect_url, headers=headers, json=payload, stream=stream, timeout=30, allow_redirects=False)
-                                response.raise_for_status()
-                                # 成功！跳出循环
-                                break
-                            except Exception as redirect_error:
-                                last_error = f"重定向失败: {str(redirect_error)}"
-                                continue
-                    
-                    if e.response.status_code in [401, 403]:
-                        # 认证错误，不再尝试其他 URL
-                        break
-                    continue
-                except requests.exceptions.RequestException as e:
-                    # 网络错误，尝试下一个 URL
-                    last_error = f"请求错误: {str(e)}"
-                    continue
+            response.raise_for_status()
 
-            else:
-                # 所有 URL 都失败了
-                raise requests.exceptions.HTTPError(last_error) if last_error else Exception("所有 API URL 都失败")
 
-            # 检查 response 是否已成功获取
-            if response is None:
-                raise Exception("无法获取有效响应")
 
         except requests.exceptions.HTTPError as e:
             if show_indicator:
@@ -267,10 +223,14 @@ class DifyProvider(AIProvider):
             full_response = ""
             for line in response.iter_lines():
                 if line:
-                    decoded_line = line.decode('utf-8')
+                    decoded_line = line.decode("utf-8")
                     # 检查是否是 HTML 响应（可能是错误页面）
-                    if decoded_line.startswith("<!DOCTYPE") or decoded_line.startswith("<html"):
-                        raise Exception(f"收到 HTML 响应而非 JSON: {decoded_line[:100]}")
+                    if decoded_line.startswith("<!DOCTYPE") or decoded_line.startswith(
+                        "<html"
+                    ):
+                        raise Exception(
+                            f"收到 HTML 响应而非 JSON: {decoded_line[:100]}"
+                        )
                     if decoded_line.startswith("data:"):
                         try:
                             data = json.loads(decoded_line[5:])
@@ -310,19 +270,19 @@ class DifyProvider(AIProvider):
             return full_response, True, None, new_conversation_id
         else:
             # 检查响应内容类型
-            content_type = response.headers.get('content-type', '').lower()
-            if 'text/html' in content_type:
+            content_type = response.headers.get("content-type", "").lower()
+            if "text/html" in content_type:
                 # 如果返回 HTML，可能是错误页面
                 html_content = response.text[:200]
                 return "", False, f"收到 HTML 响应而非 JSON: {html_content}", None
-            
+
             try:
                 data = response.json()
             except json.JSONDecodeError:
                 # 如果不是 JSON，可能是其他错误
                 text_content = response.text[:200]
                 return "", False, f"响应不是有效 JSON: {text_content}", None
-                
+
             if show_indicator:
                 stop_event.set()
                 if waiting_thread is not None:
@@ -348,26 +308,28 @@ class OpenAIProvider(AIProvider):
     """OpenAI 兼容 API 供应商实现"""
 
     def __init__(self, base_url: str, api_key: str):
-        self.base_url = base_url.rstrip('/')
+        self.base_url = base_url.rstrip("/")
         self.api_key = api_key
-        self.conversation_history = []
 
         # 从配置中获取 OpenAI 模型列表
         if config:
-            self.DEFAULT_MODELS = config.get_list('OPENAI_MODELS', default=[
-                "gpt-4o",
-                "gpt-4o-mini",
-                "gpt-4-turbo",
-                "gpt-3.5-turbo",
-                "custom-model"
-            ])
+            self.DEFAULT_MODELS = config.get_list(
+                "OPENAI_MODELS",
+                default=[
+                    "gpt-4o",
+                    "gpt-4o-mini",
+                    "gpt-4-turbo",
+                    "gpt-3.5-turbo",
+                    "custom-model",
+                ],
+            )
         else:
             self.DEFAULT_MODELS = [
                 "gpt-4o",
                 "gpt-4o-mini",
                 "gpt-4-turbo",
                 "gpt-3.5-turbo",
-                "custom-model"
+                "custom-model",
             ]
 
     def get_models(self) -> List[str]:
@@ -379,29 +341,32 @@ class OpenAIProvider(AIProvider):
         message: str,
         model: str,
         role: str = "员工",
-        conversation_id: Optional[str] = None,
+        history: Optional[List[dict]] = None,  # 新增：用于传递对话历史
+        conversation_id: Optional[str] = None,  # 保留：匹配基类签名
         stream: bool = True,
-        show_indicator: bool = True
+        show_indicator: bool = True,
     ) -> tuple:
         """发送消息到 OpenAI 兼容 API"""
         # 处理 base_url：如果已包含 /v1 路径，只添加 /chat/completions
-        if self.base_url.endswith('/v1'):
+        if self.base_url.endswith("/v1"):
             url = f"{self.base_url}/chat/completions"
         else:
             url = f"{self.base_url}/v1/chat/completions"
 
         headers = {
             "Authorization": f"Bearer {self.api_key}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         }
 
         # 准备消息
         messages = [
-            {"role": "system", "content": f"你是一个AI助手。当前角色：{role}。请以专业、友好的方式回答问题。"}
+            {
+                "role": "system",
+                "content": f"你是一个AI助手。当前角色：{role}。请以专业、友好的方式回答问题。",
+            }
         ]
-
-        # 如果有历史对话，添加到消息中
-        messages.extend(self.conversation_history)
+        if history:
+            messages.extend(history)
         messages.append({"role": "user", "content": message})
 
         payload = {
@@ -409,7 +374,7 @@ class OpenAIProvider(AIProvider):
             "messages": messages,
             "stream": stream,
             "temperature": 0.7,
-            "max_tokens": 2000
+            "max_tokens": 2000,
         }
 
         stop_event = threading.Event()
@@ -418,18 +383,27 @@ class OpenAIProvider(AIProvider):
 
         try:
             if show_indicator:
-                waiting_thread = threading.Thread(target=self.show_waiting_indicator, args=(stop_event,))
+                waiting_thread = threading.Thread(
+                    target=self.show_waiting_indicator, args=(stop_event,)
+                )
                 waiting_thread.daemon = True
                 waiting_thread.start()
 
-            response = requests.post(url, headers=headers, json=payload, stream=stream, timeout=30, allow_redirects=False)
+            response = requests.post(
+                url,
+                headers=headers,
+                json=payload,
+                stream=stream,
+                timeout=30,
+                allow_redirects=False,
+            )
             response.raise_for_status()
 
             if stream:
                 full_response = ""
                 for line in response.iter_lines():
                     if line:
-                        decoded_line = line.decode('utf-8')
+                        decoded_line = line.decode("utf-8")
                         if decoded_line.startswith("data: "):
                             if decoded_line == "data: [DONE]":
                                 break
@@ -458,14 +432,7 @@ class OpenAIProvider(AIProvider):
                 if show_indicator:
                     print()
 
-                # 更新对话历史
-                if full_response:
-                    self.conversation_history.append({"role": "user", "content": message})
-                    self.conversation_history.append({"role": "assistant", "content": full_response})
-                    # 保持历史在合理长度内
-                    if len(self.conversation_history) > 20:
-                        self.conversation_history = self.conversation_history[-20:]
-
+                # 对话历史由调用方管理，此处不再更新
                 return full_response, True, None, conversation_id
             else:
                 data = response.json()
@@ -479,10 +446,7 @@ class OpenAIProvider(AIProvider):
                     if show_indicator:
                         print("OpenAI:", content)
 
-                    # 更新对话历史
-                    self.conversation_history.append({"role": "user", "content": message})
-                    self.conversation_history.append({"role": "assistant", "content": content})
-
+                    # 对话历史由调用方管理，此处不再更新
                     return content, True, None, conversation_id
                 else:
                     return "", False, "未知响应格式", None
@@ -515,22 +479,19 @@ class iFlowProvider(AIProvider):
     def __init__(self, api_key: str):
         self.base_url = "https://apis.iflow.cn/v1"
         self.api_key = api_key
-        self.conversation_history = []
 
         # 从配置中获取 iFlow 模型列表
         if config:
-            self.DEFAULT_MODELS = config.get_list('IFLOW_MODELS', default=[
-                "qwen3-max",
-                "kimi-k2-0905",
-                "glm-4.6",
-                "deepseek-v3.2"
-            ])
+            self.DEFAULT_MODELS = config.get_list(
+                "IFLOW_MODELS",
+                default=["qwen3-max", "kimi-k2-0905", "glm-4.6", "deepseek-v3.2"],
+            )
         else:
             self.DEFAULT_MODELS = [
                 "qwen3-max",
                 "kimi-k2-0905",
                 "glm-4.6",
-                "deepseek-v3.2"
+                "deepseek-v3.2",
             ]
 
     def get_models(self) -> List[str]:
@@ -542,24 +503,27 @@ class iFlowProvider(AIProvider):
         message: str,
         model: str,
         role: str = "员工",
-        conversation_id: Optional[str] = None,
+        history: Optional[List[dict]] = None,  # 新增：用于传递对话历史
+        conversation_id: Optional[str] = None,  # 保留：匹配基类签名
         stream: bool = True,
-        show_indicator: bool = True
+        show_indicator: bool = True,
     ) -> tuple:
         """发送消息到 iFlow API"""
         url = f"{self.base_url}/chat/completions"
         headers = {
             "Authorization": f"Bearer {self.api_key}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         }
 
         # 准备消息
         messages = [
-            {"role": "system", "content": f"你是一个AI助手。当前角色：{role}。请以专业、友好的方式回答问题。"}
+            {
+                "role": "system",
+                "content": f"你是一个AI助手。当前角色：{role}。请以专业、友好的方式回答问题。",
+            }
         ]
-
-        # 如果有历史对话，添加到消息中
-        messages.extend(self.conversation_history)
+        if history:
+            messages.extend(history)
         messages.append({"role": "user", "content": message})
 
         payload = {
@@ -567,7 +531,7 @@ class iFlowProvider(AIProvider):
             "messages": messages,
             "stream": stream,
             "temperature": 0.7,
-            "max_tokens": 2000
+            "max_tokens": 2000,
         }
 
         stop_event = threading.Event()
@@ -576,12 +540,16 @@ class iFlowProvider(AIProvider):
 
         try:
             if show_indicator:
-                waiting_thread = threading.Thread(target=self.show_waiting_indicator, args=(stop_event,))
+                waiting_thread = threading.Thread(
+                    target=self.show_waiting_indicator, args=(stop_event,)
+                )
                 waiting_thread.daemon = True
                 waiting_thread.start()
 
             # 先尝试流式响应
-            response = requests.post(url, headers=headers, json=payload, stream=True, timeout=30)
+            response = requests.post(
+                url, headers=headers, json=payload, stream=True, timeout=30
+            )
             response.raise_for_status()
 
             full_response = ""
@@ -591,7 +559,7 @@ class iFlowProvider(AIProvider):
             try:
                 for line in response.iter_lines():
                     if line:
-                        decoded_line = line.decode('utf-8')
+                        decoded_line = line.decode("utf-8")
                         if decoded_line.startswith("data: "):
                             if decoded_line == "data: [DONE]":
                                 stream_success = True
@@ -631,7 +599,7 @@ class iFlowProvider(AIProvider):
                 if show_indicator:
                     print()
 
-            except Exception:
+            except (json.JSONDecodeError, requests.exceptions.RequestException):
                 # 流式解析出错，保持 stream_success 为 False，尝试非流式
                 pass
 
@@ -640,12 +608,16 @@ class iFlowProvider(AIProvider):
                 try:
                     # 重新发送非流式请求
                     payload["stream"] = False
-                    response = requests.post(url, headers=headers, json=payload, stream=False, timeout=30)
+                    response = requests.post(
+                        url, headers=headers, json=payload, stream=False, timeout=30
+                    )
                     response.raise_for_status()
                     data = response.json()
 
                     if "choices" in data and len(data["choices"]) > 0:
-                        content = data["choices"][0].get("message", {}).get("content", "")
+                        content = (
+                            data["choices"][0].get("message", {}).get("content", "")
+                        )
                         if not content and "text" in data["choices"][0]:
                             content = data["choices"][0]["text"]
 
@@ -665,14 +637,7 @@ class iFlowProvider(AIProvider):
                 except Exception as e:
                     return "", False, f"非流式回退失败: {str(e)}", None
 
-            # 更新对话历史
-            if full_response:
-                self.conversation_history.append({"role": "user", "content": message})
-                self.conversation_history.append({"role": "assistant", "content": full_response})
-                # 保持历史在合理长度内
-                if len(self.conversation_history) > 20:
-                    self.conversation_history = self.conversation_history[-20:]
-
+            # 对话历史由调用方管理，此处不再更新
             return full_response, True, None, conversation_id
 
         except requests.exceptions.HTTPError as e:
@@ -707,11 +672,7 @@ def get_provider(provider_name: str, **kwargs) -> AIProvider:
     Returns:
         AIProvider 实例
     """
-    providers = {
-        "dify": DifyProvider,
-        "openai": OpenAIProvider,
-        "iflow": iFlowProvider
-    }
+    providers = {"dify": DifyProvider, "openai": OpenAIProvider, "iflow": iFlowProvider}
 
     if provider_name not in providers:
         raise ValueError(f"不支持的 AI 供应商: {provider_name}")

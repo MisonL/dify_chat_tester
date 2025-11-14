@@ -16,6 +16,8 @@
 - 📊 **批量询问模式** - Excel 批量处理，实时保存结果
 - 📝 **详细日志记录** - 完整的操作记录和错误追踪
 - 🎨 **美观终端界面** - 基于 Rich 库的现代化 CLI
+- 🔐 **安全输入** - API密钥自动隐藏，保护隐私
+- 🔄 **流畅切换** - 模式间快速切换，无需重启
 
 ## 🚀 快速开始
 
@@ -55,6 +57,7 @@ cp config.env.example config.env
 | 🔒 **部署方式** | 支持云服务和私有化部署 |
 | 🔑 **API格式** | `app-xxxxx` |
 | 🌐 **官网** | [https://cloud.dify.ai](https://cloud.dify.ai) |
+| 🎯 **特色** | 无需选择模型，直接使用应用ID |
 
 ### 2. OpenAI 兼容接口
 
@@ -82,8 +85,9 @@ cp config.env.example config.env
 ✅ 实时多轮对话
 ✅ 上下文自动维护
 ✅ 命令控制：
-   - exit: 退出程序
+   - /exit 或 /quit: 返回模式选择
    - /new: 重置对话
+✅ 退出时静默返回，无额外提示
 ```
 
 ### 批量询问模式
@@ -99,11 +103,17 @@ cp config.env.example config.env
 
 ```
 dify_chat_tester/
-├── main.py                    # 主程序入口
+├── main.py                    # 主程序入口（简洁委托）
 ├── dify_chat_tester/          # 核心模块
+│   ├── app_controller.py      # 应用控制器
+│   ├── chat_manager.py        # 聊天管理器
+│   ├── batch_manager.py       # 批量管理器
+│   ├── provider_setup.py      # 供应商设置
+│   ├── selectors.py           # 选择器
 │   ├── ai_providers.py        # AI供应商实现
 │   ├── config_loader.py       # 配置管理
-│   └── terminal_ui.py         # 终端界面
+│   ├── terminal_ui.py         # 终端界面
+│   └── excel_utils.py         # Excel工具
 ├── config.env.example         # 配置模板
 ├── pyproject.toml            # 项目配置
 └── README.md                 # 项目文档
@@ -121,11 +131,14 @@ dify_chat_tester/
 主要配置项（config.env）：
 
 ```bash
-# 角色配置
+# 角色配置（包含内置用户选项）
 ROLES=员工,门店,管理员
 
 # 批量处理间隔（秒）
 BATCH_REQUEST_INTERVAL=1.0
+
+# 是否默认显示批量回答
+BATCH_DEFAULT_SHOW_RESPONSE=true
 
 # iFlow 模型列表
 IFLOW_MODELS=qwen3-max,kimi-k2-0905,glm-4.6,deepseek-v3.2
@@ -135,6 +148,8 @@ OPENAI_MODELS=gpt-4o,gpt-4o-mini,gpt-3.5-turbo
 
 # 等待动画
 WAITING_INDICATORS=⣾,⣽,⣻,⢿,⡿,⣟,⣯,⣷
+WAITING_TEXT=正在思考
+WAITING_DELAY=0.1
 ```
 
 ## 🛠️ 开发
@@ -147,6 +162,10 @@ uv run ruff check .
 
 # 自动修复
 uv run ruff check --fix .
+
+# 代码格式化
+uv run black .
+uv run isort .
 ```
 
 ### 测试
@@ -165,8 +184,6 @@ uv run pytest
 **Mison** - <1360962086@qq.com>
 
 [GitHub](https://github.com/MisonL) | [邮箱](mailto:1360962086@qq.com)
-
----
 
 ---
 
@@ -210,39 +227,6 @@ graph TD
 - 📝 **建议**：首次使用请先阅读[程序使用方法](用户使用指南.md#9-程序使用方法)
 
 **👉 [查看完整用户使用指南](用户使用指南.md)**
-
-### 📑 快速导航
-
-| 章节 | 内容 | 适用人群 |
-|------|------|----------|
-| 📋 [准备工作](用户使用指南.md#1-准备工作) | 系统要求和环境检查 | 所有用户 |
-| 📝 [安装 VSCode](用户使用指南.md#2-安装-vscode) | 代码编辑器安装配置 | 新手用户 |
-| 🐍 [安装 Python](用户使用指南.md#3-安装-python) | Python 环境搭建 | 所有用户 |
-| 📦 [安装 Git](用户使用指南.md#4-安装-git-for-windows) | 版本控制工具安装 | 所有用户 |
-| 🚀 [克隆项目](用户使用指南.md#5-克隆项目) | 获取项目代码 | 所有用户 |
-| ⚙️ [安装依赖](用户使用指南.md#7-安装-uv-包管理器) | 环境配置和依赖安装 | 所有用户 |
-| 🎮 [使用方法](用户使用指南.md#9-程序使用方法) | 程序运行和功能说明 | 所有用户 |
-| ❓ [常见问题](用户使用指南.md#10-常见问题) | 问题排查和解决方案 | 遇到问题的用户 |
-
-### 💡 核心步骤概览
-
-```mermaid
-graph TD
-    A[下载安装 VSCode] --> B[安装 Python 3.7+]
-    B --> C[安装 Git for Windows]
-    C --> D[克隆项目到本地]
-    D --> E[安装 uv 包管理器]
-    E --> F[运行 uv sync 安装依赖]
-    F --> G[配置 config.env 文件]
-    G --> H[运行程序开始使用]
-```
-
-### 🎯 特别提醒
-
-- ℹ️ **Python PATH**：本项目使用 uv 管理 Python 环境，无需勾选 "Add Python to PATH" 也能正常运行
-- 💻 **推荐**：设置 VSCode 默认终端为 Git Bash
-- 🔑 **安全**：不要在配置文件中硬编码 API 密钥
-- 📝 **建议**：首次使用请先阅读[程序使用方法](用户使用指南.md#9-程序使用方法)
 
 ---
 
