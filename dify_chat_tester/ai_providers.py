@@ -122,18 +122,13 @@ class DifyProvider(AIProvider):
         show_indicator: bool = True,
     ) -> tuple:
         """发送消息到 Dify API"""
-        # 根据 Dify 官方文档，私有化部署使用 /v1/chat-messages 路径
-        # base_url 应该是域名，程序会自动添加 /v1 前缀
-
-        # Ensure base_url ends with /v1
-        if not self.base_url.endswith("/v1"):
-            # If it ends with a slash, remove it before adding /v1
-            if self.base_url.endswith("/"):
-                self.base_url = self.base_url.rstrip("/") + "/v1"
-            else:
-                self.base_url += "/v1"
-
-        url = f"{self.base_url}/chat-messages"
+        # base_url 已经包含了完整的 API 基础路径（包括 /v1）
+        # 直接添加 chat-messages 端点
+        
+        # 确保 base_url 不以 / 结尾，避免双斜杠
+        base_url = self.base_url.rstrip('/')
+        
+        url = f"{base_url}/chat-messages"
 
         headers = {
             "Authorization": f"Bearer {self.api_key}",
