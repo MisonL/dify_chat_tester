@@ -10,7 +10,6 @@ from datetime import datetime
 import openpyxl
 
 from dify_chat_tester.terminal_ui import (
-    Icons,
     Panel,
     Text,
     box,
@@ -22,7 +21,6 @@ from dify_chat_tester.terminal_ui import (
     print_success,
 )
 from dify_chat_tester.excel_utils import (
-    clean_excel_text,
     init_excel_log,
     log_to_excel,
     write_cell_safely,
@@ -49,11 +47,7 @@ def run_batch_query(
     mode_text.append("💬 供应商: ", style="bold yellow")
     mode_text.append(f"{provider_name}", style="bold cyan")
 
-    # 如果是 Dify，添加应用 ID
-    app_id = getattr(provider, "app_id", None)
-    if provider_name == "Dify" and app_id:
-        mode_text.append("\n🔑 应用 ID: ", style="bold yellow")
-        mode_text.append(f"{app_id}", style="bold cyan")
+    # Dify 不再需要显示应用 ID
 
     mode_panel = Panel(
         mode_text,
@@ -120,9 +114,9 @@ def run_batch_query(
     # 注意：不再创建或使用回答列，所有结果只记录到日志文件
 
     # 询问是否显示每个问题的回答内容
-    display_response_choice = print_input_prompt("是否在控制台显示每个问题的回答内容？ (y/N)")
+    display_response_choice = print_input_prompt("是否在控制台显示每个问题的回答内容？ (Y/n)")
     show_batch_response = (
-        (display_response_choice.lower() == "y") if display_response_choice else batch_default_show_response
+        (display_response_choice.lower() != "n") if display_response_choice else True
     )
 
     # 从配置中获取请求间隔时间（使用配置中的默认值）
@@ -245,10 +239,7 @@ def run_batch_query(
     if base_url:
         summary_text.append(f"  • API 接口: {base_url}\n", style="white")
 
-    # 如果是 Dify，添加应用 ID
-    app_id = getattr(provider, "app_id", None)
-    if provider_name == "Dify" and app_id:
-        summary_text.append(f"  • 应用 ID: {app_id}\n", style="white")
+    # Dify 不再需要显示应用 ID
 
     summary_text.append("\n", style="white")
 

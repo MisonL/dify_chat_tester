@@ -17,7 +17,6 @@ from dify_chat_tester.provider_setup import (
 )
 from dify_chat_tester.selectors import select_mode, select_model, select_role
 from dify_chat_tester.terminal_ui import (
-    Icons,
     Panel,
     Text,
     box,
@@ -97,9 +96,9 @@ class AppController:
                     provider_id = provider_info["id"]
                     return provider_name, provider_id
                 else:
-                    print_error("无效的供应商序号！")
+                    print_error("无效的供应商序号")
             except ValueError:
-                print_error("请输入有效的数字！")
+                error_msg = "请输入有效的数字！"
 
     def _setup_provider(self, provider_id):
         """设置AI供应商"""
