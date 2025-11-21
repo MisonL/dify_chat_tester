@@ -50,20 +50,23 @@
 - 专业的 LLM 应用开发平台
 - 支持私有化部署
 - API 密钥格式: `app-xxxxx`
-- 特性: 应用 ID 提取、重定向处理、会话管理
+- 特性: 应用 ID 提取、重定向处理、会话管理、真正的流式输出
 - 注意: 不需要选择模型，直接使用应用 ID
+- 更新: 修复应用 ID 传递方式，通过 inputs 参数传递
 
 ### 2. OpenAI 兼容接口
 - 通用适配器，支持任何 OpenAI 格式的 API
 - 支持自定义基础 URL
 - 支持自定义模型名称
 - 特性: 对话历史管理、流式响应
+- 更新: 修复流式处理问题，支持自定义模型输入
 
 ### 3. iFlow
 - 多模型 AI 平台
 - 预配置基础 URL: `https://apis.iflow.cn/v1`
 - 内置模型: qwen3-max, kimi-k2-0905, glm-4.6, deepseek-v3.2
 - 特性: 流式响应自动回退到非流式
+- 更新: 修复响应解析逻辑，支持更稳定的流式处理
 
 ## Running the Application
 
@@ -116,6 +119,10 @@ uv run isort .
 
 # 创建发布包
 python build/create_release_zip.py
+
+# 生成的打包文件格式：
+# - macOS: dify_chat_tester_macos_YYYYMMDD_HHMMSS.tar.gz
+# - Windows: dify_chat_tester_windows_YYYYMMDD_HHMMSS.zip
 ```
 
 ## Configuration
@@ -160,6 +167,7 @@ python build/create_release_zip.py
 - 实时结果写入
 - 带时间戳的详细日志
 - 可配置的请求间隔
+- 新特性: 默认显示响应内容（Y/n），可通过配置控制
 
 ## Architecture
 
@@ -178,13 +186,15 @@ python build/create_release_zip.py
    - `terminal_ui.py`: UI 组件
 
 ### Key Features
-- 带指示器的流式响应
-- 批量处理的 Excel 集成
-- 多供应商支持
+- 带指示器的流式响应（Dify 渠道真正的实时流式输出）
+- 批量处理的 Excel 集成（默认显示响应内容）
+- 多供应商支持（Dify、OpenAI 兼容接口、iFlow）
 - Rich 终端 UI 体验
 - Windows 控制台增强
 - 跨平台兼容性
 - 模块化的代码架构
+- 流式响应失败自动回退机制
+- 优化的错误处理和异常管理
 
 ## Development Conventions
 
@@ -258,12 +268,36 @@ python build/create_release_zip.py
 
 ## Version Information
 
-- **当前版本**: 1.0.0
+- **当前版本**: 1.1.0
 - **Python 要求**: >=3.7
 - **许可证**: MIT
 - **作者**: Mison
 - **邮箱**: 1360962086@qq.com
 - **仓库**: https://github.com/MisonL/dify_chat_tester
+
+## Recent Changes (v1.1.0)
+
+### 新增功能
+- 批量查询模式默认显示响应内容（Y/n）
+- 流式响应失败自动回退机制
+- 改进的流式响应解析，支持实时显示
+
+### 重要修复
+- 修复 Dify 渠道实现真正的流式输出
+- 修复 Dify 应用 ID 传递方式（通过 inputs 参数）
+- 修复 OpenAI 兼容接口的流式处理问题
+- 修复 iFlow 渠道的响应解析逻辑
+
+### 优化改进
+- 增加请求超时时间到 60 秒
+- 优化错误处理和异常信息
+- 清理代码质量问题（清理未使用导入）
+- 删除所有测试文件和调试文件，优化项目结构
+
+### 构建和发布
+- 支持跨平台打包（macOS 和 Windows）
+- 自动化构建脚本和发布流程
+- GitHub 和 GitLab 双平台发布
 
 ## Dependencies
 
