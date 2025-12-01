@@ -155,7 +155,8 @@ def run_batch_query(
     queries_since_last_save = 0
     start_time = time.time()
 
-    print("\n开始批量询问...")
+    total_rows = batch_worksheet.max_row - 1
+    print(f"\n开始批量询问... (共 {total_rows} 行数据)")
     for row_idx in range(2, batch_worksheet.max_row + 1):  # 从第二行开始读取数据
         # 获取文档名称（如果输入表中存在对应列）
         doc_name = ""
@@ -187,8 +188,17 @@ def run_batch_query(
 
         total_queries += 1  # 只有非空问题才计入总数
 
+        # 计算进度
+        current_progress = row_idx - 1
+        pending_count = total_rows - current_progress
+        progress_percent = (current_progress / total_rows) * 100
+
         # 美化问题显示（加粗和颜色）
-        question_display = f"[bold bright_magenta]处理问题 (第 {total_queries} 个):[/bold bright_magenta] [bold yellow]{question[:50]}{'...' if len(question) > 50 else ''}[/bold yellow]"
+        question_display = (
+            f"[bold bright_magenta]处理进度 ({current_progress}/{total_rows} - {progress_percent:.1f}%) "
+            f"| 待处理: {pending_count} | 问题:[/bold bright_magenta] "
+            f"[bold yellow]{question[:50]}{'...' if len(question) > 50 else ''}[/bold yellow]"
+        )
         console.print(f"\n{question_display}")
 
         response, success, error, conversation_id = provider.send_message(
