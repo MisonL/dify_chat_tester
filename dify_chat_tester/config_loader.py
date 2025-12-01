@@ -104,7 +104,14 @@ class ConfigLoader:
             self._create_basic_config_file(base_dir)
 
     def _get_default_config_dict(self) -> dict:
-        """返回默认配置字典"""
+        """返回默认配置字典
+
+        说明：
+        - Provider 相关敏感信息（如 API_KEY 等）默认留空，
+          用户可在 config.env 中自行填写；
+        - 读取时如果为空字符串，会被视为“未配置”，
+          程序会自动回退到交互式输入方式。
+        """
         return {
             "CHAT_LOG_FILE_NAME": "chat_log.xlsx",
             "ROLES": "员工,门店",
@@ -116,6 +123,19 @@ class ConfigLoader:
             "WAITING_INDICATORS": "⣾,⣽,⣻,⢿,⡿,⣟,⣯,⣷",
             "WAITING_TEXT": "正在思考",
             "WAITING_DELAY": "0.1",
+            # 日志配置
+            "LOG_LEVEL": "INFO",
+            "LOG_TO_FILE": "false",
+            "LOG_FILE_NAME": "dify_chat_tester.log",
+            # UI 配置
+            "USE_RICH_UI": "true",  # 是否使用富文本 UI（false 时使用简单文本输出）
+            # Provider 默认配置（留空即可，通过 config.env 配置）
+            "DIFY_BASE_URL": "",
+            "DIFY_API_KEY": "",
+            "DIFY_APP_ID": "",
+            "OPENAI_BASE_URL": "",
+            "OPENAI_API_KEY": "",
+            "IFLOW_API_KEY": "",
         }
 
     def _create_basic_config_file(self, base_dir):

@@ -218,6 +218,9 @@ dify_chat_tester/uv.lock
 *.swo
 *~
 
+# Knowledge base documents
+kb-docs/
+
 # OS generated files
 Icon?
 nohup.out

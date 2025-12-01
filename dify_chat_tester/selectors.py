@@ -136,3 +136,80 @@ def select_mode():
             print_error("无效的模式选择，请重新输入。")
             console.print()
             continue
+
+
+def select_main_function():
+    """选择主功能"""
+    print("请选择功能:")
+    print("1. AI问答测试")
+    print("2. AI生成测试提问点")
+    print("0. 退出程序")
+    console.print()
+
+    while True:
+        function_choice = print_input_prompt("请输入功能序号")
+
+        if function_choice in ["1", "2", "0"]:
+            return function_choice
+        else:
+            print_error("无效的功能选择，请重新输入。")
+            console.print()
+            continue
+
+
+def select_folder_path(default_path: str = "./kb-docs"):
+    """
+    选择文档文件夹路径
+    
+    Args:
+        default_path: 默认路径
+        
+    Returns:
+        str: 选择的文件夹路径
+    """
+    from pathlib import Path
+    
+    print(f"请选择文档文件夹路径 (直接回车使用默认路径: {default_path}):")
+    print(f"1. 使用默认路径: {default_path}")
+    print("2. 输入自定义路径")
+    
+    # 列出当前目录下的文件夹
+    current_dir = Path(".")
+    folders = [f for f in current_dir.iterdir() if f.is_dir() and not f.name.startswith('.')]
+    
+    if folders:
+        print("\n当前目录下的文件夹:")
+        for idx, folder in enumerate(folders, start=3):
+            print(f"{idx}. {folder.name}")
+    
+    console.print()
+    
+    while True:
+        choice = print_input_prompt("请输入选择 (直接回车使用默认)")
+        
+        # 如果直接回车（空输入），使用默认路径
+        if not choice or choice.strip() == "":
+            print(f"使用默认路径: {default_path}")
+            return default_path
+        elif choice == "1":
+            # 使用默认路径
+            return default_path
+        elif choice == "2":
+            # 输入自定义路径
+            custom_path = print_input_prompt("请输入文件夹路径")
+            if custom_path and custom_path.strip():
+                return custom_path.strip()
+            else:
+                print_error("路径不能为空，请重新输入。")
+        elif choice.isdigit() and folders:
+            # 选择列出的文件夹
+            idx = int(choice) - 3
+            if 0 <= idx < len(folders):
+                return str(folders[idx])
+            else:
+                print_error("无效的选择，请重新输入。")
+        else:
+            print_error("无效的选择，请重新输入。")
+        
+        console.print()
+

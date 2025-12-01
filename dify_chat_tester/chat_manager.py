@@ -7,9 +7,17 @@ from datetime import datetime
 from dify_chat_tester.terminal_ui import Icons, console, print_error, print_input_prompt, print_success
 from dify_chat_tester.excel_utils import init_excel_log, log_to_excel
 
+# 每多少轮对话保存一次聊天日志
+SAVE_EVERY_N_ROUNDS = 5
+
 
 def run_interactive_chat(
-    provider, selected_role: str, provider_name: str, selected_model: str, chat_log_file_name: str
+    provider,
+    selected_role: str,
+    provider_name: str,
+    selected_model: str,
+    chat_log_file_name: str,
+    provider_id: str = None,
 ):
     """运行会话模式"""
     # 初始化 Excel
@@ -29,6 +37,7 @@ def run_interactive_chat(
     print_success(f"已选择模型: {selected_model}")
     console.print()
     console.print(f"{Icons.INFO} 命令说明:", style="bold cyan")
+    console.print(f"  {Icons.USER} 输入 '/help' 查看命令说明", style="white")
     console.print(f"  {Icons.USER} 输入 '/exit' 或 '/quit' 返回模式选择", style="white")
     console.print(
         f"  {Icons.USER} 输入 '/new' 开启新的对话（重置上下文）", style="white"
@@ -44,6 +53,17 @@ def run_interactive_chat(
     while True:
         user_input = print_input_prompt(f"{Icons.USER} 你")
         user_input = user_input.strip()
+
+        # 处理帮助命令
+        if user_input == "/help":
+            console.print()
+            console.print(f"{Icons.INFO} 可用命令:", style="bold cyan")
+            console.print(f"  {Icons.USER} 直接输入内容：向 {provider_name} 提问", style="white")
+            console.print("  /help  查看命令说明", style="white")
+            console.print("  /new   开启新对话（重置上下文）", style="white")
+            console.print("  /exit 或 /quit 返回模式选择", style="white")
+            console.print()
+            continue
 
         # 处理退出命令 - 返回运行模式选择
         if user_input.lower() in ["/exit", "/quit"]:
@@ -68,7 +88,9 @@ def run_interactive_chat(
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
         # 根据供应商类型调用 send_message
-        if provider_name == "Dify":
+        is_dify = (provider_id == "dify") if provider_id else (provider_name == "Dify")
+        
+        if is_dify:
             response, success, error, new_conversation_id = provider.send_message(
                 message=user_input,
                 model=selected_model,
@@ -112,14 +134,15 @@ def run_interactive_chat(
             ],
         )
 
-        # 实时保存日志（每轮对话后都保存）
-        try:
-            workbook.save(chat_log_file_name)
-        except PermissionError:
-            print_error(
-                f"警告：无法实时保存日志文件 '{chat_log_file_name}'。请确保文件未被其他程序打开。"
-            )
-        except Exception as e:
-            print_error(f"警告：保存日志时出错：{e}")
+        # 按轮次批量保存日志，减少 IO 频率
+        if conversation_round % SAVE_EVERY_N_ROUNDS == 0:
+            try:
+                workbook.save(chat_log_file_name)
+            except PermissionError:
+                print_error(
+                    f"警告：无法保存日志文件 '{chat_log_file_name}'。请确保文件未被其他程序打开。"
+                )
+            except Exception as e:
+                print_error(f"警告：保存日志时出错：{e}")
 
-    # 注意：日志保存已在退出时处理
+    # 注意：循环通过 /exit 或 /quit 返回调用方，此处不再额外处理

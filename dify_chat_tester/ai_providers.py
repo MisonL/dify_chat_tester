@@ -21,6 +21,8 @@ from typing import List, Optional
 
 import requests
 
+from dify_chat_tester.logging_utils import get_logger
+
 # 导入配置加载器
 try:
     from dify_chat_tester.config_loader import get_config
@@ -29,6 +31,48 @@ try:
 except ImportError:
     # 如果没有配置加载器，使用默认配置
     config = None
+
+
+logger = get_logger("dify_chat_tester.ai_providers")
+
+
+def _friendly_error_message(error_msg: str, status_code: Optional[int] = None) -> str:
+    """将底层错误信息翻译为更友好的中文提示。
+
+    说明：
+    - 保持返回的字符串简洁、可执行；
+    - 详细技术信息已经写入日志，这里只给用户看概要。
+    """
+    # HTTP 状态码优先
+    if status_code is not None:
+        if status_code in (401, 403):
+            return "认证失败：API 密钥无效或权限不足，请检查配置。"
+        if status_code == 429:
+            return "请求过于频繁，已触发频率限制，请适当增大请求间隔或稍后重试。"
+        if 500 <= status_code <= 599:
+            return f"服务端错误（HTTP {status_code}），请稍后重试或联系服务提供方。"
+
+    # 常见网络类错误关键字
+    lowered = error_msg.lower()
+    net_keywords = [
+        "failed to establish a new connection",
+        "name or service not known",
+        "temporary failure in name resolution",
+        "connection refused",
+        "max retries exceeded",
+        "connecttimeout",
+        "read timed out",
+        "timeout",
+    ]
+    if any(k in lowered for k in net_keywords):
+        return "无法连接到 API 服务器，请检查网络连接和 base_url 配置是否正确。"
+
+    ssl_keywords = ["ssl", "certificate_verify_failed"]
+    if any(k in lowered for k in ssl_keywords):
+        return "SSL 证书错误，请检查 API 地址是否正确或联系管理员。"
+
+    # 默认返回原始信息（已是中文时可直接展现）
+    return error_msg
 
 
 class AIProvider(ABC):
@@ -151,7 +195,6 @@ class DifyProvider(AIProvider):
         waiting_thread = None
         first_char_printed = False
         new_conversation_id = None
-        last_error = None # Initialize last_error here
 
         try:
             # 启动等待动画（如果需要）
@@ -197,19 +240,33 @@ class DifyProvider(AIProvider):
                 stop_event.set()
                 if waiting_thread is not None:
                     waiting_thread.join(timeout=0.5)
-            error_msg = f"{last_error or str(e)}"
+            # 尝试提供更有用的错误信息
+            response_text = ""
+            try:
+                response_text = e.response.text
+            except Exception:
+                response_text = ""
+            status_code = getattr(e.response, "status_code", None)
+            if response_text:
+                raw_error = f"HTTP错误 {status_code}: {response_text}"
+            else:
+                raw_error = str(e)
+            friendly_error = _friendly_error_message(raw_error, status_code=status_code)
+            logger.error("Dify 请求 HTTP 错误: %s", raw_error)
             if show_indicator:
-                print(f"\r错误: {error_msg}", file=sys.stderr)
-            return "", False, error_msg, None
+                print(f"\r错误: {friendly_error}", file=sys.stderr)
+            return "", False, friendly_error, None
         except Exception as e:
             if show_indicator:
                 stop_event.set()
                 if waiting_thread is not None:
                     waiting_thread.join(timeout=0.5)
-            error_msg = f"请求错误: {str(e)}"
+            raw_error = f"请求错误: {str(e)}"
+            friendly_error = _friendly_error_message(raw_error)
+            logger.exception("Dify 请求异常: %s", raw_error)
             if show_indicator:
-                print(f"\r错误: {error_msg}", file=sys.stderr)
-            return "", False, error_msg, None
+                print(f"\r错误: {friendly_error}", file=sys.stderr)
+            return "", False, friendly_error, None
         finally:
             if show_indicator:
                 stop_event.set()
@@ -423,19 +480,28 @@ class OpenAIProvider(AIProvider):
                     stop_event.set()
                     if waiting_thread is not None:
                         waiting_thread.join(timeout=0.5)
-                return "", False, "请求超时", conversation_id
+                raw_error = "请求超时"
+                friendly_error = _friendly_error_message(raw_error)
+                logger.warning("OpenAI 请求超时: %s", raw_error)
+                return "", False, friendly_error, conversation_id
             except requests.exceptions.ConnectionError as e:
                 if show_indicator:
                     stop_event.set()
                     if waiting_thread is not None:
                         waiting_thread.join(timeout=0.5)
-                return "", False, f"连接错误: {str(e)}", conversation_id
+                raw_error = f"连接错误: {str(e)}"
+                friendly_error = _friendly_error_message(raw_error)
+                logger.error("OpenAI 连接错误: %s", raw_error)
+                return "", False, friendly_error, conversation_id
             except Exception as e:
                 if show_indicator:
                     stop_event.set()
                     if waiting_thread is not None:
                         waiting_thread.join(timeout=0.5)
-                return "", False, f"请求错误: {str(e)}", conversation_id
+                raw_error = f"请求错误: {str(e)}"
+                friendly_error = _friendly_error_message(raw_error)
+                logger.exception("OpenAI 请求异常: %s", raw_error)
+                return "", False, friendly_error, conversation_id
 
             if stream:
                 full_response = ""
@@ -616,15 +682,27 @@ class OpenAIProvider(AIProvider):
                             error_info = f"响应格式异常。收到的数据: {str(data)[:200]}"
                             return "", False, error_info, None
                     except requests.exceptions.Timeout:
-                        return "", False, "非流式请求超时", None
+                        raw_error = "非流式请求超时"
+                        friendly_error = _friendly_error_message(raw_error)
+                        logger.warning("OpenAI 非流式请求超时: %s", raw_error)
+                        return "", False, friendly_error, None
                     except requests.exceptions.ConnectionError as e:
-                        return "", False, f"非流式请求连接错误: {str(e)}", None
+                        raw_error = f"非流式请求连接错误: {str(e)}"
+                        friendly_error = _friendly_error_message(raw_error)
+                        logger.error("OpenAI 非流式连接错误: %s", raw_error)
+                        return "", False, friendly_error, None
                     except json.JSONDecodeError as e:
                         # 尝试显示原始响应
                         raw_response = response.text[:500] if hasattr(response, 'text') else "无法读取响应"
-                        return "", False, f"非流式响应JSON解析错误: {str(e)}。原始响应: {raw_response}", None
+                        raw_error = f"非流式响应JSON解析错误: {str(e)}。原始响应: {raw_response}"
+                        friendly_error = _friendly_error_message(raw_error)
+                        logger.error("OpenAI 非流式 JSON 解析错误: %s", raw_error)
+                        return "", False, friendly_error, None
                     except Exception as e:
-                        return "", False, f"非流式请求异常: {str(e)}", None
+                        raw_error = f"非流式请求异常: {str(e)}"
+                        friendly_error = _friendly_error_message(raw_error)
+                        logger.exception("OpenAI 非流式请求异常: %s", raw_error)
+                        return "", False, friendly_error, None
 
                 if show_indicator:
                     print()
@@ -658,37 +736,46 @@ class OpenAIProvider(AIProvider):
                 response_text = e.response.text
             except Exception:
                 response_text = "无法读取响应内容"
-            error_msg = f"HTTP错误 {e.response.status_code}: {response_text}"
+            status_code = getattr(e.response, "status_code", None)
+            raw_error = f"HTTP错误 {status_code}: {response_text}"
+            friendly_error = _friendly_error_message(raw_error, status_code=status_code)
+            logger.error("OpenAI HTTP 错误: %s", raw_error)
             if show_indicator:
-                print(f"\r错误: {error_msg}", file=sys.stderr)
-            return "", False, error_msg, None
+                print(f"\r错误: {friendly_error}", file=sys.stderr)
+            return "", False, friendly_error, None
         except requests.exceptions.Timeout:
             if show_indicator:
                 stop_event.set()
                 if waiting_thread is not None:
                     waiting_thread.join(timeout=0.5)
-            error_msg = "请求超时，请稍后重试"
+            raw_error = "请求超时，请稍后重试"
+            friendly_error = _friendly_error_message(raw_error)
+            logger.warning("OpenAI 请求超时: %s", raw_error)
             if show_indicator:
-                print(f"\r错误: {error_msg}", file=sys.stderr)
-            return "", False, error_msg, None
+                print(f"\r错误: {friendly_error}", file=sys.stderr)
+            return "", False, friendly_error, None
         except requests.exceptions.ConnectionError as e:
             if show_indicator:
                 stop_event.set()
                 if waiting_thread is not None:
                     waiting_thread.join(timeout=0.5)
-            error_msg = f"连接错误: {str(e)}"
+            raw_error = f"连接错误: {str(e)}"
+            friendly_error = _friendly_error_message(raw_error)
+            logger.error("OpenAI 连接错误: %s", raw_error)
             if show_indicator:
-                print(f"\r错误: {error_msg}", file=sys.stderr)
-            return "", False, error_msg, None
+                print(f"\r错误: {friendly_error}", file=sys.stderr)
+            return "", False, friendly_error, None
         except Exception as e:
             if show_indicator:
                 stop_event.set()
                 if waiting_thread is not None:
                     waiting_thread.join(timeout=0.5)
-            error_msg = f"请求错误: {str(e)}"
+            raw_error = f"请求错误: {str(e)}"
+            friendly_error = _friendly_error_message(raw_error)
+            logger.exception("OpenAI 请求异常: %s", raw_error)
             if show_indicator:
-                print(f"\r错误: {error_msg}", file=sys.stderr)
-            return "", False, error_msg, None
+                print(f"\r错误: {friendly_error}", file=sys.stderr)
+            return "", False, friendly_error, None
         finally:
             if show_indicator:
                 stop_event.set()
@@ -756,6 +843,10 @@ class iFlowProvider(AIProvider):
             "temperature": 0.7,
             "max_tokens": 2000,
         }
+        
+        # 添加流式优化参数
+        if stream:
+            payload["stream_options"] = {"include_usage": True}
 
         stop_event = threading.Event()
         waiting_thread = None
@@ -769,9 +860,15 @@ class iFlowProvider(AIProvider):
                 waiting_thread.daemon = True
                 waiting_thread.start()
 
-            # 先尝试流式响应，增加超时时间到 60 秒
+            # 先尝试流式响应，增加超时时间到 60 秒，优化连接配置
             response = requests.post(
-                url, headers=headers, json=payload, stream=True, timeout=60
+                url, 
+                headers=headers, 
+                json=payload, 
+                stream=True, 
+                timeout=60,
+                verify=True,
+                allow_redirects=True
             )
             
             # 检查响应状态
@@ -793,9 +890,9 @@ class iFlowProvider(AIProvider):
 
             # 尝试流式解析
             try:
-                # 直接使用 iter_lines，让 requests 自动处理解压
-                # 虽然可能不是完美的流式，但至少能正常工作
-                for line in response.iter_lines():
+                # 使用 iter_lines 并设置 chunk_size=1 来优化流式响应
+                # 这样可以更快地接收到数据流
+                for line in response.iter_lines(chunk_size=1):
                     if line:
                         has_lines = True
                         line_count += 1
@@ -845,8 +942,8 @@ class iFlowProvider(AIProvider):
                             except json.JSONDecodeError:
                                 continue
                 else:
-                    # 非压缩响应，使用 iter_lines
-                    for line in response.iter_lines():
+                    # 非压缩响应，使用 iter_lines 并优化 chunk_size
+                    for line in response.iter_lines(chunk_size=1):
                         if line:
                             has_lines = True
                             line_count += 1
@@ -918,9 +1015,28 @@ class iFlowProvider(AIProvider):
                     # 重新发送非流式请求
                     # 标准 OpenAI API 设置 stream=False
                     payload["stream"] = False
+                    # 移除流式选项
+                    if "stream_options" in payload:
+                        del payload["stream_options"]
                     response = requests.post(
-                        url, headers=headers, json=payload, stream=False, timeout=60
+                        url, 
+                        headers=headers, 
+                        json=payload, 
+                        stream=False, 
+                        timeout=60,
+                        verify=True,
+                        allow_redirects=True
                     )
+                    
+                    # 检查响应状态
+                    if response.status_code != 200:
+                        error_text = response.text[:500] if response.text else f"状态码: {response.status_code}"
+                        return "", False, f"非流式请求失败: {error_text}", None
+                    
+                    # 检查响应内容
+                    if not response.content:
+                        return "", False, "非流式请求返回空响应", None
+                        
                     response.raise_for_status()
                     data = response.json()
 
@@ -939,13 +1055,23 @@ class iFlowProvider(AIProvider):
                                 print("iFlow:", content)
                             full_response = content
                         else:
-                            return "", False, "响应格式异常", None
+                            # 提供更详细的错误信息，便于调试
+                            error_info = f"响应格式异常。收到的数据: {str(data)[:200]}"
+                            return "", False, error_info, None
                     else:
-                        return "", False, "响应格式异常", None
+                        # 提供更详细的错误信息，便于调试
+                        error_info = f"响应格式异常。收到的数据: {str(data)[:200]}"
+                        return "", False, error_info, None
                 except requests.exceptions.Timeout:
-                    return "", False, "请求超时", None
+                    return "", False, "非流式请求超时", None
+                except requests.exceptions.ConnectionError as e:
+                    return "", False, f"非流式请求连接错误: {str(e)}", None
+                except json.JSONDecodeError as e:
+                    # 尝试显示原始响应
+                    raw_response = response.text[:500] if hasattr(response, 'text') else "无法读取响应"
+                    return "", False, f"非流式响应JSON解析错误: {str(e)}。原始响应: {raw_response}", None
                 except Exception as e:
-                    return "", False, f"非流式回退失败: {str(e)}", None
+                    return "", False, f"非流式请求异常: {str(e)}", None
 
             # 对话历史由调用方管理，此处不再更新
             # 调试：确保返回的响应不为空
@@ -966,28 +1092,35 @@ class iFlowProvider(AIProvider):
                 response_text = e.response.text
             except Exception:
                 response_text = "无法读取响应内容"
-            error_msg = f"HTTP错误 {e.response.status_code}: {response_text}"
+            status_code = getattr(e.response, "status_code", None)
+            raw_error = f"HTTP错误 {status_code}: {response_text}"
+            friendly_error = _friendly_error_message(raw_error, status_code=status_code)
+            logger.error("iFlow HTTP 错误: %s", raw_error)
             if show_indicator:
-                print(f"\r错误: {error_msg}", file=sys.stderr)
-            return "", False, error_msg, None
+                print(f"\r错误: {friendly_error}", file=sys.stderr)
+            return "", False, friendly_error, None
         except requests.exceptions.Timeout:
             if show_indicator:
                 stop_event.set()
                 if waiting_thread is not None:
                     waiting_thread.join(timeout=0.5)
-            error_msg = "请求超时，请稍后重试"
+            raw_error = "请求超时，请稍后重试"
+            friendly_error = _friendly_error_message(raw_error)
+            logger.warning("iFlow 请求超时: %s", raw_error)
             if show_indicator:
-                print(f"\r错误: {error_msg}", file=sys.stderr)
-            return "", False, error_msg, None
+                print(f"\r错误: {friendly_error}", file=sys.stderr)
+            return "", False, friendly_error, None
         except Exception as e:
             if show_indicator:
                 stop_event.set()
                 if waiting_thread is not None:
                     waiting_thread.join(timeout=0.5)
-            error_msg = f"请求错误: {str(e)}"
+            raw_error = f"请求错误: {str(e)}"
+            friendly_error = _friendly_error_message(raw_error)
+            logger.exception("iFlow 请求异常: %s", raw_error)
             if show_indicator:
-                print(f"\r错误: {error_msg}", file=sys.stderr)
-            return "", False, error_msg, None
+                print(f"\r错误: {friendly_error}", file=sys.stderr)
+            return "", False, friendly_error, None
         finally:
             if show_indicator:
                 stop_event.set()

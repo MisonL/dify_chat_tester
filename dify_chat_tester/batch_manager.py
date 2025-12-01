@@ -23,8 +23,10 @@ from dify_chat_tester.terminal_ui import (
 from dify_chat_tester.excel_utils import (
     init_excel_log,
     log_to_excel,
-    write_cell_safely,
 )
+
+# 每多少条问题保存一次批量日志
+SAVE_EVERY_N_QUERIES = 10
 
 
 def run_batch_query(
@@ -106,6 +108,13 @@ def run_batch_query(
     column_names = [cell.value for cell in batch_worksheet[1]]
     print_success(f"已选择文件: {selected_excel_file}")
 
+    # 检查是否存在“文档名称”列（如果存在则复用）
+    doc_name_col_index = None
+    try:
+        doc_name_col_index = column_names.index("文档名称")
+    except ValueError:
+        doc_name_col_index = None
+
     # 让用户通过序号选择问题列
     from dify_chat_tester.terminal_ui import select_column_by_index
 
@@ -130,6 +139,7 @@ def run_batch_query(
     batch_log_headers = [
         "时间戳",
         "角色",
+        "文档名称",
         "原始问题",
         f"{provider_name}响应",
         "是否成功",
@@ -141,10 +151,18 @@ def run_batch_query(
     total_queries = 0
     successful_queries = 0
     failed_queries = 0
+    # 自上次保存以来已处理的问题数量
+    queries_since_last_save = 0
     start_time = time.time()
 
     print("\n开始批量询问...")
     for row_idx in range(2, batch_worksheet.max_row + 1):  # 从第二行开始读取数据
+        # 获取文档名称（如果输入表中存在对应列）
+        doc_name = ""
+        if doc_name_col_index is not None:
+            doc_cell_value = batch_worksheet.cell(row=row_idx, column=doc_name_col_index + 1).value
+            doc_name = str(doc_cell_value) if doc_cell_value is not None else ""
+
         question_cell_value = batch_worksheet.cell(row=row_idx, column=question_col_index + 1).value
         question = str(question_cell_value) if question_cell_value is not None else ""  # 确保转换为字符串
 
@@ -156,6 +174,7 @@ def run_batch_query(
                 [
                     datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                     selected_role,
+                    doc_name,
                     question,  # 原始问题为空
                     "",
                     False,
@@ -193,6 +212,7 @@ def run_batch_query(
             [
                 datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                 selected_role,
+                doc_name,
                 question,
                 response,
                 success,
@@ -201,17 +221,28 @@ def run_batch_query(
             ],
         )
 
-        # 实时保存日志（每轮对话后都保存）
-        try:
-            output_workbook.save(output_file_name)
-        except PermissionError:
-            print_error(f"警告：无法实时保存日志文件 '{output_file_name}'。请确保文件未被其他程序打开。")
-        except Exception as e:
-            print_error(f"警告：保存日志时出错：{e}")
+        # 按批次保存日志，减少磁盘 IO
+        queries_since_last_save += 1
+        if queries_since_last_save >= SAVE_EVERY_N_QUERIES:
+            try:
+                output_workbook.save(output_file_name)
+                queries_since_last_save = 0
+            except PermissionError:
+                print_error(f"警告：无法保存日志文件 '{output_file_name}'。请确保文件未被其他程序打开。")
+            except Exception as e:
+                print_error(f"警告：保存日志时出错：{e}")
 
         # 原始文件保持不变，只记录到日志文件
 
         time.sleep(request_interval)  # 间隔时间
+
+    # 循环结束后做一次最终保存
+    try:
+        output_workbook.save(output_file_name)
+    except PermissionError:
+        print_error(f"警告：无法保存日志文件 '{output_file_name}'。请确保文件未被其他程序打开。")
+    except Exception as e:
+        print_error(f"警告：保存日志时出错：{e}")
 
     end_time = time.time()
     total_duration = end_time - start_time

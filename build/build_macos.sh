@@ -77,7 +77,7 @@ if [ -f "$PROJECT_DIR/dist/dify_chat_tester" ]; then
     
     # 复制文档文件（如果存在）
     [ -f "$PROJECT_DIR/README.md" ] && cp "$PROJECT_DIR/README.md" "$PROJECT_DIR/release_macos/"
-    [ -f "$PROJECT_DIR/用户使用指南.md" ] && cp "$PROJECT_DIR/用户使用指南.md" "$PROJECT_DIR/release_macos/"
+    [ -d "$PROJECT_DIR/docs" ] && cp -r "$PROJECT_DIR/docs" "$PROJECT_DIR/release_macos/"
     
     # 创建启动脚本
     cat > "$PROJECT_DIR/release_macos/run.sh" << 'EOF'

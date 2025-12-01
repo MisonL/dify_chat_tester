@@ -10,11 +10,14 @@ from rich import box
 from rich.console import Console, Group
 from rich.panel import Panel
 from rich.prompt import Confirm, Prompt
-from rich.rule import Rule
 from rich.table import Table
 from rich.text import Text
 
-from dify_chat_tester import __author__, __email__, __license__, __version__
+from dify_chat_tester.config_loader import get_config
+
+# 读取配置，控制是否使用富文本 UI
+_config = get_config()
+USE_RICH_UI = _config.get_bool("USE_RICH_UI", True)
 
 # 初始化 colorama（Windows 兼容）
 colorama.init(autoreset=True)
@@ -73,6 +76,10 @@ class Icons:
 
 def print_success(message: str):
     """打印成功信息"""
+    if not USE_RICH_UI:
+        console.print(f"[SUCCESS] {message}")
+        return
+
     success_text = Text()
     success_text.append(f"✅ {message}", style=f"bold {Colors.SUCCESS}")
 
@@ -84,6 +91,10 @@ def print_success(message: str):
 
 def print_error(message: str):
     """打印错误信息"""
+    if not USE_RICH_UI:
+        console.print(f"[ERROR] {message}")
+        return
+
     error_text = Text()
     error_text.append(f"❌ {message}", style=f"bold {Colors.ERROR}")
 
@@ -95,6 +106,10 @@ def print_error(message: str):
 
 def print_warning(message: str):
     """打印警告信息"""
+    if not USE_RICH_UI:
+        console.print(f"[WARN] {message}")
+        return
+
     warning_text = Text()
     warning_text.append(f"⚠️ {message}", style=f"bold {Colors.WARNING}")
 
@@ -106,6 +121,10 @@ def print_warning(message: str):
 
 def print_info(message: str):
     """打印信息"""
+    if not USE_RICH_UI:
+        console.print(f"[INFO] {message}")
+        return
+
     info_text = Text()
     info_text.append(f"ℹ️ {message}", style=f"bold {Colors.INFO}")
 
@@ -118,13 +137,16 @@ def print_info(message: str):
 def print_input_prompt(message: str) -> str:
     """打印输入提示（美化的）"""
     # 使用普通的 input() 替代 Prompt.ask，解决退格键问题
-    text = Text()
-    text.append(f"{Icons.GEAR} ", style=f"bold {Colors.ACCENT}")
-    text.append(message + ": ", style=Colors.TEXT)
-    
-    # 打印提示符但不换行
-    console.print(text, end="")
-    
+    if not USE_RICH_UI:
+        # 简单文本提示
+        console.print(f">> {message}: ", end="")
+    else:
+        text = Text()
+        text.append(f"{Icons.GEAR} ", style=f"bold {Colors.ACCENT}")
+        text.append(message + ": ", style=Colors.TEXT)
+        # 打印提示符但不换行
+        console.print(text, end="")
+
     try:
         # 使用内置 input 函数，确保退格键正常工作
         return input().strip()
@@ -137,13 +159,14 @@ def input_api_key(prompt: str) -> str:
     """安全地输入 API 密钥（不回显密钥内容）"""
     import getpass
 
-    text = Text()
-    text.append(f"{Icons.GEAR} ", style="bold yellow")
-    text.append(prompt, style="bold white")
-    # 不添加冒号，让 getpass 自动处理
-
-    # 打印提示符但不换行
-    console.print(text, end="")
+    if not USE_RICH_UI:
+        console.print(prompt, end="")
+    else:
+        text = Text()
+        text.append(f"{Icons.GEAR} ", style="bold yellow")
+        text.append(prompt, style="bold white")
+        # 打印提示符但不换行
+        console.print(text, end="")
 
     # 使用 getpass 获取密码
     try:
@@ -179,6 +202,18 @@ def print_statistics(total: int, success: int, failed: int, duration: float):
     success_rate = (success / total * 100) if total > 0 else 0
     failed_rate = (failed / total * 100) if total > 0 else 0
     avg_time = duration / total if total > 0 else 0
+
+    # 简单文本模式
+    if not USE_RICH_UI:
+        console.print(f"总处理数量: {total}")
+        console.print(f"成功数量: {success} ({success_rate:.1f}%)")
+        console.print(f"失败数量: {failed} ({failed_rate:.1f}%)")
+        console.print(f"总用时长: {duration:.2f} 秒")
+        console.print(f"平均用时: {avg_time:.2f} 秒/问题")
+        speed = total / duration if duration > 0 else 0
+        console.print(f"处理速度: {speed:.1f} 问题/秒")
+        console.print()
+        return
 
     # 统计信息内容
     stats_text = Text()
@@ -217,6 +252,12 @@ def print_statistics(total: int, success: int, failed: int, duration: float):
 
 def print_welcome():
     """打印美化版的程序标题头"""
+    if not USE_RICH_UI:
+        console.print("==============================")
+        console.print("dify_chat_tester - AI聊天测试工具")
+        console.print("==============================")
+        return
+
     console.print()
 
     # 标题
@@ -238,7 +279,7 @@ def print_welcome():
         box=box.ROUNDED,
         border_style="bright_cyan",
         padding=(1, 4),
-        width=54,  # 修正宽度以匹配信息面板 (54 -> 50)
+        width=50,  # 修正宽度以匹配信息面板
         expand=False,  # 不扩展宽度
     )
 
@@ -249,7 +290,12 @@ def print_api_key_confirmation(api_key: str) -> bool:
     """打印 API 密钥确认"""
     # 隐藏密钥中间部分
     hidden_key = hide_api_key(api_key)
-    
+
+    if not USE_RICH_UI:
+        console.print(f"已输入密钥: {hidden_key}")
+        answer = input("是否正确？[Y/n]: ").strip().lower()
+        return answer in ("", "y", "yes")
+
     key_text = Text()
     key_text.append("🔑 已输入密钥:\n", style="bold green")
     key_text.append(f"  {hidden_key}", style="bold cyan")
@@ -287,6 +333,10 @@ def hide_api_key(key: str) -> str:
 def print_file_list(files: list):
     """打印文件列表"""
     if not files:
+        if not USE_RICH_UI:
+            console.print("当前目录没有找到 Excel 文件")
+            return
+
         warning_text = Text()
         warning_text.append("⚠️ 当前目录没有找到 Excel 文件", style="bold orange_red1")
         warning_panel = Panel(
@@ -297,6 +347,12 @@ def print_file_list(files: list):
             padding=(1, 2),
         )
         console.print(warning_panel)
+        return
+
+    if not USE_RICH_UI:
+        for i, file_name in enumerate(files, 1):
+            console.print(f"[{i}] {file_name}")
+        console.print()
         return
 
     # 表格内容
@@ -320,6 +376,12 @@ def print_file_list(files: list):
 
 def print_column_list(columns: list):
     """打印列名列表"""
+    if not USE_RICH_UI:
+        for i, col_name in enumerate(columns, 1):
+            console.print(f"[{i}] {col_name}")
+        console.print()
+        return
+
     # 表格内容
     table = Table(show_header=False, box=None, padding=(0, 1))
     table.add_column("序号", style="cyan", justify="center", width=8)

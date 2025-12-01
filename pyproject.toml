@@ -1,6 +1,6 @@
 [project]
 name = "dify-chat-tester"
-version = "1.1.0"
+version = "1.2.0"
 description = "AI 聊天客户端测试工具（支持多AI供应商）"
 authors = [
     {name = "Mison", email = "1360962086@qq.com"}
@@ -15,12 +15,17 @@ dependencies = [
     "rich",
 ]
 
+[project.scripts]
+# 安装为包后，可直接使用 `dify-chat-tester` 命令启动程序
+"dify-chat-tester" = "main:main"
+
 [dependency-groups]
 dev = [
     "pytest>=7.0.0",
     "black>=23.0.0",
     "isort>=5.0.0",
     "pyinstaller>=5.13.2",
+    "pytest-cov>=4.1.0",
 ]
 
 [build-system]

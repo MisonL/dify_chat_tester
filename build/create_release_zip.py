@@ -44,6 +44,18 @@ def create_zip():
         shutil.copy2(excel_file, os.path.join(source_dir, 'dify_chat_tester_template.xlsx'))
         print("Copied Excel template")
     
+    # Copy README
+    readme_file = os.path.join(project_dir, 'README.md')
+    if os.path.exists(readme_file):
+        shutil.copy2(readme_file, os.path.join(source_dir, 'README.md'))
+        print("Copied README")
+    
+    # Copy docs folder
+    docs_dir = os.path.join(project_dir, 'docs')
+    if os.path.exists(docs_dir):
+        shutil.copytree(docs_dir, os.path.join(source_dir, 'docs'), dirs_exist_ok=True)
+        print("Copied docs folder")
+    
     # Windows exe can be run directly, no need for run.bat script
     
     # Create ZIP

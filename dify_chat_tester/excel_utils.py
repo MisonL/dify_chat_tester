@@ -3,7 +3,6 @@
 """
 
 import os
-from datetime import datetime
 
 import openpyxl
 from openpyxl.cell.cell import MergedCell
