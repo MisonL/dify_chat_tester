@@ -12,12 +12,13 @@
 ## ✨ 功能特性
 
 - 🌐 **多 AI 供应商支持** - 集成 Dify、OpenAI 兼容接口、iFlow
-- 💬 **实时对话模式** - 支持多轮对话，上下文维护
+- 💬 **实时对话模式** - 支持多轮对话，智能上下文维护
 - 📊 **批量询问模式** - Excel 批量处理，实时保存结果
-- 📝 **详细日志记录** - 完整的操作记录和错误追踪
-- 🎨 **美观终端界面** - 基于 Rich 库的现代化 CLI
-- 🔐 **安全输入** - API 密钥自动隐藏，保护隐私
-- 🔄 **流畅切换** - 模式间快速切换，无需重启
+- 🤖 **AI 生成测试问题** - 智能分析文档，自动生成测试提问点
+- 📝 **智能日志系统** - 日志轮转、权限自适应、完整错误追踪
+- 🎨 **美观终端界面** - 基于 Rich 库的现代化 CLI，流式输出优化
+- 🔐 **安全输入** - API 密钥自动隐藏，配置文件保护
+- 🔄 **灵活配置** - 支持配置文件和交互式输入双模式
 
 ## 🚀 快速开始
 
@@ -37,7 +38,10 @@ pip install requests openpyxl colorama rich
 # 交互式模式（默认）
 uv run python main.py
 
-# 直接进入“AI生成测试提问点”功能，可选指定文档目录
+# 直接进入 "AI 生成测试提问点" 功能
+uv run python main.py -- --mode question-generation
+
+# 指定文档目录（跳过目录选择）
 uv run python main.py -- --mode question-generation --folder ./kb-docs
 ```
 
@@ -83,7 +87,7 @@ cp .env.config.example .env.config
 
 ## 💻 运行模式
 
-### 会话模式
+### 1️⃣ 会话模式
 
 ```bash
 # 启动后选择 1
@@ -96,14 +100,26 @@ cp .env.config.example .env.config
 ✅ 退出时静默返回，无额外提示
 ```
 
-### 批量询问模式
+### 2️⃣ 批量询问模式
 
 ```bash
 # 启动后选择 2
-📁 从Excel文件读取问题
-🚀 批量发送到AI供应商
-💾 实时写入结果到Excel
-📊 生成详细日志文件
+📁 从 Excel 文件读取问题
+🚀 批量发送到 AI 供应商
+💾 实时写入结果到 Excel
+📊 进度条显示处理状态
+📈 生成详细统计信息
+```
+
+### 3️⃣ AI 生成测试提问点
+
+```bash
+# 启动后选择 3
+📂 读取指定目录下的 Markdown 文档
+🤖 AI 智能分析文档内容
+❓ 自动生成高质量测试问题
+💾 导出为 Excel 文件（带美化表头）
+⚡ 支持增量保存，避免进度丢失
 ```
 
 ## 📂 项目结构
@@ -128,50 +144,56 @@ dify_chat_tester/
 
 ## 📝 日志文件
 
-| 模式        | 文件名                                 | 内容                   |
-| ----------- | -------------------------------------- | ---------------------- |
-| 🗣️ 会话模式 | `chat_log.xlsx`                        | 对话记录、时间戳、状态 |
-| 📊 批量模式 | `batch_query_log_YYYYMMDD_HHMMSS.xlsx` | 详细操作日志、错误追踪 |
+| 模式              | 文件名                                     | 内容                               |
+| ----------------- | ------------------------------------------ | ---------------------------------- |
+| 🗣️ 会话模式       | `chat_log.xlsx`                            | 对话记录、时间戳、状态             |
+| 📊 批量模式       | `batch_query_log_YYYYMMDD_HHMMSS.xlsx`     | 批量询问结果、详细操作日志         |
+| 🤖 问题生成模式   | `question_generation_YYYYMMDD_HHMMSS.xlsx` | AI 生成的测试问题、文档名称对应    |
+| 📋 系统日志(可选) | `dify_chat_tester.log`                     | 程序运行日志（需开启 LOG_TO_FILE） |
 
 ## ⚙️ 配置说明
 
 主要配置项（.env.config）：
 
 ```bash
-# 角色配置（包含内置用户选项）
+# === 文件配置 ===
+CHAT_LOG_FILE_NAME=chat_log.xlsx
+
+# === 角色配置 ===
 ROLES=员工,门店,管理员
 
-# 批量处理间隔（秒）
-BATCH_REQUEST_INTERVAL=1.0
+# === 批量处理配置 ===
+BATCH_REQUEST_INTERVAL=1.0           # 批量请求间隔（秒）
+BATCH_DEFAULT_SHOW_RESPONSE=true     # 是否默认显示批量回答
 
-# 是否默认显示批量回答
-BATCH_DEFAULT_SHOW_RESPONSE=true
+# === 网络重试配置 ===
+# 仅在出现网络超时/连接错误时重试
+NETWORK_MAX_RETRIES=3                # 每次请求的最大重试次数
+NETWORK_RETRY_DELAY=1.0              # 重试之间的等待时间（秒）
 
-# 网络重试配置（仅在出现网络超时/连接错误时重试）
-NETWORK_MAX_RETRIES=3      # 每次请求的最大重试次数
-NETWORK_RETRY_DELAY=1.0   # 重试之间的等待时间（秒）
-
-# iFlow 模型列表
+# === AI 模型配置 ===
 IFLOW_MODELS=qwen3-max,kimi-k2-0905,glm-4.6,deepseek-v3.2
-
-# OpenAI 模型列表
 OPENAI_MODELS=gpt-4o,gpt-4o-mini,gpt-3.5-turbo
 
-# 等待动画
+# === 等待动画配置 ===
 WAITING_INDICATORS=⣾,⣽,⣻,⢿,⡿,⣟,⣯,⣷
 WAITING_TEXT=正在思考
 WAITING_DELAY=0.1
 
-# 终端 UI 配置
-# true 使用 Rich 彩色面板，false 使用简单文本输出
-USE_RICH_UI=true
+# === 终端 UI 配置 ===
+USE_RICH_UI=true                     # true 使用 Rich 彩色面板，false 使用简单文本
+ENABLE_THINKING=true                 # 是否默认开启思维链/推理过程
 
-# 日志配置
-LOG_LEVEL=INFO              # DEBUG/INFO/WARNING/ERROR/CRITICAL
-LOG_TO_FILE=false           # 是否写入日志文件
-LOG_FILE_NAME=dify_chat_tester.log
+# === 日志配置 ===
+LOG_LEVEL=INFO                       # DEBUG/INFO/WARNING/ERROR/CRITICAL
+LOG_TO_FILE=false                    # 是否写入日志文件
+LOG_FILE_NAME=dify_chat_tester.log   # 日志文件名
+# LOG_DIR=logs                       # 日志目录（可选，默认 logs）
+# LOG_MAX_BYTES=10485760             # 单个日志文件最大字节数（默认 10MB）
+# LOG_BACKUP_COUNT=5                 # 保留的备份文件数量（默认 5）
 
-# Provider 连接配置（可选，未配置则在程序中交互输入）
+# === Provider 连接配置（可选） ===
+# 未配置则在程序中交互输入
 # DIFY_BASE_URL=https://api.dify.ai/v1
 # DIFY_API_KEY=app-xxx
 # DIFY_APP_ID=your-app-id
