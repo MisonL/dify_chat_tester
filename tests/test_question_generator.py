@@ -14,7 +14,7 @@ def test_parse_questions_from_response_json_array():
 
 
 def test_parse_questions_from_response_embedded_json():
-    response = "前面的话... [\"Q1\", \"Q2\"] 后面的说明"
+    response = '前面的话... ["Q1", "Q2"] 后面的说明'
     questions = parse_questions_from_response(response)
     assert questions == ["Q1", "Q2"]
 

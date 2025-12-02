@@ -1,6 +1,6 @@
 <div align="center">
   <h1>🤖 AI 聊天客户端测试工具</h1>
-  <p>支持多AI供应商的聊天测试工具（Dify、OpenAI、iFlow） v1.2.0</p>
+  <p>支持多AI供应商的聊天测试工具（Dify、OpenAI、iFlow） v1.3.0</p>
   
   <img src="https://img.shields.io/badge/Python-3.7+-blue?logo=python" alt="Python版本">
   <img src="https://img.shields.io/badge/License-MIT-green" alt="许可证">
@@ -45,7 +45,7 @@ uv run python main.py -- --mode question-generation --folder ./kb-docs
 
 ```bash
 # 复制配置模板
-cp config.env.example config.env
+cp .env.config.example .env.config
 
 # 编辑配置文件
 # 设置 API 密钥、角色列表等
@@ -121,7 +121,7 @@ dify_chat_tester/
 │   ├── config_loader.py       # 配置管理
 │   ├── terminal_ui.py         # 终端界面
 │   └── excel_utils.py         # Excel工具
-├── config.env.example         # 配置模板
+├── .env.config.example         # 配置模板
 ├── pyproject.toml            # 项目配置
 └── README.md                 # 项目文档
 ```
@@ -135,7 +135,7 @@ dify_chat_tester/
 
 ## ⚙️ 配置说明
 
-主要配置项（config.env）：
+主要配置项（.env.config）：
 
 ```bash
 # 角色配置（包含内置用户选项）
@@ -146,6 +146,10 @@ BATCH_REQUEST_INTERVAL=1.0
 
 # 是否默认显示批量回答
 BATCH_DEFAULT_SHOW_RESPONSE=true
+
+# 网络重试配置（仅在出现网络超时/连接错误时重试）
+NETWORK_MAX_RETRIES=3      # 每次请求的最大重试次数
+NETWORK_RETRY_DELAY=1.0   # 重试之间的等待时间（秒）
 
 # iFlow 模型列表
 IFLOW_MODELS=qwen3-max,kimi-k2-0905,glm-4.6,deepseek-v3.2
@@ -239,7 +243,7 @@ graph TD
     C --> D[克隆项目到本地]
     D --> E[安装 uv 包管理器]
     E --> F[运行 uv sync 安装依赖]
-    F --> G[配置 config.env 文件]
+    F --> G[配置 .env.config 文件]
     G --> H[运行程序开始使用]
 ```
 

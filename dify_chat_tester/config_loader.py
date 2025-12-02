@@ -1,6 +1,6 @@
 """
 配置加载器
-从 config.env 文件中加载所有配置参数
+从 .env.config 文件中加载所有配置参数
 
 作者：Mison
 邮箱：1360962086@qq.com
@@ -12,9 +12,9 @@ from typing import Any, List, Optional
 
 
 class ConfigLoader:
-    """配置加载器 - 从 .env 文件加载配置"""
+    """配置加载器 - 从 .env.config 文件加载配置"""
 
-    def __init__(self, env_file: str = "config.env"):
+    def __init__(self, env_file: str = ".env.config"):
         self.env_file = env_file
         self.config = {}
         self.load_config()
@@ -28,14 +28,20 @@ class ConfigLoader:
                 f"警告: 配置文件 '{self.env_file}' 不存在，正在尝试创建默认配置...",
                 file=sys.stderr,
             )
-            self._create_default_config_file() # This function now handles printing success/failure
+            self._create_default_config_file()  # This function now handles printing success/failure
 
             # After attempting to create, check if it now exists
             if os.path.exists(config_file_path):
-                print(f"信息: 配置文件 '{self.env_file}' 已成功创建并加载。", file=sys.stderr)
+                print(
+                    f"信息: 配置文件 '{self.env_file}' 已成功创建并加载。",
+                    file=sys.stderr,
+                )
                 self._read_config_file(config_file_path)
             else:
-                print(f"警告: 无法创建配置文件 '{self.env_file}'，将使用内置默认配置。", file=sys.stderr)
+                print(
+                    f"警告: 无法创建配置文件 '{self.env_file}'，将使用内置默认配置。",
+                    file=sys.stderr,
+                )
                 self._load_defaults()
         else:
             self._read_config_file(config_file_path)
@@ -74,19 +80,19 @@ class ConfigLoader:
             current_dir = os.path.dirname(os.path.abspath(__file__))
             base_dir = os.path.dirname(current_dir)
 
-        # 优先从程序目录查找 config.env.example
-        example_file = os.path.join(base_dir, "config.env.example")
+        # 优先从程序目录查找 .env.config.example
+        example_file = os.path.join(base_dir, ".env.config.example")
 
         # 如果程序目录没有，尝试从源码目录查找
         if not os.path.exists(example_file) and not getattr(sys, "frozen", False):
             current_dir = os.path.dirname(os.path.abspath(__file__))
             project_dir = os.path.dirname(current_dir)
-            example_file = os.path.join(project_dir, "config.env.example")
+            example_file = os.path.join(project_dir, ".env.config.example")
 
         # 配置文件创建在程序运行目录
         config_file_path = os.path.join(base_dir, self.env_file)
 
-        # 如果 config.env.example 存在，复制它作为默认配置
+        # 如果 .env.config.example 存在，复制它作为默认配置
         if os.path.exists(example_file):
             try:
                 with open(example_file, "r", encoding="utf-8") as src:
@@ -108,7 +114,7 @@ class ConfigLoader:
 
         说明：
         - Provider 相关敏感信息（如 API_KEY 等）默认留空，
-          用户可在 config.env 中自行填写；
+          用户可在 .env.config 中自行填写；
         - 读取时如果为空字符串，会被视为“未配置”，
           程序会自动回退到交互式输入方式。
         """
@@ -123,19 +129,24 @@ class ConfigLoader:
             "WAITING_INDICATORS": "⣾,⣽,⣻,⢿,⡿,⣟,⣯,⣷",
             "WAITING_TEXT": "正在思考",
             "WAITING_DELAY": "0.1",
+            # 网络重试配置
+            "NETWORK_MAX_RETRIES": "3",
+            "NETWORK_RETRY_DELAY": "1.0",
             # 日志配置
             "LOG_LEVEL": "INFO",
             "LOG_TO_FILE": "false",
             "LOG_FILE_NAME": "dify_chat_tester.log",
             # UI 配置
             "USE_RICH_UI": "true",  # 是否使用富文本 UI（false 时使用简单文本输出）
-            # Provider 默认配置（留空即可，通过 config.env 配置）
+            # Provider 默认配置（留空即可，通过 .env.config 配置）
             "DIFY_BASE_URL": "",
             "DIFY_API_KEY": "",
             "DIFY_APP_ID": "",
             "OPENAI_BASE_URL": "",
             "OPENAI_API_KEY": "",
             "IFLOW_API_KEY": "",
+            # 思维链配置
+            "ENABLE_THINKING": "true",  # 是否默认开启思维链/推理过程
         }
 
     def _create_basic_config_file(self, base_dir):
@@ -145,7 +156,7 @@ class ConfigLoader:
 
         config_content = [
             "# AI 聊天客户端测试工具 - 配置文件",
-            "# 复制此文件为 config.env 并根据需要修改配置",
+            "# 复制此文件为 .env.config 并根据需要修改配置",
             "",
         ]
         for key, value in default_config_dict.items():
@@ -177,6 +188,13 @@ class ConfigLoader:
         except (ValueError, TypeError):
             return default
 
+    def get_int(self, key: str, default: int = 0) -> int:
+        """获取整数配置"""
+        try:
+            return int(self.get(key, default))
+        except (ValueError, TypeError):
+            return default
+
     def get_bool(self, key: str, default: bool = False) -> bool:
         """获取布尔配置"""
         value = self.get(key, default)
@@ -194,6 +212,16 @@ class ConfigLoader:
         if not value:
             return default
         return [item.strip() for item in value.split(delimiter) if item.strip()]
+
+    def get_enable_thinking(self) -> bool:
+        """获取是否默认启用思维链/推理过程显示"""
+        # 优先从环境变量获取
+        value = os.getenv("ENABLE_THINKING")
+        if value is not None:
+            return value.lower() in ("true", "1", "yes", "on")
+        
+        # 从配置文件获取
+        return self.get_bool("ENABLE_THINKING", True)
 
 
 # 全局配置实例

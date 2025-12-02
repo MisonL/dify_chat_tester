@@ -178,7 +178,7 @@ cython_debug/
 .env.development
 .env.test
 .env.production
-config.env
+.env.config
 
 # Logs
 *.log

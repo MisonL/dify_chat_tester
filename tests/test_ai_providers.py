@@ -5,7 +5,6 @@
 
 from unittest.mock import Mock, patch
 
-
 from dify_chat_tester.ai_providers import DifyProvider, OpenAIProvider, iFlowProvider
 
 
@@ -17,7 +16,7 @@ class TestDifyProvider:
         provider = DifyProvider(
             base_url="https://api.dify.ai/v1",
             api_key="app-test-key",
-            app_id="test-app-id"
+            app_id="test-app-id",
         )
         assert provider.base_url == "https://api.dify.ai/v1"
         assert provider.api_key == "app-test-key"
@@ -28,14 +27,14 @@ class TestDifyProvider:
         provider = DifyProvider(
             base_url="https://api.dify.ai/v1",
             api_key="app-test-key",
-            app_id="test-app-id"
+            app_id="test-app-id",
         )
         models = provider.get_models()
         assert isinstance(models, list)
         assert len(models) == 1
         assert "Dify App" in models[0]
 
-    @patch('requests.post')
+    @patch("requests.post")
     def test_send_message_blocking_success(self, mock_post):
         """测试非流式消息发送成功"""
         # Mock 响应
@@ -44,14 +43,14 @@ class TestDifyProvider:
         mock_response.headers = {"content-type": "application/json"}
         mock_response.json.return_value = {
             "answer": "测试回答",
-            "conversation_id": "conv-123"
+            "conversation_id": "conv-123",
         }
         mock_post.return_value = mock_response
 
         provider = DifyProvider(
             base_url="https://api.dify.ai/v1",
             api_key="app-test-key",
-            app_id="test-app-id"
+            app_id="test-app-id",
         )
 
         response, success, error, conv_id = provider.send_message(
@@ -59,7 +58,7 @@ class TestDifyProvider:
             model="Dify App",
             role="测试角色",
             stream=False,
-            show_indicator=False
+            show_indicator=False,
         )
 
         assert success is True
@@ -67,7 +66,7 @@ class TestDifyProvider:
         assert error is None
         assert conv_id == "conv-123"
 
-    @patch('requests.post')
+    @patch("requests.post")
     def test_send_message_http_error(self, mock_post):
         """测试 HTTP 错误处理"""
         # Mock HTTP 错误
@@ -80,14 +79,11 @@ class TestDifyProvider:
         provider = DifyProvider(
             base_url="https://api.dify.ai/v1",
             api_key="invalid-key",
-            app_id="test-app-id"
+            app_id="test-app-id",
         )
 
         response, success, error, conv_id = provider.send_message(
-            message="测试问题",
-            model="Dify App",
-            stream=False,
-            show_indicator=False
+            message="测试问题", model="Dify App", stream=False, show_indicator=False
         )
 
         assert success is False
@@ -101,8 +97,7 @@ class TestOpenAIProvider:
     def test_init(self):
         """测试初始化"""
         provider = OpenAIProvider(
-            base_url="https://api.openai.com/v1",
-            api_key="sk-test-key"
+            base_url="https://api.openai.com/v1", api_key="sk-test-key"
         )
         assert provider.base_url == "https://api.openai.com/v1"
         assert provider.api_key == "sk-test-key"
@@ -110,34 +105,26 @@ class TestOpenAIProvider:
     def test_get_models(self):
         """测试获取模型列表"""
         provider = OpenAIProvider(
-            base_url="https://api.openai.com/v1",
-            api_key="sk-test-key"
+            base_url="https://api.openai.com/v1", api_key="sk-test-key"
         )
         models = provider.get_models()
         assert isinstance(models, list)
         assert len(models) > 0
         assert "gpt-4o" in models
 
-    @patch('requests.post')
+    @patch("requests.post")
     def test_send_message_blocking_success(self, mock_post):
         """测试非流式消息发送成功"""
         # Mock 响应
         mock_response = Mock()
         mock_response.status_code = 200
         mock_response.json.return_value = {
-            "choices": [
-                {
-                    "message": {
-                        "content": "测试回答"
-                    }
-                }
-            ]
+            "choices": [{"message": {"content": "测试回答"}}]
         }
         mock_post.return_value = mock_response
 
         provider = OpenAIProvider(
-            base_url="https://api.openai.com/v1",
-            api_key="sk-test-key"
+            base_url="https://api.openai.com/v1", api_key="sk-test-key"
         )
 
         response, success, error, conv_id = provider.send_message(
@@ -145,7 +132,7 @@ class TestOpenAIProvider:
             model="gpt-4o",
             role="测试角色",
             stream=False,
-            show_indicator=False
+            show_indicator=False,
         )
 
         assert success is True
@@ -170,7 +157,7 @@ class TestiFlowProvider:
         assert len(models) > 0
         assert "qwen3-max" in models
 
-    @patch('requests.post')
+    @patch("requests.post")
     def test_send_message_blocking_success(self, mock_post):
         """测试非流式消息发送成功"""
         # Mock 响应
@@ -179,14 +166,7 @@ class TestiFlowProvider:
         # Mock iter_lines to return empty iterator for stream mode
         mock_response.iter_lines.return_value = iter([])
         mock_response.json.return_value = {
-            "choices": [
-                {
-                    "message": {
-                        "content": "测试回答"
-                    },
-                    "finish_reason": "stop"
-                }
-            ]
+            "choices": [{"message": {"content": "测试回答"}, "finish_reason": "stop"}]
         }
         mock_post.return_value = mock_response
 
@@ -197,7 +177,7 @@ class TestiFlowProvider:
             model="qwen3-max",
             role="测试角色",
             stream=False,
-            show_indicator=False
+            show_indicator=False,
         )
 
         assert success is True

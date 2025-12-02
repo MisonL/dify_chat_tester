@@ -34,3 +34,8 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["dify_chat_tester"]
+
+[tool.isort]
+profile = "black"
+line_length = 88
+known_first_party = ["dify_chat_tester"]

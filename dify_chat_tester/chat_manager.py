@@ -4,8 +4,16 @@
 """
 
 from datetime import datetime
-from dify_chat_tester.terminal_ui import Icons, console, print_error, print_input_prompt, print_success
+
+from dify_chat_tester.config_loader import get_config
 from dify_chat_tester.excel_utils import init_excel_log, log_to_excel
+from dify_chat_tester.terminal_ui import (
+    Icons,
+    console,
+    print_error,
+    print_input_prompt,
+    print_success,
+)
 
 # 每多少轮对话保存一次聊天日志
 SAVE_EVERY_N_ROUNDS = 5
@@ -20,6 +28,10 @@ def run_interactive_chat(
     provider_id: str = None,
 ):
     """运行会话模式"""
+    # 获取配置
+    config = get_config()
+    enable_thinking = config.get_enable_thinking()
+
     # 初始化 Excel
     chat_headers = [
         "时间戳",
@@ -35,6 +47,8 @@ def run_interactive_chat(
 
     print_success(f"已选择角色: {selected_role}")
     print_success(f"已选择模型: {selected_model}")
+    if enable_thinking:
+        console.print(f"{Icons.INFO} 思维链显示已开启", style="bright_green")
     console.print()
     console.print(f"{Icons.INFO} 命令说明:", style="bold cyan")
     console.print(f"  {Icons.USER} 输入 '/help' 查看命令说明", style="white")
@@ -58,7 +72,9 @@ def run_interactive_chat(
         if user_input == "/help":
             console.print()
             console.print(f"{Icons.INFO} 可用命令:", style="bold cyan")
-            console.print(f"  {Icons.USER} 直接输入内容：向 {provider_name} 提问", style="white")
+            console.print(
+                f"  {Icons.USER} 直接输入内容：向 {provider_name} 提问", style="white"
+            )
             console.print("  /help  查看命令说明", style="white")
             console.print("  /new   开启新对话（重置上下文）", style="white")
             console.print("  /exit 或 /quit 返回模式选择", style="white")
@@ -89,7 +105,7 @@ def run_interactive_chat(
 
         # 根据供应商类型调用 send_message
         is_dify = (provider_id == "dify") if provider_id else (provider_name == "Dify")
-        
+
         if is_dify:
             response, success, error, new_conversation_id = provider.send_message(
                 message=user_input,
@@ -98,6 +114,7 @@ def run_interactive_chat(
                 conversation_id=conversation_id,
                 stream=True,
                 show_indicator=True,
+                show_thinking=enable_thinking,
             )
             # 更新Dify的对话ID
             if new_conversation_id:
@@ -110,6 +127,7 @@ def run_interactive_chat(
                 history=history,  # 传入历史
                 stream=True,
                 show_indicator=True,
+                show_thinking=enable_thinking,
             )
             # 更新OpenAI/iFlow的对话历史
             if success:

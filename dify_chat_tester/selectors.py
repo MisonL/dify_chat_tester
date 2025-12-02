@@ -5,7 +5,12 @@
 
 import sys
 
-from dify_chat_tester.terminal_ui import console, print_error, print_input_prompt, print_success
+from dify_chat_tester.terminal_ui import (
+    console,
+    print_error,
+    print_input_prompt,
+    print_success,
+)
 
 
 def select_model(available_models, provider_name):
@@ -74,7 +79,9 @@ def select_role(available_roles):
 
     while True:
         try:
-            role_choice = print_input_prompt(f"请选择角色（输入 1-{len(available_roles) + 2}）")
+            role_choice = print_input_prompt(
+                f"请选择角色（输入 1-{len(available_roles) + 2}）"
+            )
 
             # 尝试转换为数字
             if role_choice.isdigit():
@@ -101,14 +108,19 @@ def select_role(available_roles):
                     break
 
                 else:
-                    print_error(f"无效的角色序号！请输入 1-{len(available_roles) + 2} 之间的数字。")
+                    print_error(
+                        f"无效的角色序号！请输入 1-{len(available_roles) + 2} 之间的数字。"
+                    )
             else:
                 # 直接输入角色名称
                 if role_choice:
                     selected_role = role_choice
                     return selected_role
                 else:
-                    print("输入不能为空，请选择角色或输入自定义角色名称。", file=sys.stderr)
+                    print(
+                        "输入不能为空，请选择角色或输入自定义角色名称。",
+                        file=sys.stderr,
+                    )
 
         except ValueError:
             print_error("请输入有效的数字！")
@@ -160,33 +172,35 @@ def select_main_function():
 def select_folder_path(default_path: str = "./kb-docs"):
     """
     选择文档文件夹路径
-    
+
     Args:
         default_path: 默认路径
-        
+
     Returns:
         str: 选择的文件夹路径
     """
     from pathlib import Path
-    
+
     print(f"请选择文档文件夹路径 (直接回车使用默认路径: {default_path}):")
     print(f"1. 使用默认路径: {default_path}")
     print("2. 输入自定义路径")
-    
+
     # 列出当前目录下的文件夹
     current_dir = Path(".")
-    folders = [f for f in current_dir.iterdir() if f.is_dir() and not f.name.startswith('.')]
-    
+    folders = [
+        f for f in current_dir.iterdir() if f.is_dir() and not f.name.startswith(".")
+    ]
+
     if folders:
         print("\n当前目录下的文件夹:")
         for idx, folder in enumerate(folders, start=3):
             print(f"{idx}. {folder.name}")
-    
+
     console.print()
-    
+
     while True:
         choice = print_input_prompt("请输入选择 (直接回车使用默认)")
-        
+
         # 如果直接回车（空输入），使用默认路径
         if not choice or choice.strip() == "":
             print(f"使用默认路径: {default_path}")
@@ -210,6 +224,5 @@ def select_folder_path(default_path: str = "./kb-docs"):
                 print_error("无效的选择，请重新输入。")
         else:
             print_error("无效的选择，请重新输入。")
-        
-        console.print()
 
+        console.print()

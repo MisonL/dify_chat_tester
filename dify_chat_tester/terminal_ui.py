@@ -72,6 +72,7 @@ class Icons:
     DATA = "📊"
     FIRE = "🔥"
     USER = "👤"  # main.py is using this
+    ROBOT = "🤖"  # StreamDisplay is using this
 
 
 def print_success(message: str):
@@ -220,7 +221,7 @@ def print_statistics(total: int, success: int, failed: int, duration: float):
     stats_text.append("📈 数量统计\n", style="bold yellow")
     stats_text.append(f"  • 总处理数量: {total}\n", style="white")
     stats_text.append(
-        f"  • 成功数量: {success} ({success_rate:.1f}%)\n", style="bold green"
+        f"  • 成功数量: {success} ({success_rate:.1f}%)\n", style="bright_green"
     )
     stats_text.append(
         f"  • 失败数量: {failed} ({failed_rate:.1f}%)\n\n", style="bold red"
@@ -297,13 +298,13 @@ def print_api_key_confirmation(api_key: str) -> bool:
         return answer in ("", "y", "yes")
 
     key_text = Text()
-    key_text.append("🔑 已输入密钥:\n", style="bold green")
+    key_text.append("🔑 已输入密钥:\n", style="bright_green")
     key_text.append(f"  {hidden_key}", style="bold cyan")
 
     key_panel = Panel(
         key_text,
         title="[bold]🔐 API 密钥确认[/bold]",
-        border_style="green",
+        border_style="bright_green",
         box=box.ROUNDED,
         padding=(1, 2),
     )
@@ -393,7 +394,7 @@ def print_column_list(columns: list):
     column_panel = Panel(
         table,
         title="[bold]📋 Excel 文件中的列名[/bold]",
-        border_style="bright_green",
+        border_style=Colors.SUCCESS,
         box=box.ROUNDED,
         padding=(1, 2),
     )
@@ -419,3 +420,51 @@ def select_column_by_index(columns: list, prompt_msg: str) -> int:
         except KeyboardInterrupt:
             print_warning("用户取消操作，程序退出。")
             sys.exit(0)
+
+class StreamDisplay:
+    """流式输出显示管理器"""
+
+    def __init__(self, title: str = "AI 思考中..."):
+        self.title = title
+        self.content = ""
+        self.live = None
+        self.panel = None
+
+    def start(self):
+        """开始显示"""
+        if not USE_RICH_UI:
+            return
+
+        from rich.live import Live
+
+        self.panel = Panel(
+            "",
+            title=f"{Icons.ROBOT} {self.title}",
+            border_style=Colors.PRIMARY,
+            box=box.ROUNDED,
+            padding=(1, 2),
+            width=100,
+        )
+        self.live = Live(
+            self.panel, console=console, refresh_per_second=10, transient=True
+        )
+        self.live.start()
+
+    def update(self, new_content: str):
+        """更新内容"""
+        if self.live:
+            self.content += new_content
+            self.panel.renderable = self.content
+            self.live.refresh()
+        elif not USE_RICH_UI:
+            # 非 Rich UI 模式下的简单输出
+            sys.stdout.write(new_content)
+            sys.stdout.flush()
+
+    def stop(self):
+        """停止显示"""
+        if self.live:
+            self.live.stop()
+            self.live = None
+        elif not USE_RICH_UI:
+            print()  # 换行

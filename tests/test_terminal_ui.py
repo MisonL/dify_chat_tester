@@ -3,7 +3,6 @@
 测试终端 UI 辅助函数，如 hide_api_key 等。
 """
 
-
 from dify_chat_tester.terminal_ui import hide_api_key
 
 

@@ -36,6 +36,53 @@ except ImportError:
 logger = get_logger("dify_chat_tester.ai_providers")
 
 
+# 全局网络重试配置（仅针对网络超时/连接错误生效）
+if config:
+    try:
+        NETWORK_MAX_RETRIES = int(config.get_float("NETWORK_MAX_RETRIES", 3))
+    except Exception:
+        NETWORK_MAX_RETRIES = 3
+    try:
+        NETWORK_RETRY_DELAY = float(config.get_float("NETWORK_RETRY_DELAY", 1.0))
+    except Exception:
+        NETWORK_RETRY_DELAY = 1.0
+else:
+    NETWORK_MAX_RETRIES = 3
+    NETWORK_RETRY_DELAY = 1.0
+
+
+def _post_with_retry(
+    url: str,
+    *,
+    max_retries: int | None = None,
+    retry_delay: float | None = None,
+    **kwargs,
+) -> requests.Response:
+    """带简单重试机制的 requests.post 封装。
+
+    仅在出现 Timeout / ConnectionError 时重试，其他异常原样抛出。
+    """
+    if max_retries is None:
+        max_retries = NETWORK_MAX_RETRIES
+    if retry_delay is None:
+        retry_delay = NETWORK_RETRY_DELAY
+
+    last_exc: Exception | None = None
+    for attempt in range(1, max_retries + 1):
+        try:
+            return requests.post(url, **kwargs)
+        except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as e:  # type: ignore[attr-defined]
+            last_exc = e
+            logger.warning("请求失败（第 %s/%s 次）：%s", attempt, max_retries, str(e))
+            if attempt >= max_retries:
+                raise
+            time.sleep(retry_delay)
+    # 理论上不会到这里，仅为类型检查兜底
+    raise (
+        last_exc if last_exc is not None else RuntimeError("_post_with_retry 未知错误")
+    )
+
+
 def _friendly_error_message(error_msg: str, status_code: Optional[int] = None) -> str:
     """将底层错误信息翻译为更友好的中文提示。
 
@@ -93,6 +140,7 @@ class AIProvider(ABC):
         conversation_id: Optional[str] = None,  # 保留：用于Dify
         stream: bool = True,
         show_indicator: bool = True,
+        show_thinking: bool = True,  # 新增：是否显示思维链
     ) -> tuple:
         """
         发送消息到 AI 供应商
@@ -104,6 +152,7 @@ class AIProvider(ABC):
             conversation_id: 对话ID（用于多轮对话）
             stream: 是否使用流式响应
             show_indicator: 是否显示等待指示器
+            show_thinking: 是否显示思维链
 
         Returns:
             tuple: (response_text, success, error_message, new_conversation_id)
@@ -164,15 +213,16 @@ class DifyProvider(AIProvider):
         conversation_id: Optional[str] = None,
         stream: bool = True,
         show_indicator: bool = True,
+        show_thinking: bool = True,
     ) -> tuple:
         """发送消息到 Dify API"""
         # base_url 已经包含了完整的 API 基础路径（包括 /v1）
         # 根据 Dify 官方文档，标准端点是：{base_url}/chat-messages
         # 应用 ID 不是在 URL 中，而是通过其他方式传递
-        
+
         # 确保 base_url 不以 / 结尾，避免双斜杠
-        base_url = self.base_url.rstrip('/')
-        
+        base_url = self.base_url.rstrip("/")
+
         # 构建标准 URL
         url = f"{base_url}/chat-messages"
 
@@ -205,7 +255,7 @@ class DifyProvider(AIProvider):
                 waiting_thread.daemon = True
                 waiting_thread.start()
 
-            response = requests.post(
+            response = _post_with_retry(
                 url,
                 headers=headers,
                 json=payload,
@@ -218,7 +268,7 @@ class DifyProvider(AIProvider):
             if response.status_code in [301, 302, 307, 308]:
                 redirect_url = response.headers.get("Location")
                 if redirect_url:
-                    response = requests.post(
+                    response = _post_with_retry(
                         redirect_url,
                         headers=headers,
                         json=payload,
@@ -232,8 +282,6 @@ class DifyProvider(AIProvider):
                     )
 
             response.raise_for_status()
-
-
 
         except requests.exceptions.HTTPError as e:
             if show_indicator:
@@ -275,67 +323,75 @@ class DifyProvider(AIProvider):
 
         if stream:
             full_response = ""
-            # 使用 iter_lines 进行真正的流式处理
-            for line in response.iter_lines():
-                if line:
-                    decoded_line = line.decode('utf-8')
-                    
-                    # 检查是否是 HTML 响应（可能是错误页面）
-                    if decoded_line.startswith("<!DOCTYPE") or decoded_line.startswith("<html"):
-                        raise ValueError(
-                            f"收到 HTML 响应而非 JSON: {decoded_line[:100]}"
-                        )
-                    
-                    if decoded_line.startswith("data:"):
-                        try:
-                            data = json.loads(decoded_line[5:])
-                            
-                            # 获取事件类型
-                            event = data.get("event")
-                            
-                            # 处理错误事件
-                            if event == "error":
-                                if show_indicator:
-                                    stop_event.set()
-                                    if waiting_thread is not None:
-                                        waiting_thread.join(timeout=0.5)
-                                error_msg = data.get("message", "未知错误")
-                                print(f"\n错误: {error_msg}", file=sys.stderr)
-                                return "", False, error_msg, None
-                            
-                            # 处理消息事件
-                            elif event == "message":
-                                if "conversation_id" in data:
-                                    new_conversation_id = data["conversation_id"]
-
-                                if "answer" in data:
-                                    if show_indicator and not first_char_printed:
-                                        stop_event.set()
-                                        if waiting_thread is not None:
-                                            waiting_thread.join(timeout=0.5)
-                                        sys.stdout.write("Dify: ")
-                                        sys.stdout.flush()
-                                        first_char_printed = True
-
-                                    # 实时输出内容
-                                    if show_indicator:
-                                        print(data["answer"], end="", flush=True)
-                                    full_response += data["answer"]
-                            
-                            # 处理消息结束事件
-                            elif event == "message_end":
-                                # 消息结束，可以在这里处理元数据
-                                if "conversation_id" in data:
-                                    new_conversation_id = data["conversation_id"]
-                                # 流式响应正常结束
-                                break
-                            
-                            # 忽略其他事件（workflow_started, workflow_finished, ping 等）
-                            
-                        except json.JSONDecodeError:
-                            continue
+            
+            # 初始化流式显示
+            stream_display = None
             if show_indicator:
-                print()
+                from dify_chat_tester.terminal_ui import StreamDisplay
+                stream_display = StreamDisplay(title="Dify")
+                stream_display.start()
+                
+                # 停止等待动画
+                stop_event.set()
+                if waiting_thread is not None:
+                    waiting_thread.join(timeout=0.5)
+
+            try:
+                # 使用 iter_lines 进行真正的流式处理
+                for line in response.iter_lines():
+                    if line:
+                        decoded_line = line.decode("utf-8")
+
+                        # 检查是否是 HTML 响应（可能是错误页面）
+                        if decoded_line.startswith("<!DOCTYPE") or decoded_line.startswith(
+                            "<html"
+                        ):
+                            raise ValueError(
+                                f"收到 HTML 响应而非 JSON: {decoded_line[:100]}"
+                            )
+
+                        if decoded_line.startswith("data:"):
+                            try:
+                                data = json.loads(decoded_line[5:])
+
+                                # 获取事件类型
+                                event = data.get("event")
+
+                                # 处理错误事件
+                                if event == "error":
+                                    error_msg = data.get("message", "未知错误")
+                                    if stream_display:
+                                        stream_display.stop()
+                                    print(f"\n错误: {error_msg}", file=sys.stderr)
+                                    return "", False, error_msg, None
+
+                                # 处理消息事件
+                                elif event == "message":
+                                    if "conversation_id" in data:
+                                        new_conversation_id = data["conversation_id"]
+
+                                    if "answer" in data:
+                                        answer = data["answer"]
+                                        full_response += answer
+                                        if stream_display:
+                                            stream_display.update(answer)
+
+                                # 处理消息结束事件
+                                elif event == "message_end":
+                                    # 消息结束，可以在这里处理元数据
+                                    if "conversation_id" in data:
+                                        new_conversation_id = data["conversation_id"]
+                                    # 流式响应正常结束
+                                    break
+
+                                # 忽略其他事件（workflow_started, workflow_finished, ping 等）
+
+                            except json.JSONDecodeError:
+                                continue
+            finally:
+                if stream_display:
+                    stream_display.stop()
+                    
             return full_response, True, None, new_conversation_id
         else:
             # 检查响应内容类型
@@ -414,6 +470,7 @@ class OpenAIProvider(AIProvider):
         conversation_id: Optional[str] = None,  # 保留：匹配基类签名
         stream: bool = True,
         show_indicator: bool = True,
+        show_thinking: bool = True,
     ) -> tuple:
         """发送消息到 OpenAI 兼容 API"""
         # 检测 k2sonnet API，它不支持非流式模式
@@ -421,7 +478,7 @@ class OpenAIProvider(AIProvider):
         if is_k2sonnet and not stream:
             # k2sonnet 只支持流式模式，强制使用流式
             stream = True
-        
+
         # 处理 base_url：如果已包含 /v1 路径，只添加 /chat/completions
         if self.base_url.endswith("/v1"):
             url = f"{self.base_url}/chat/completions"
@@ -466,7 +523,7 @@ class OpenAIProvider(AIProvider):
                 waiting_thread.start()
 
             try:
-                response = requests.post(
+                response = _post_with_retry(
                     url,
                     headers=headers,
                     json=payload,
@@ -507,72 +564,100 @@ class OpenAIProvider(AIProvider):
                 full_response = ""
                 stream_success = False
                 
-                # 首先尝试标准流式处理
-                for line in response.iter_lines():
-                    if line:
-                        decoded_line = line.decode("utf-8")
-                        # OpenAI 使用 "data: " (有空格)
-                        if decoded_line.startswith("data: "):
-                            # 检查流式结束标记
-                            if decoded_line == "data: [DONE]":
-                                stream_success = True
-                                break
-                            try:
-                                data = json.loads(decoded_line[6:])
+                # 初始化流式显示
+                stream_display = None
+                if show_indicator:
+                    from dify_chat_tester.terminal_ui import StreamDisplay
+                    stream_display = StreamDisplay(title=f"OpenAI ({model})")
+                    stream_display.start()
+                    
+                    # 停止等待动画
+                    stop_event.set()
+                    if waiting_thread is not None:
+                        waiting_thread.join(timeout=0.5)
 
-                                if "choices" in data and len(data["choices"]) > 0:
-                                    choice = data["choices"][0]
-                                    
-                                    # 确保 choice 是字典
-                                    if not isinstance(choice, dict):
-                                        continue
-                                    
-                                    # 检查是否结束
-                                    finish_reason = choice.get("finish_reason")
-                                    if finish_reason in ["stop", "length", "content_filter", "tool_calls"]:
-                                        # 流式响应自然结束
-                                        stream_success = True
-                                        break
-                                    
-                                    delta = choice.get("delta", {})
-                                    if not isinstance(delta, dict):
-                                        continue
-                                    content = delta.get("content", "")
-                                    
-                                    if content:
-                                        stream_success = True
-                                        if show_indicator and not first_char_printed:
-                                            stop_event.set()
-                                            if waiting_thread is not None:
-                                                waiting_thread.join(timeout=0.5)
-                                            sys.stdout.write("OpenAI: ")
-                                            sys.stdout.flush()
-                                            first_char_printed = True
+                try:
+                    # 首先尝试标准流式处理
+                    for line in response.iter_lines():
+                        if line:
+                            decoded_line = line.decode("utf-8")
+                            # OpenAI 使用 "data: " (有空格)
+                            if decoded_line.startswith("data: "):
+                                # 检查流式结束标记
+                                if decoded_line == "data: [DONE]":
+                                    stream_success = True
+                                    break
+                                try:
+                                    data = json.loads(decoded_line[6:])
 
-                                        # 只有在启用显示时才输出到终端（但 always flush for real-time output）
-                                        if show_indicator:
-                                            print(content, end="", flush=True)
-                                        full_response += content
-                            except json.JSONDecodeError:
-                                continue
-                
+                                    if "choices" in data and len(data["choices"]) > 0:
+                                        choice = data["choices"][0]
+
+                                        # 确保 choice 是字典
+                                        if not isinstance(choice, dict):
+                                            continue
+
+                                        # 检查是否结束
+                                        finish_reason = choice.get("finish_reason")
+                                        if finish_reason in [
+                                            "stop",
+                                            "length",
+                                            "content_filter",
+                                            "tool_calls",
+                                        ]:
+                                            # 流式响应自然结束
+                                            stream_success = True
+                                            break
+
+                                        delta = choice.get("delta", {})
+                                        if not isinstance(delta, dict):
+                                            continue
+                                        
+                                        # 处理思维链内容 (reasoning_content)
+                                        reasoning_content = delta.get("reasoning_content", "")
+                                        if reasoning_content and show_thinking:
+                                            # 这里可以特殊处理思维链显示，目前简单地作为内容的一部分或单独显示
+                                            # 为了简单起见，我们暂时将其视为普通内容，但加上特殊标记可能更好
+                                            # 或者如果 StreamDisplay 支持思维链模式，可以调用它
+                                            # 目前 StreamDisplay 只是简单的追加文本
+                                            if stream_display:
+                                                # 可以考虑用斜体或灰色显示思维过程
+                                                stream_display.update(reasoning_content)
+                                        
+                                        content = delta.get("content", "")
+
+                                        if content:
+                                            stream_success = True
+                                            if stream_display:
+                                                stream_display.update(content)
+                                            full_response += content
+                                except json.JSONDecodeError:
+                                    continue
+                finally:
+                    if stream_display:
+                        stream_display.stop()
+
                 # 如果流式处理失败或没有内容，尝试使用 iter_content 处理（类似 iFlow 的方式）
                 if not stream_success or not full_response.strip():
                     # 重置响应
                     full_response = ""
                     raw_data = ""
-                    for chunk in response.iter_content(chunk_size=1024, decode_unicode=True):
+                    for chunk in response.iter_content(
+                        chunk_size=1024, decode_unicode=True
+                    ):
                         if chunk:
                             raw_data += chunk
-                    
+
                     # 按行分割处理
-                    lines = raw_data.split('\n')
+                    lines = raw_data.split("\n")
                     for line in lines:
                         if line.strip():
                             # 检查是否是 HTML 响应（可能是错误页面）
                             if line.startswith("<!DOCTYPE") or line.startswith("<html"):
-                                raise ValueError(f"收到 HTML 响应而非 JSON: {line[:100]}")
-                            
+                                raise ValueError(
+                                    f"收到 HTML 响应而非 JSON: {line[:100]}"
+                                )
+
                             # 尝试不同的前缀格式
                             if line.startswith("data: "):
                                 try:
@@ -581,34 +666,42 @@ class OpenAIProvider(AIProvider):
                                         stream_success = True
                                         break
                                     data = json.loads(data_str)
-                                    
+
                                     if "choices" in data and len(data["choices"]) > 0:
                                         choice = data["choices"][0]
-                                        
+
                                         # 确保 choice 是字典
                                         if not isinstance(choice, dict):
                                             continue
-                                        
+
                                         finish_reason = choice.get("finish_reason")
-                                        if finish_reason in ["stop", "length", "content_filter", "tool_calls"]:
+                                        if finish_reason in [
+                                            "stop",
+                                            "length",
+                                            "content_filter",
+                                            "tool_calls",
+                                        ]:
                                             stream_success = True
                                             break
-                                        
+
                                         delta = choice.get("delta", {})
                                         if not isinstance(delta, dict):
                                             continue
                                         content = delta.get("content", "")
-                                        
+
                                         if content:
                                             stream_success = True
-                                            if show_indicator and not first_char_printed:
+                                            if (
+                                                show_indicator
+                                                and not first_char_printed
+                                            ):
                                                 stop_event.set()
                                                 if waiting_thread is not None:
                                                     waiting_thread.join(timeout=0.5)
                                                 sys.stdout.write("OpenAI: ")
                                                 sys.stdout.flush()
                                                 first_char_printed = True
-                                            
+
                                             if show_indicator:
                                                 print(content, end="", flush=True)
                                             full_response += content
@@ -618,28 +711,31 @@ class OpenAIProvider(AIProvider):
                                 try:
                                     data_str = line[5:]  # 去掉 "data:"
                                     data = json.loads(data_str)
-                                    
+
                                     if "choices" in data and len(data["choices"]) > 0:
                                         choice = data["choices"][0]
                                         delta = choice.get("delta", {})
                                         content = delta.get("content", "")
-                                        
+
                                         if content:
                                             stream_success = True
-                                            if show_indicator and not first_char_printed:
+                                            if (
+                                                show_indicator
+                                                and not first_char_printed
+                                            ):
                                                 stop_event.set()
                                                 if waiting_thread is not None:
                                                     waiting_thread.join(timeout=0.5)
                                                 sys.stdout.write("OpenAI: ")
                                                 sys.stdout.flush()
                                                 first_char_printed = True
-                                            
+
                                             if show_indicator:
                                                 print(content, end="", flush=True)
                                             full_response += content
                                 except json.JSONDecodeError:
                                     continue
-                
+
                 # 如果流式仍然失败，尝试回退到非流式
                 if not stream_success or not full_response.strip():
                     # 重新发送非流式请求
@@ -650,24 +746,34 @@ class OpenAIProvider(AIProvider):
                         if show_indicator:
                             sys.stdout.write("\r尝试非流式请求...")
                             sys.stdout.flush()
-                        
-                        response = requests.post(
-                            url, headers=headers, json=payload, stream=False, timeout=60
+
+                        response = _post_with_retry(
+                            url,
+                            headers=headers,
+                            json=payload,
+                            stream=False,
+                            timeout=60,
                         )
-                        
+
                         # 检查响应状态
                         if response.status_code != 200:
-                            error_text = response.text[:500] if response.text else f"状态码: {response.status_code}"
+                            error_text = (
+                                response.text[:500]
+                                if response.text
+                                else f"状态码: {response.status_code}"
+                            )
                             return "", False, f"非流式请求失败: {error_text}", None
-                        
+
                         # 检查响应内容
                         if not response.content:
                             return "", False, "非流式请求返回空响应", None
-                        
+
                         data = response.json()
-                        
+
                         if "choices" in data and len(data["choices"]) > 0:
-                            content = data["choices"][0].get("message", {}).get("content", "")
+                            content = (
+                                data["choices"][0].get("message", {}).get("content", "")
+                            )
                             if content:
                                 if show_indicator:
                                     stop_event.set()
@@ -693,7 +799,11 @@ class OpenAIProvider(AIProvider):
                         return "", False, friendly_error, None
                     except json.JSONDecodeError as e:
                         # 尝试显示原始响应
-                        raw_response = response.text[:500] if hasattr(response, 'text') else "无法读取响应"
+                        raw_response = (
+                            response.text[:500]
+                            if hasattr(response, "text")
+                            else "无法读取响应"
+                        )
                         raw_error = f"非流式响应JSON解析错误: {str(e)}。原始响应: {raw_response}"
                         friendly_error = _friendly_error_message(raw_error)
                         logger.error("OpenAI 非流式 JSON 解析错误: %s", raw_error)
@@ -817,6 +927,7 @@ class iFlowProvider(AIProvider):
         conversation_id: Optional[str] = None,  # 保留：匹配基类签名
         stream: bool = True,
         show_indicator: bool = True,
+        show_thinking: bool = True,
     ) -> tuple:
         """发送消息到 iFlow API"""
         url = f"{self.base_url}/chat/completions"
@@ -843,7 +954,7 @@ class iFlowProvider(AIProvider):
             "temperature": 0.7,
             "max_tokens": 2000,
         }
-        
+
         # 添加流式优化参数
         if stream:
             payload["stream_options"] = {"include_usage": True}
@@ -861,16 +972,16 @@ class iFlowProvider(AIProvider):
                 waiting_thread.start()
 
             # 先尝试流式响应，增加超时时间到 60 秒，优化连接配置
-            response = requests.post(
-                url, 
-                headers=headers, 
-                json=payload, 
-                stream=True, 
+            response = _post_with_retry(
+                url,
+                headers=headers,
+                json=payload,
+                stream=True,
                 timeout=60,
                 verify=True,
-                allow_redirects=True
+                allow_redirects=True,
             )
-            
+
             # 检查响应状态
             if response.status_code != 200:
                 error_msg = f"API返回错误状态码: {response.status_code}"
@@ -880,13 +991,25 @@ class iFlowProvider(AIProvider):
                 except Exception:
                     pass
                 return "", False, error_msg, None
-                
+
             response.raise_for_status()
 
             full_response = ""
             stream_success = False
             has_lines = False
             line_count = 0
+            
+            # 初始化流式显示
+            stream_display = None
+            if show_indicator:
+                from dify_chat_tester.terminal_ui import StreamDisplay
+                stream_display = StreamDisplay(title=f"iFlow ({model})")
+                stream_display.start()
+                
+                # 停止等待动画
+                stop_event.set()
+                if waiting_thread is not None:
+                    waiting_thread.join(timeout=0.5)
 
             # 尝试流式解析
             try:
@@ -897,24 +1020,30 @@ class iFlowProvider(AIProvider):
                         has_lines = True
                         line_count += 1
                         decoded_line = line.decode("utf-8")
-                        
+
                         if decoded_line.startswith("data:"):
                             try:
                                 data = json.loads(decoded_line[5:])
-                                
+
                                 if "choices" in data and len(data["choices"]) > 0:
                                     choice = data["choices"][0]
-                                    
+
                                     # 检查是否是结束标记
                                     finish_reason = choice.get("finish_reason")
                                     if finish_reason == "stop":
                                         stream_success = True
                                         break
-                                    
+
                                     # 提取内容
                                     delta = choice.get("delta", {})
                                     message_obj = choice.get("message", {})
-                                    
+
+                                    # 处理思维链内容 (reasoning_content)
+                                    reasoning_content = delta.get("reasoning_content", "")
+                                    if reasoning_content and show_thinking:
+                                        if stream_display:
+                                            stream_display.update(reasoning_content)
+
                                     content = ""
                                     if "content" in delta:
                                         content = delta["content"]
@@ -922,92 +1051,37 @@ class iFlowProvider(AIProvider):
                                         content = message_obj["content"]
                                     elif choice.get("text"):
                                         content = choice["text"]
-                                    
+
                                     # 标记已收到有效的流式响应
                                     if "content" in delta or "content" in message_obj:
                                         stream_success = True
-                                    
+
                                     # 实时显示内容
                                     if content:
-                                        if show_indicator and not first_char_printed:
-                                            stop_event.set()
-                                            if waiting_thread is not None:
-                                                waiting_thread.join(timeout=0.5)
-                                        first_char_printed = True
-                                        
-                                        if show_indicator:
-                                            print(content, end="", flush=True)
+                                        if stream_display:
+                                            stream_display.update(content)
                                         full_response += content
-                                        
+
                             except json.JSONDecodeError:
                                 continue
-                else:
-                    # 非压缩响应，使用 iter_lines 并优化 chunk_size
-                    for line in response.iter_lines(chunk_size=1):
-                        if line:
-                            has_lines = True
-                            line_count += 1
-                            decoded_line = line.decode("utf-8")
-                            
-                            if decoded_line.startswith("data:"):
-                                try:
-                                    data = json.loads(decoded_line[5:])
-                                    
-                                    if "choices" in data and len(data["choices"]) > 0:
-                                        choice = data["choices"][0]
-                                        
-                                        # 检查是否是结束标记
-                                        finish_reason = choice.get("finish_reason")
-                                        if finish_reason == "stop":
-                                            stream_success = True
-                                            break
-                                        
-                                        # 提取内容
-                                        delta = choice.get("delta", {})
-                                        message_obj = choice.get("message", {})
-                                        
-                                        content = ""
-                                        if "content" in delta:
-                                            content = delta["content"]
-                                        elif "content" in message_obj:
-                                            content = message_obj["content"]
-                                        elif choice.get("text"):
-                                            content = choice["text"]
-                                        
-                                        # 标记已收到有效的流式响应
-                                        if "content" in delta or "content" in message_obj:
-                                            stream_success = True
-                                        
-                                        # 实时显示内容
-                                        if content:
-                                            if show_indicator and not first_char_printed:
-                                                stop_event.set()
-                                                if waiting_thread is not None:
-                                                    waiting_thread.join(timeout=0.5)
-                                            first_char_printed = True
-                                            
-                                            if show_indicator:
-                                                print(content, end="", flush=True)
-                                            full_response += content
-                                            
-                                except json.JSONDecodeError:
-                                    continue
 
                 # 如果收到了流式响应行但没有解析到内容，也认为是成功的
                 if has_lines and not stream_success:
                     stream_success = True
+            except (json.JSONDecodeError, requests.exceptions.RequestException):
+                # 流式解析出错，保持 stream_success 为 False，尝试非流式
+                pass
+            finally:
+                if stream_display:
+                    stream_display.stop()
 
                 # 调试信息
                 if not show_indicator and full_response:
                     # 在不显示模式下的调试信息
                     pass
 
-                if show_indicator:
-                    print()
-
-            except (json.JSONDecodeError, requests.exceptions.RequestException):
-                # 流式解析出错，保持 stream_success 为 False，尝试非流式
-                pass
+                if show_indicator and full_response:
+                    pass  # StreamDisplay 已经处理了输出
 
             # 如果流式解析失败，尝试非流式
             if not stream_success:
@@ -1018,25 +1092,29 @@ class iFlowProvider(AIProvider):
                     # 移除流式选项
                     if "stream_options" in payload:
                         del payload["stream_options"]
-                    response = requests.post(
-                        url, 
-                        headers=headers, 
-                        json=payload, 
-                        stream=False, 
+                    response = _post_with_retry(
+                        url,
+                        headers=headers,
+                        json=payload,
+                        stream=False,
                         timeout=60,
                         verify=True,
-                        allow_redirects=True
+                        allow_redirects=True,
                     )
-                    
+
                     # 检查响应状态
                     if response.status_code != 200:
-                        error_text = response.text[:500] if response.text else f"状态码: {response.status_code}"
+                        error_text = (
+                            response.text[:500]
+                            if response.text
+                            else f"状态码: {response.status_code}"
+                        )
                         return "", False, f"非流式请求失败: {error_text}", None
-                    
+
                     # 检查响应内容
                     if not response.content:
                         return "", False, "非流式请求返回空响应", None
-                        
+
                     response.raise_for_status()
                     data = response.json()
 
@@ -1068,8 +1146,17 @@ class iFlowProvider(AIProvider):
                     return "", False, f"非流式请求连接错误: {str(e)}", None
                 except json.JSONDecodeError as e:
                     # 尝试显示原始响应
-                    raw_response = response.text[:500] if hasattr(response, 'text') else "无法读取响应"
-                    return "", False, f"非流式响应JSON解析错误: {str(e)}。原始响应: {raw_response}", None
+                    raw_response = (
+                        response.text[:500]
+                        if hasattr(response, "text")
+                        else "无法读取响应"
+                    )
+                    return (
+                        "",
+                        False,
+                        f"非流式响应JSON解析错误: {str(e)}。原始响应: {raw_response}",
+                        None,
+                    )
                 except Exception as e:
                     return "", False, f"非流式请求异常: {str(e)}", None
 
@@ -1078,7 +1165,7 @@ class iFlowProvider(AIProvider):
             if not full_response.strip() and stream_success:
                 # 如果标记为成功但没有内容，返回一个默认响应
                 full_response = "（收到空响应）"
-            
+
             return full_response, True, None, conversation_id
 
         except requests.exceptions.HTTPError as e:

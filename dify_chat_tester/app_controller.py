@@ -4,7 +4,8 @@
 """
 
 import sys
-from dify_chat_tester import __version__, __author__, __email__
+
+from dify_chat_tester import __author__, __email__, __version__
 
 # 导入功能模块
 from dify_chat_tester.batch_manager import run_batch_query
@@ -46,12 +47,18 @@ class AppController:
     def _load_config(self):
         """加载配置参数"""
         self.ai_providers = parse_ai_providers(self.config.get("AI_PROVIDERS", ""))
-        self.chat_log_file_name = self.config.get_str("CHAT_LOG_FILE_NAME", "chat_log.xlsx")
+        self.chat_log_file_name = self.config.get_str(
+            "CHAT_LOG_FILE_NAME", "chat_log.xlsx"
+        )
         self.roles = self.config.get_list("ROLES", ",")
         self.iflow_models = self.config.get_list("IFLOW_MODELS", ",")
         self.openai_models = self.config.get_list("OPENAI_MODELS", ",")
-        self.batch_request_interval = self.config.get_float("BATCH_REQUEST_INTERVAL", 1.0)
-        self.batch_default_show_response = self.config.get_bool("BATCH_DEFAULT_SHOW_RESPONSE", False)
+        self.batch_request_interval = self.config.get_float(
+            "BATCH_REQUEST_INTERVAL", 1.0
+        )
+        self.batch_default_show_response = self.config.get_bool(
+            "BATCH_DEFAULT_SHOW_RESPONSE", False
+        )
 
     def _print_header(self):
         """打印程序头部信息"""
@@ -69,15 +76,17 @@ class AppController:
         info_text.append("邮箱: ", style="bold yellow")
         info_text.append(f"{__email__}\n", style="bold cyan")
         info_text.append("项目:\n", style="bold yellow")
-        info_text.append("https://github.com/MisonL/dify_chat_tester", style="bold cyan")
+        info_text.append(
+            "https://github.com/MisonL/dify_chat_tester", style="bold cyan"
+        )
 
         info_panel = Panel(
             info_text,
             box=box.ROUNDED,
             padding=(0, 1),
-            border_style="dim",
+            border_style="bright_cyan",
             width=50,  # 与标题面板保持一致的宽度
-            expand=False  # 不扩展宽度
+            expand=False,  # 不扩展宽度
         )
         console.print(info_panel)
         console.print()
@@ -149,7 +158,15 @@ class AppController:
 
         return provider, all_models
 
-    def _run_mode(self, mode_choice, provider, selected_role, provider_name, selected_model, provider_id=None):
+    def _run_mode(
+        self,
+        mode_choice,
+        provider,
+        selected_role,
+        provider_name,
+        selected_model,
+        provider_id=None,
+    ):
         """运行选择的模式"""
         if mode_choice == "1":
             # 会话模式
@@ -260,12 +277,12 @@ class AppController:
         while True:
             # 选择主功能
             function_choice = select_main_function()
-            
+
             # 如果选择退出
             if function_choice == "0":
                 print_info("感谢使用 dify_chat_tester，再见！")
                 sys.exit(0)
-            
+
             # 选择AI供应商
             provider_name, provider_id = self._select_provider()
 
@@ -300,14 +317,20 @@ class AppController:
                 mode_choice = select_mode()
 
                 # 运行选择的模式
-                result = self._run_mode(mode_choice, provider, selected_role, provider_name, selected_model, provider_id)
-                
+                result = self._run_mode(
+                    mode_choice,
+                    provider,
+                    selected_role,
+                    provider_name,
+                    selected_model,
+                    provider_id,
+                )
+
                 # 如果是退出命令，跳出内层循环
                 if mode_choice == "3":
                     break
-                
+
                 # 如果是从会话或批量模式返回，继续选择模式
                 if result == "continue":
                     console.print()
                     print_welcome()
-

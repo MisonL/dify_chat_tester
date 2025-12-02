@@ -23,6 +23,9 @@ class _FakeConfig:
             return self._to_file
         return default
 
+    def get_int(self, key, default=0):
+        return default
+
 
 def test_get_logger_basic_configuration(monkeypatch, tmp_path):
     # 使用假配置，并将日志文件写到临时目录
