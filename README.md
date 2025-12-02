@@ -202,6 +202,61 @@ LOG_FILE_NAME=dify_chat_tester.log   # 日志文件名
 # IFLOW_API_KEY=sk-xxx
 ```
 
+## 🔗 与 Semantic Tester 协同使用
+
+本项目可与 [semantic_tester](https://github.com/MisonL/semantic_tester) 配合使用，形成完整的 AI 客服测试闭环：
+
+### 完整工作流程
+
+```mermaid
+graph LR
+    A[知识库文档] --> B[dify_chat_tester: 生成测试问题]
+    B --> C[测试问题 Excel]
+    C --> D[dify_chat_tester: 批量询问]
+    D --> E[问答结果 Excel]
+    E --> F[semantic_tester: 语义比对]
+    F --> G[语义评估报告]
+```
+
+### 快速开始
+
+#### 步骤 1: 生成测试问题
+
+```bash
+cd dify_chat_tester
+uv run python main.py -- --mode question-generation --folder ./kb-docs
+# 输出: question_generation_YYYYMMDD_HHMMSS.xlsx
+```
+
+#### 步骤 2: 批量询问 AI
+
+```bash
+uv run python main.py
+# 选择批量模式，使用上一步生成的 Excel 文件
+# 输出: batch_query_log_YYYYMMDD_HHMMSS.xlsx
+```
+
+#### 步骤 3: 语义比对
+
+```bash
+cd ../semantic_tester
+uv run python main.py
+# 选择上一步的批量结果文件
+# 程序会自动检测格式并进行语义比对
+# 输出: 在原 Excel 中新增"语义是否相符"和"判断依据"列
+```
+
+### 主要优势
+
+- 🚀 **自动化流程**: 从问题生成到语义评估，全流程自动化
+- 📊 **数据追溯**: Excel 文件贯穿整个流程，便于追溯和分析
+- 🎯 **精准评估**: 结合 AI 回答和知识库进行语义层面的质量评估
+- 🔄 **持续优化**: 通过评估结果改进知识库，形成闭环
+
+### 详细说明
+
+参见完整的[协同使用指南](docs/用户使用指南.md#与-semantic-tester-协同使用)
+
 ## 🛠️ 开发
 
 ### 代码检查
