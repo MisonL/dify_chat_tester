@@ -1,6 +1,6 @@
 """Terminal UI 模块的扩展测试。"""
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -45,12 +45,12 @@ def test_print_column_list(mock_console):
 def test_select_column_by_index(mock_input, mock_console):
     """测试选择列"""
     columns = ["A", "B", "C"]
-    
+
     # 正常选择
     mock_input.return_value = "1"
     idx = select_column_by_index(columns, "选择列")
     assert idx == 0
-    
+
     # 无效选择后有效选择
     mock_input.side_effect = ["4", "0", "2"]
     idx = select_column_by_index(columns, "选择列")
@@ -62,7 +62,7 @@ def test_create_provider_menu(mock_prompt_ask):
     """测试创建 Provider 菜单"""
     providers = {
         "1": {"name": "Dify", "id": "dify"},
-        "2": {"name": "OpenAI", "id": "openai"}
+        "2": {"name": "OpenAI", "id": "openai"},
     }
     mock_prompt_ask.return_value = "1"
     result = create_provider_menu(providers)
@@ -76,7 +76,7 @@ def test_print_api_key_confirmation(mock_confirm_ask, mock_console):
     # 确认
     mock_confirm_ask.return_value = True
     assert print_api_key_confirmation("key") is True
-    
+
     # 拒绝
     mock_confirm_ask.return_value = False
     assert print_api_key_confirmation("key") is False

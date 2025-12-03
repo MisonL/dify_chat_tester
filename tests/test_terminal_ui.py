@@ -59,26 +59,26 @@ def test_print_functions(monkeypatch):
         print_welcome,
     )
     from unittest.mock import MagicMock, patch
-    
+
     mock_console = MagicMock()
     monkeypatch.setattr("dify_chat_tester.terminal_ui.console", mock_console)
-    
+
     # Mock Panel to verify content
     with patch("dify_chat_tester.terminal_ui.Panel") as MockPanel:
         print_info("Info message")
         mock_console.print.assert_called()
         # Verify Panel was created
         assert MockPanel.called
-        
+
         print_success("Success message")
         mock_console.print.assert_called()
-        
+
         print_warning("Warning message")
         mock_console.print.assert_called()
-        
+
         print_error("Error message")
         mock_console.print.assert_called()
-        
+
         print_welcome()
         mock_console.print.assert_called()
 
@@ -87,13 +87,13 @@ def test_print_input_prompt(monkeypatch):
     """测试输入提示函数"""
     from dify_chat_tester.terminal_ui import print_input_prompt
     from unittest.mock import MagicMock
-    
+
     mock_console = MagicMock()
     monkeypatch.setattr("dify_chat_tester.terminal_ui.console", mock_console)
-    
+
     # Mock builtins.input to accept optional argument
     monkeypatch.setattr("builtins.input", lambda prompt="": "user input")
-    
+
     result = print_input_prompt("Prompt")
     assert result == "user input"
     mock_console.print.assert_called()
@@ -102,29 +102,29 @@ def test_print_input_prompt(monkeypatch):
 def test_stream_display(monkeypatch):
     """测试 StreamDisplay 类"""
     from dify_chat_tester.terminal_ui import StreamDisplay
-    from unittest.mock import MagicMock, patch
-    
+    from unittest.mock import patch
+
     # Mock Live from rich.live
     with patch("rich.live.Live") as MockLive:
         mock_live_instance = MockLive.return_value
         mock_live_instance.__enter__.return_value = mock_live_instance
         mock_live_instance.__exit__.return_value = None
-        
+
         display = StreamDisplay(title="Test Stream")
-        
+
         # Test start
         display.start()
         assert display.live is not None
         assert MockLive.called
-        
+
         # Test update
         display.update("chunk1")
         assert display.content == "chunk1"
         mock_live_instance.refresh.assert_called()
-        
+
         display.update("chunk2")
         assert display.content == "chunk1chunk2"
-        
+
         # Test stop
         display.stop()
         assert display.live is None

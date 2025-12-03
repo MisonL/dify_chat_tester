@@ -243,7 +243,6 @@ class DifyProvider(AIProvider):
 
         stop_event = threading.Event()
         waiting_thread = None
-        first_char_printed = False
         new_conversation_id = None
 
         try:
@@ -323,14 +322,15 @@ class DifyProvider(AIProvider):
 
         if stream:
             full_response = ""
-            
+
             # 初始化流式显示
             stream_display = None
             if show_indicator:
                 from dify_chat_tester.terminal_ui import StreamDisplay
+
                 stream_display = StreamDisplay(title="Dify")
                 stream_display.start()
-                
+
                 # 停止等待动画
                 stop_event.set()
                 if waiting_thread is not None:
@@ -343,9 +343,9 @@ class DifyProvider(AIProvider):
                         decoded_line = line.decode("utf-8")
 
                         # 检查是否是 HTML 响应（可能是错误页面）
-                        if decoded_line.startswith("<!DOCTYPE") or decoded_line.startswith(
-                            "<html"
-                        ):
+                        if decoded_line.startswith(
+                            "<!DOCTYPE"
+                        ) or decoded_line.startswith("<html"):
                             raise ValueError(
                                 f"收到 HTML 响应而非 JSON: {decoded_line[:100]}"
                             )
@@ -391,7 +391,7 @@ class DifyProvider(AIProvider):
             finally:
                 if stream_display:
                     stream_display.stop()
-                    
+
             return full_response, True, None, new_conversation_id
         else:
             # 检查响应内容类型
@@ -563,14 +563,15 @@ class OpenAIProvider(AIProvider):
             if stream:
                 full_response = ""
                 stream_success = False
-                
+
                 # 初始化流式显示
                 stream_display = None
                 if show_indicator:
                     from dify_chat_tester.terminal_ui import StreamDisplay
+
                     stream_display = StreamDisplay(title=f"OpenAI ({model})")
                     stream_display.start()
-                    
+
                     # 停止等待动画
                     stop_event.set()
                     if waiting_thread is not None:
@@ -612,9 +613,11 @@ class OpenAIProvider(AIProvider):
                                         delta = choice.get("delta", {})
                                         if not isinstance(delta, dict):
                                             continue
-                                        
+
                                         # 处理思维链内容 (reasoning_content)
-                                        reasoning_content = delta.get("reasoning_content", "")
+                                        reasoning_content = delta.get(
+                                            "reasoning_content", ""
+                                        )
                                         if reasoning_content and show_thinking:
                                             # 这里可以特殊处理思维链显示，目前简单地作为内容的一部分或单独显示
                                             # 为了简单起见，我们暂时将其视为普通内容，但加上特殊标记可能更好
@@ -623,7 +626,7 @@ class OpenAIProvider(AIProvider):
                                             if stream_display:
                                                 # 可以考虑用斜体或灰色显示思维过程
                                                 stream_display.update(reasoning_content)
-                                        
+
                                         content = delta.get("content", "")
 
                                         if content:
@@ -961,7 +964,6 @@ class iFlowProvider(AIProvider):
 
         stop_event = threading.Event()
         waiting_thread = None
-        first_char_printed = False
 
         try:
             if show_indicator:
@@ -998,14 +1000,15 @@ class iFlowProvider(AIProvider):
             stream_success = False
             has_lines = False
             line_count = 0
-            
+
             # 初始化流式显示
             stream_display = None
             if show_indicator:
                 from dify_chat_tester.terminal_ui import StreamDisplay
+
                 stream_display = StreamDisplay(title=f"iFlow ({model})")
                 stream_display.start()
-                
+
                 # 停止等待动画
                 stop_event.set()
                 if waiting_thread is not None:
@@ -1039,7 +1042,9 @@ class iFlowProvider(AIProvider):
                                     message_obj = choice.get("message", {})
 
                                     # 处理思维链内容 (reasoning_content)
-                                    reasoning_content = delta.get("reasoning_content", "")
+                                    reasoning_content = delta.get(
+                                        "reasoning_content", ""
+                                    )
                                     if reasoning_content and show_thinking:
                                         if stream_display:
                                             stream_display.update(reasoning_content)

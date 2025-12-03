@@ -219,7 +219,7 @@ class ConfigLoader:
         value = os.getenv("ENABLE_THINKING")
         if value is not None:
             return value.lower() in ("true", "1", "yes", "on")
-        
+
         # 从配置文件获取
         return self.get_bool("ENABLE_THINKING", True)
 

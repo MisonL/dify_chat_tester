@@ -4,7 +4,6 @@ import os
 import tempfile
 from unittest.mock import MagicMock, patch
 
-import pytest
 
 from dify_chat_tester.question_generator import (
     export_questions_to_excel,
@@ -19,15 +18,15 @@ def test_read_markdown_files():
     with tempfile.TemporaryDirectory() as tmpdir:
         # 创建测试文件
         file1 = os.path.join(tmpdir, "doc1.md")
-        file2 = os.path.join(tmpdir, "doc2.txt") # 应该被忽略
-        
+        file2 = os.path.join(tmpdir, "doc2.txt")  # 应该被忽略
+
         with open(file1, "w") as f:
             f.write("# Doc 1 Content")
         with open(file2, "w") as f:
             f.write("Ignored")
-            
+
         file_names, contents = read_markdown_files(tmpdir)
-        
+
         assert "doc1.md" in file_names
         assert "doc2.txt" not in file_names
         assert contents["doc1.md"] == "# Doc 1 Content"
@@ -60,7 +59,7 @@ def test_extract_questions_from_text():
     Some other text.
     """
     questions = extract_questions_from_text(text)
-    
+
     assert "What is AI?" in questions
     assert "How does it work?" in questions
     assert "Is it safe?" in questions
@@ -87,11 +86,11 @@ def test_generate_questions_for_document():
     """测试为文档生成问题"""
     mock_provider = MagicMock()
     mock_provider.send_message.return_value = ("1. Q1\n2. Q2", True, None, None)
-    
+
     questions = generate_questions_for_document(
         mock_provider, "model", "role", "doc.md", "content"
     )
-    
+
     assert "Q1" in questions
     assert "Q2" in questions
     mock_provider.send_message.assert_called_once()
@@ -101,28 +100,29 @@ def test_generate_questions_for_document_failure():
     """测试生成失败"""
     mock_provider = MagicMock()
     mock_provider.send_message.return_value = ("", False, "Error", None)
-    
+
     questions = generate_questions_for_document(
         mock_provider, "model", "role", "doc.md", "content"
     )
-    
+
     assert questions == []
 
 
 def test_export_questions_to_excel():
     """测试导出到 Excel"""
     questions = [("doc1.md", "Q1"), ("doc1.md", "Q2")]
-    
+
     with tempfile.TemporaryDirectory() as tmpdir:
         output_file = os.path.join(tmpdir, "output.xlsx")
-        
+
         success = export_questions_to_excel(questions, output_file)
-        
+
         assert success is True
         assert os.path.exists(output_file)
-        
+
         # 验证内容
         import openpyxl
+
         wb = openpyxl.load_workbook(output_file)
         ws = wb.active
         assert ws.cell(row=2, column=1).value == "doc1.md"

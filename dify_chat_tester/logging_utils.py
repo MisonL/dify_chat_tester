@@ -14,7 +14,6 @@
 from __future__ import annotations
 
 import logging
-import os
 import sys
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
@@ -33,36 +32,36 @@ def _parse_level(level_str: str) -> int:
 def _get_log_directory(log_dir: str) -> Path:
     """
     获取日志目录路径，优先使用程序所在目录，否则使用用户主目录
-    
+
     Args:
         log_dir: 日志目录名称
-        
+
     Returns:
         Path: 日志目录的绝对路径
     """
     # 尝试获取程序所在目录
-    if getattr(sys, 'frozen', False):
+    if getattr(sys, "frozen", False):
         # 打包后的程序
         app_dir = Path(sys.executable).parent
     else:
         # 开发环境
         app_dir = Path.cwd()
-    
+
     # 首选：程序所在目录的logs文件夹
     preferred_log_dir = app_dir / log_dir
-    
+
     # 测试是否有写入权限
     try:
         preferred_log_dir.mkdir(parents=True, exist_ok=True)
         # 尝试写入测试文件
-        test_file = preferred_log_dir / '.write_test'
-        test_file.write_text('test')
+        test_file = preferred_log_dir / ".write_test"
+        test_file.write_text("test")
         test_file.unlink()
         return preferred_log_dir
     except (OSError, PermissionError):
         # 如果没有写入权限，使用用户主目录
         home_dir = Path.home()
-        fallback_log_dir = home_dir / '.dify_chat_tester' / log_dir
+        fallback_log_dir = home_dir / ".dify_chat_tester" / log_dir
         fallback_log_dir.mkdir(parents=True, exist_ok=True)
         return fallback_log_dir
 
@@ -99,7 +98,7 @@ def get_logger(name: str = "dify_chat_tester") -> logging.Logger:
         file_name = _config.get_str("LOG_FILE_NAME", "dify_chat_tester.log")
         max_bytes = _config.get_int("LOG_MAX_BYTES", 10 * 1024 * 1024)  # 10MB
         backup_count = _config.get_int("LOG_BACKUP_COUNT", 5)
-        
+
         try:
             # 获取智能日志目录
             actual_log_dir = _get_log_directory(log_dir)
@@ -107,15 +106,12 @@ def get_logger(name: str = "dify_chat_tester") -> logging.Logger:
 
             # 使用 RotatingFileHandler 实现日志轮转
             file_handler = RotatingFileHandler(
-                log_path,
-                maxBytes=max_bytes,
-                backupCount=backup_count,
-                encoding="utf-8"
+                log_path, maxBytes=max_bytes, backupCount=backup_count, encoding="utf-8"
             )
             file_handler.setLevel(log_level)
             file_handler.setFormatter(formatter)
             logger.addHandler(file_handler)
-            
+
             # 记录日志目录位置
             logger.info(f"日志目录: {actual_log_dir}")
         except Exception as e:

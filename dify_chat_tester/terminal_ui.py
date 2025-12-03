@@ -421,6 +421,7 @@ def select_column_by_index(columns: list, prompt_msg: str) -> int:
             print_warning("用户取消操作，程序退出。")
             sys.exit(0)
 
+
 class StreamDisplay:
     """流式输出显示管理器"""
 
