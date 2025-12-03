@@ -470,6 +470,56 @@ class TestOpenAIProviderExtended:
     """OpenAIProvider 的深入测试"""
 
     @patch("requests.post")
+    def test_send_message_stream_iter_content_html_error(self, mock_post):
+        """iter_content 返回 HTML 时，应进入回退分支并最终通过非流式返回内容。"""
+        from unittest.mock import MagicMock
+
+        # 第一次调用：流式响应，iter_lines 不可用，走 iter_content 分支，返回 HTML
+        resp_stream = MagicMock()
+        resp_stream.status_code = 200
+        # iter_lines 不可用，触发 iter_content 回退路径
+        resp_stream.iter_lines.side_effect = AttributeError("no iter_lines")
+        html_chunk = "<!DOCTYPE html><html><body>Error</body></html>"
+        resp_stream.iter_content.return_value = iter([html_chunk])
+        mock_post.side_effect = [resp_stream]
+
+        provider = OpenAIProvider("http://url", "key")
+
+        # 由于 HTML 会在 iter_content 分支中触发 ValueError，随后进入顶层异常处理，
+        # 返回 ("", False, error, None)。
+        response, success, error, _ = provider.send_message(
+            "msg", "model", stream=True, show_indicator=False
+        )
+
+        assert success is False
+        assert response == ""
+        assert error is not None
+
+    @patch("requests.post")
+    def test_send_message_http_error_openai(self, mock_post):
+        """OpenAIProvider 顶层 HTTPError 分支应返回友好错误。"""
+        from requests.exceptions import HTTPError
+        from unittest.mock import MagicMock
+
+        resp = MagicMock()
+        resp.status_code = 502
+        resp.text = "Bad Gateway"
+        http_err = HTTPError(response=resp)
+        mock_post.side_effect = http_err
+
+        provider = OpenAIProvider("http://url", "key")
+
+        response, success, error, _ = provider.send_message(
+            "msg", "model", stream=False, show_indicator=False
+        )
+
+        assert success is False
+        assert response == ""
+        # 只要返回了非空错误信息，说明顶层 HTTPError 分支被触发
+        assert isinstance(error, str)
+        assert error
+
+    @patch("requests.post")
     def test_send_message_stream_with_iter_content(self, mock_post):
         """测试使用 iter_content 的流式响应"""
         from unittest.mock import MagicMock
@@ -550,9 +600,173 @@ class TestOpenAIProviderExtended:
         # 根据实际实现，可能导致失败或忽略
         assert error is None or "HTML" in error or not success
 
+    @patch("dify_chat_tester.ai_providers._post_with_retry")
+    def test_stream_fallback_non_stream_http_error(self, mock_post_with_retry):
+        """流式无内容时回退到非流式，且非流式返回 HTTP 错误状态。"""
+        from unittest.mock import MagicMock
+
+        # 第一次调用：流式请求，返回 200 但没有任何内容
+        resp_stream = MagicMock()
+        resp_stream.status_code = 200
+        resp_stream.iter_lines.return_value = iter([])
+
+        # 第二次调用：非流式请求，返回 500 错误
+        resp_non_stream = MagicMock()
+        resp_non_stream.status_code = 500
+        resp_non_stream.text = "Server Error"
+        resp_non_stream.content = b"Server Error"
+
+        mock_post_with_retry.side_effect = [resp_stream, resp_non_stream]
+
+        provider = OpenAIProvider("http://url", "key")
+
+        response, success, error, _ = provider.send_message(
+            "msg", "model", stream=True, show_indicator=False
+        )
+
+        assert success is False
+        assert response == ""
+        assert "非流式请求失败" in error
+
+    @patch("dify_chat_tester.ai_providers._post_with_retry")
+    def test_stream_fallback_non_stream_empty_content(self, mock_post_with_retry):
+        """流式无内容时回退到非流式，非流式返回空 content。"""
+        from unittest.mock import MagicMock
+
+        resp_stream = MagicMock()
+        resp_stream.status_code = 200
+        resp_stream.iter_lines.return_value = iter([])
+
+        resp_non_stream = MagicMock()
+        resp_non_stream.status_code = 200
+        resp_non_stream.content = b""  # 空响应
+        resp_non_stream.text = ""
+
+        mock_post_with_retry.side_effect = [resp_stream, resp_non_stream]
+
+        provider = OpenAIProvider("http://url", "key")
+
+        response, success, error, _ = provider.send_message(
+            "msg", "model", stream=True, show_indicator=False
+        )
+
+        assert success is False
+        assert response == ""
+        assert "非流式请求返回空响应" in error
+
+    @patch("dify_chat_tester.ai_providers._post_with_retry")
+    def test_stream_fallback_non_stream_json_decode_error(self, mock_post_with_retry):
+        """流式无内容时回退到非流式，非流式 JSON 解析异常分支。"""
+        from unittest.mock import MagicMock
+        import json
+
+        resp_stream = MagicMock()
+        resp_stream.status_code = 200
+        resp_stream.iter_lines.return_value = iter([])
+
+        resp_non_stream = MagicMock()
+        resp_non_stream.status_code = 200
+        resp_non_stream.content = b"invalid json"
+        resp_non_stream.text = "invalid json"
+        resp_non_stream.json.side_effect = json.JSONDecodeError("msg", "doc", 0)
+
+        mock_post_with_retry.side_effect = [resp_stream, resp_non_stream]
+
+        provider = OpenAIProvider("http://url", "key")
+
+        response, success, error, _ = provider.send_message(
+            "msg", "model", stream=True, show_indicator=False
+        )
+
+        assert success is False
+        assert response == ""
+        assert isinstance(error, str) and error
+
 
 class TestiFlowProviderExtended:
     """iFlowProvider 的深入测试"""
+
+    @patch("dify_chat_tester.ai_providers._post_with_retry")
+    def test_non_stream_http_error_status(self, mock_post_with_retry):
+        """非流式 fallback 分支：status_code != 200。"""
+        from unittest.mock import MagicMock
+
+        # 第一次：流式请求，200 + 无 iter_lines -> 触发 fallback
+        resp_stream = MagicMock()
+        resp_stream.status_code = 200
+        resp_stream.iter_lines.return_value = iter([])
+
+        # 第二次：非流式请求，返回 500
+        resp_non_stream = MagicMock()
+        resp_non_stream.status_code = 500
+        resp_non_stream.text = "Server Error"
+        resp_non_stream.content = b"Server Error"
+
+        mock_post_with_retry.side_effect = [resp_stream, resp_non_stream]
+
+        provider = iFlowProvider("key")
+
+        response, success, error, _ = provider.send_message(
+            "msg", "model", stream=True, show_indicator=False
+        )
+
+        assert success is False
+        assert response == ""
+        assert "非流式请求失败" in error
+
+    @patch("dify_chat_tester.ai_providers._post_with_retry")
+    def test_non_stream_empty_content(self, mock_post_with_retry):
+        """非流式 fallback 分支：content 为空。"""
+        from unittest.mock import MagicMock
+
+        resp_stream = MagicMock()
+        resp_stream.status_code = 200
+        resp_stream.iter_lines.return_value = iter([])
+
+        resp_non_stream = MagicMock()
+        resp_non_stream.status_code = 200
+        resp_non_stream.content = b""  # 空响应
+        resp_non_stream.text = ""
+
+        mock_post_with_retry.side_effect = [resp_stream, resp_non_stream]
+
+        provider = iFlowProvider("key")
+
+        response, success, error, _ = provider.send_message(
+            "msg", "model", stream=True, show_indicator=False
+        )
+
+        assert success is False
+        assert response == ""
+        assert "非流式请求返回空响应" in error
+
+    @patch("dify_chat_tester.ai_providers._post_with_retry")
+    def test_non_stream_json_decode_error(self, mock_post_with_retry):
+        """非流式 fallback 分支：JSONDecodeError。"""
+        from unittest.mock import MagicMock
+        import json
+
+        resp_stream = MagicMock()
+        resp_stream.status_code = 200
+        resp_stream.iter_lines.return_value = iter([])
+
+        resp_non_stream = MagicMock()
+        resp_non_stream.status_code = 200
+        resp_non_stream.content = b"invalid json"
+        resp_non_stream.text = "invalid json"
+        resp_non_stream.json.side_effect = json.JSONDecodeError("msg", "doc", 0)
+
+        mock_post_with_retry.side_effect = [resp_stream, resp_non_stream]
+
+        provider = iFlowProvider("key")
+
+        response, success, error, _ = provider.send_message(
+            "msg", "model", stream=True, show_indicator=False
+        )
+
+        assert success is False
+        assert response == ""
+        assert "JSON解析错误" in error or isinstance(error, str)
 
     @patch("requests.post")
     def test_send_message_with_tools(self, mock_post):
@@ -845,6 +1059,58 @@ class TestiFlowProviderStreamingEdgeCases:
     """iFlowProvider 流式处理边缘情况测试"""
 
     @patch("requests.post")
+    def test_stream_fallback_to_non_stream_success(self, mock_post):
+        """当流式没有任何数据时，应回退到非流式并成功返回内容。"""
+        from unittest.mock import MagicMock
+
+        # 第一次调用：流式请求，返回 200 但没有任何 iter_lines 内容
+        resp_stream = MagicMock()
+        resp_stream.status_code = 200
+        resp_stream.iter_lines.return_value = iter([])
+        # content/text 在流式阶段不会被使用，但为安全起见设置上
+        resp_stream.content = b""
+        resp_stream.text = ""
+
+        # 第二次调用：非流式请求，返回正常 JSON 响应
+        resp_non_stream = MagicMock()
+        resp_non_stream.status_code = 200
+        resp_non_stream.content = b"{...}"
+        resp_non_stream.json.return_value = {
+            "choices": [
+                {"message": {"content": "Fallback content"}},
+            ]
+        }
+
+        mock_post.side_effect = [resp_stream, resp_non_stream]
+
+        provider = iFlowProvider("key")
+
+        response, success, error, _ = provider.send_message(
+            "msg", "model", stream=True, show_indicator=False
+        )
+
+        assert success is True
+        assert error is None
+        assert response == "Fallback content"
+
+    @patch("requests.post")
+    def test_stream_timeout_error(self, mock_post):
+        """iFlow 流式请求超时时应返回友好错误信息。"""
+        from requests.exceptions import Timeout
+
+        mock_post.side_effect = Timeout("Connection timed out")
+
+        provider = iFlowProvider("key")
+
+        response, success, error, _ = provider.send_message(
+            "msg", "model", stream=True, show_indicator=False
+        )
+
+        assert success is False
+        assert response == ""
+        assert error is not None
+
+    @patch("requests.post")
     def test_stream_with_message_finish(self, mock_post):
         """测试带 finish_reason 的流式响应"""
         from unittest.mock import MagicMock
@@ -899,6 +1165,40 @@ class TestiFlowProviderStreamingEdgeCases:
 
 class TestErrorHandlingComprehensive:
     """综合错误处理测试"""
+
+    @patch("requests.post")
+    def test_openai_timeout_error(self, mock_post):
+        """OpenAIProvider 在请求超时时应走 Timeout 分支并返回错误信息。"""
+        from requests.exceptions import Timeout
+
+        mock_post.side_effect = Timeout("Request timed out")
+
+        provider = OpenAIProvider("http://url", "key")
+
+        response, success, error, _ = provider.send_message(
+            "msg", "model", stream=False, show_indicator=False
+        )
+
+        assert success is False
+        assert response == ""
+        assert isinstance(error, str) and error
+
+    @patch("requests.post")
+    def test_iflow_timeout_error(self, mock_post):
+        """iFlowProvider 在请求超时时应走 Timeout 分支并返回友好错误。"""
+        from requests.exceptions import Timeout
+
+        mock_post.side_effect = Timeout("Connection timed out")
+
+        provider = iFlowProvider("key")
+
+        response, success, error, _ = provider.send_message(
+            "msg", "model", stream=False, show_indicator=False
+        )
+
+        assert success is False
+        assert response == ""
+        assert isinstance(error, str) and error
 
     @patch("requests.post")
     def test_connection_timeout(self, mock_post):

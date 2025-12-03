@@ -4,6 +4,7 @@
 """
 
 import json
+import re
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Tuple
@@ -204,16 +205,34 @@ def parse_questions_from_response(response: str) -> List[str]:
 
     # 如果JSON解析失败，尝试按行解析
     lines = response.split("\n")
-    for line in lines:
-        line = line.strip()
+    for raw_line in lines:
+        line = raw_line.strip()
         # 跳过空行和JSON标记
         if not line or line in ["[", "]", "{", "}"]:
             continue
-        # 移除可能的列表标记和引号
-        line = line.lstrip("-*•").strip()
+
+        # 记录原始是否为编号列表项或项目符号列表项
+        is_numbered_item = bool(re.match(r"^\d+[\.\)]\s*\S+", line))
+        is_bullet_item = bool(re.match(r"^[-*•\u2022]\s*\S+", line))
+
+        # 尝试移除可能的列表前缀（如 "- ", "* ", "• ")
+        line = re.sub(r"^[-*•\u2022]\s*", "", line)
+        # 尝试移除序号前缀（如 "1. ", "2) " 等）
+        line = re.sub(r"^\d+[\.\)]\s*", "", line)
+
+        # 去掉首尾引号和逗号
         line = line.strip("\"'").strip(",").strip()
 
-        if line and len(line) > 5:  # 过滤太短的行
+        # 只保留像问题的行：
+        # - 以 ? 或 ？ 结尾，或
+        # - 原始行是编号列表项，或
+        # - 原始行为带项目符号的列表项
+        if line and len(line) > 1 and (
+            line.endswith("?")
+            or line.endswith("？")
+            or is_numbered_item
+            or is_bullet_item
+        ):
             questions.append(line)
 
     return questions

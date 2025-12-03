@@ -200,3 +200,40 @@ class TestAppControllerAdditional:
 
         assert result == "continue"
         mock_run_batch.assert_called_once()
+
+    @patch("dify_chat_tester.app_controller.print_welcome")
+    def test_run_main_loop_question_generation_and_exit(
+        self, mock_welcome, controller, monkeypatch
+    ):
+        """测试 AppController.run 的主循环：先走问题生成，再正常退出。"""
+        import dify_chat_tester.app_controller as ac
+        import pytest
+
+        # select_main_function: 第一次选择 "2" (AI 生成测试提问点)，第二次选择 "0" 退出
+        choices = iter(["2", "0"])
+        monkeypatch.setattr(ac, "select_main_function", lambda: next(choices))
+
+        # 替换 _select_provider 和 _setup_provider，避免真实交互
+        mock_provider = MagicMock()
+        monkeypatch.setattr(
+            controller,
+            "_select_provider",
+            lambda: ("OpenAI", "openai"),
+        )
+        monkeypatch.setattr(
+            controller, "_setup_provider", lambda provider_id: (mock_provider, ["m1"])
+        )
+
+        # select_model 总是返回第一个模型
+        monkeypatch.setattr(ac, "select_model", lambda models, name: models[0])
+
+        # 拦截 _run_question_generation，避免真实逻辑
+        monkeypatch.setattr(controller, "_run_question_generation", MagicMock())
+
+        # sys.exit 在第二轮主循环中被调用，抛出 SystemExit 以终止测试
+        monkeypatch.setattr(ac.sys, "exit", lambda code=0: (_ for _ in ()).throw(SystemExit(code)))
+
+        with pytest.raises(SystemExit):
+            controller.run()
+
+        controller._run_question_generation.assert_called_once()

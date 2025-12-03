@@ -148,3 +148,53 @@ def test_get_enable_thinking(monkeypatch):
     # 3. 默认值
     loader.config = {}
     assert loader.get_enable_thinking() is True  # 默认为 True
+
+
+def test_get_system_prompt_with_env(monkeypatch):
+    """SYSTEM_PROMPT 环境变量优先，支持 {role} 占位符。"""
+    loader = ConfigLoader.__new__(ConfigLoader)
+    loader.config = {}
+
+    monkeypatch.setenv("SYSTEM_PROMPT", "Role: {role}")
+    prompt = loader.get_system_prompt(role="测试员")
+    assert prompt == "Role: 测试员"
+
+
+def test_get_system_prompt_with_config(monkeypatch):
+    """无环境变量时从配置读取 SYSTEM_PROMPT。"""
+    loader = ConfigLoader.__new__(ConfigLoader)
+    loader.config = {"SYSTEM_PROMPT": "Hello {role}"}
+
+    monkeypatch.delenv("SYSTEM_PROMPT", raising=False)
+    prompt = loader.get_system_prompt(role="User")
+    assert prompt == "Hello User"
+
+
+def test_get_system_prompt_default(monkeypatch):
+    """既无环境变量也无配置时，使用默认模板。"""
+    loader = ConfigLoader.__new__(ConfigLoader)
+    loader.config = {}
+
+    monkeypatch.delenv("SYSTEM_PROMPT", raising=False)
+    prompt = loader.get_system_prompt(role="员工")
+    assert "当前角色：员工" in prompt
+
+
+def test_create_basic_config_file_and_load_defaults(tmp_path, monkeypatch):
+    """直接调用 _create_basic_config_file 和 _load_defaults 覆盖默认配置逻辑。"""
+    loader = ConfigLoader.__new__(ConfigLoader)
+    loader.env_file = ".env.generated"
+
+    # 使用临时目录作为 base_dir
+    base_dir = str(tmp_path)
+    loader._create_basic_config_file(base_dir)
+
+    config_path = tmp_path / ".env.generated"
+    # 文件应被创建
+    assert config_path.exists()
+
+    # 使用 _load_defaults 加载默认配置，并验证几个关键字段
+    loader._load_defaults()
+    assert loader.get("CHAT_LOG_FILE_NAME") == "chat_log.xlsx"
+    assert "gpt-4o" in loader.get("OPENAI_MODELS")
+    assert loader.get_bool("BATCH_DEFAULT_SHOW_RESPONSE") is False

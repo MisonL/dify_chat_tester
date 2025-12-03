@@ -26,6 +26,8 @@
 ### 优化
 
 - **配置管理重构**：统一供应商设置模块 (`provider_setup.py`) 的配置读取逻辑。
+- **问题解析优化**：增强 `question_generator` 的问题提取算法，支持识别带编号/列表形式的问题，只保留以问号结尾或原本为列表项的行，提升生成问题的准确性和稳定性。
+- **测试覆盖率再提升**：在 `ai_providers`、`app_controller`、`config_loader`、`terminal_ui`、`batch_manager`、`chat_manager`、`console_platform` 等模块补充大量单元测试用例，覆盖更多异常分支和回退逻辑。
 - **代码规范**：引入 `isort` 进行导入排序，统一代码格式。
 - **文档完善**：大幅更新《用户使用指南》，补充了详细的环境准备、安装步骤和多种运行方式说明。
 
