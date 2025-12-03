@@ -388,7 +388,7 @@ def run_batch_query(
     summary_text.append("📁 文件信息\n", style="bold yellow")
     summary_text.append(f"  • 处理文件: {selected_excel_file}\n", style="white")
     summary_text.append(
-        f"  • 问题列: {column_names[question_col_index]} (第{question_col_index+1}列)\n",
+        f"  • 问题列: {column_names[question_col_index]} (第{question_col_index + 1}列)\n",
         style="white",
     )
     summary_text.append("  • 日志文件: 所有结果保存到独立日志文件\n\n", style="white")

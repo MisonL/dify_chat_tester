@@ -232,7 +232,7 @@ def print_statistics(total: int, success: int, failed: int, duration: float):
     stats_text.append(f"  • 平均用时: {avg_time:.2f} 秒/问题\n", style="white")
     stats_text.append(
         (
-            f"  • 处理速度: {total/duration:.1f} 问题/秒"
+            f"  • 处理速度: {total / duration:.1f} 问题/秒"
             if duration > 0
             else "  • 处理速度: 0"
         ),

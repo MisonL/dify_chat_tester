@@ -223,6 +223,32 @@ class ConfigLoader:
         # 从配置文件获取
         return self.get_bool("ENABLE_THINKING", True)
 
+    def get_system_prompt(self, role: str = "员工") -> str:
+        """
+        获取系统提示词
+        优先从环境变量获取，其次从 .env.config 文件获取
+
+        Args:
+            role: 当前角色
+
+        Returns:
+            str: 系统提示词（已替换占位符）
+        """
+        # 默认提示词模板
+        default_template = (
+            "你是一个AI助手。当前角色：{role}。请以专业、友好的方式回答问题。"
+        )
+
+        # 优先从环境变量获取
+        value = os.getenv("SYSTEM_PROMPT")
+        if value is None:
+            # 从配置文件获取
+            value = self.get("SYSTEM_PROMPT", default_template)
+
+        # 替换占位符
+        template = value or default_template
+        return template.format(role=role)
+
 
 # 全局配置实例
 config_loader = ConfigLoader()

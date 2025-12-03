@@ -78,13 +78,49 @@ cp .env.config.example .env.config
 
 ### 3. iFlow（推荐）
 
-| 特性            | 说明                                            |
-| --------------- | ----------------------------------------------- |
-| 🚀 **平台类型** | 集成多种模型的 AI 平台                          |
-| 🔗 **预设 URL** | `https://apis.iflow.cn/v1`                      |
-| 🎯 **内置模型** | qwen3-max, kimi-k2-0905, glm-4.6, deepseek-v3.2 |
-| 📱 **获取密钥** | [iFlow 控制台](https://platform.iflow.cn)       |
-| ⭐ **推荐理由** | 稳定性好、响应速度快、支持多种主流模型          |
+| 特性            | 说明                                                         |
+| --------------- | ------------------------------------------------------------ |
+| 🚀 **平台类型** | 集成多种模型的 AI 平台                                       |
+| 🔗 **预设 URL** | `https://apis.iflow.cn/v1`                                   |
+| 🎯 **内置模型** | qwen3-max, kimi-k2-0905, glm-4.6, deepseek-v3.2              |
+| 📱 **获取密钥** | [iFlow 控制台](https://platform.iflow.cn/profile?tab=apiKey) |
+| ⭐ **推荐理由** | 稳定性好、响应速度快、支持多种主流模型                       |
+
+## 🎨 AI 提示词自定义（高级功能）
+
+本工具支持自定义 AI 系统提示词，您可以调整 AI 助手的对话风格和行为：
+
+### 配置方式
+
+在 `.env.config` 文件中设置 `SYSTEM_PROMPT` 参数：
+
+```ini
+# AI 提示词配置
+# 支持占位符: {role}
+SYSTEM_PROMPT=你是一个AI助手。当前角色：{role}。请以专业、友好的方式回答问题。
+```
+
+### 使用场景
+
+- 👔 **专业领域**：让 AI 扮演特定领域专家（如电商、医疗、技术支持）
+- 📝 **回答风格**：调整 AI 的回答详细程度和语气
+- 🌐 **多语言**：切换到英文或其他语言
+- 🎯 **特殊要求**：添加安全、合规等特定约束
+
+### 示例
+
+```ini
+# 电商客服专家
+SYSTEM_PROMPT=你是一个专注于电商领域的{role}。你了解电商运营、客户服务的最佳实践。请以友好、专业的方式回答问题。
+
+# 技术支持专家
+SYSTEM_PROMPT=你是一个IT技术支持{role}。你精通常见的技术问题排查方法，能够用通俗易懂的语言解释技术概念。请耐心、详细地回答问题。
+
+# 简洁风格
+SYSTEM_PROMPT=你是{role}，请用简洁明了的语言回答问题，避免冗长的解释。每个回答控制在3-5句话以内。
+```
+
+详细配置说明请参考：[AI_PROMPT_CONFIG.md](docs/AI_PROMPT_CONFIG.md)
 
 ## 💻 运行模式
 
@@ -139,12 +175,14 @@ dify_chat_tester/
 │   ├── app_controller.py      # 应用控制器
 │   ├── chat_manager.py        # 聊天管理器
 │   ├── batch_manager.py       # 批量管理器
+│   ├── question_generator.py  # 问题生成器
 │   ├── provider_setup.py      # 供应商设置
 │   ├── selectors.py           # 选择器
 │   ├── ai_providers.py        # AI供应商实现
 │   ├── config_loader.py       # 配置管理
 │   ├── terminal_ui.py         # 终端界面
-│   └── excel_utils.py         # Excel工具
+│   ├── excel_utils.py         # Excel工具
+│   └── logging_utils.py       # 日志工具
 ├── .env.config.example         # 配置模板
 ├── pyproject.toml            # 项目配置
 └── README.md                 # 项目文档
@@ -337,6 +375,7 @@ graph TD
 - ℹ️ **Python PATH**：本项目使用 uv 管理 Python 环境，无需勾选 "Add Python to PATH" 也能正常运行
 - 💻 **推荐**：设置 VSCode 默认终端为 Git Bash
 - 🔑 **安全**：不要在配置文件中硬编码 API 密钥
+- 🧠 **思维链**：默认开启 AI 思考过程显示，可通过配置文件中的 `ENABLE_THINKING` 参数关闭
 - 📝 **建议**：首次使用请先阅读[程序使用方法](docs/用户使用指南.md#9-程序使用方法)
 
 **👉 [查看完整用户使用指南](docs/用户使用指南.md)**

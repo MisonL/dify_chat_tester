@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 
 from dify_chat_tester.question_generator import (
     export_questions_to_excel,
-    extract_questions_from_text,
+    parse_questions_from_response,
     generate_questions_for_document,
     read_markdown_files,
 )
@@ -47,7 +47,7 @@ def test_read_markdown_files_not_exist():
     assert contents == {}
 
 
-def test_extract_questions_from_text():
+def test_parse_questions_from_response():
     """测试从文本提取问题"""
     text = """
     Here are some questions:
@@ -58,7 +58,7 @@ def test_extract_questions_from_text():
     
     Some other text.
     """
-    questions = extract_questions_from_text(text)
+    questions = parse_questions_from_response(text)
 
     assert "What is AI?" in questions
     assert "How does it work?" in questions
@@ -67,7 +67,7 @@ def test_extract_questions_from_text():
     assert len(questions) == 4
 
 
-def test_extract_questions_from_text_json():
+def test_parse_questions_from_response_json():
     """测试从 JSON 格式文本提取问题"""
     text = """
     ```json
@@ -77,7 +77,7 @@ def test_extract_questions_from_text_json():
     ]
     ```
     """
-    questions = extract_questions_from_text(text)
+    questions = parse_questions_from_response(text)
     assert "Question 1" in questions
     assert "Question 2" in questions
 
