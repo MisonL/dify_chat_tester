@@ -27,7 +27,7 @@ release_dir = os.path.join(project_root, 'release_windows')
 # 收集数据文件
 datas = [
     # 配置文件模板
-    (os.path.join(project_root, 'config.env.example'), '.'),
+    (os.path.join(project_root, '.env.config.example'), '.'),
     
     # Excel模板文件
     (os.path.join(project_root, 'dify_chat_tester_template.xlsx'), '.'),
@@ -36,7 +36,7 @@ datas = [
     (os.path.join(project_root, 'README.md'), '.',) if os.path.exists(os.path.join(project_root, 'README.md')) else None,
     
     # 用户指南（如果存在）
-    (os.path.join(project_root, '用户使用指南.md'), '.',) if os.path.exists(os.path.join(project_root, '用户使用指南.md')) else None,
+    (os.path.join(project_root, 'docs', '用户使用指南.md'), '.',) if os.path.exists(os.path.join(project_root, 'docs', '用户使用指南.md')) else None,
 ]
 
 # 过滤掉 None 值
