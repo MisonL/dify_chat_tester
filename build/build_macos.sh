@@ -72,7 +72,7 @@ if [ -f "$PROJECT_DIR/dist/dify_chat_tester" ]; then
     cp "$PROJECT_DIR/dist/dify_chat_tester" "$PROJECT_DIR/release_macos/"
     
     # 复制必要的配置文件
-    cp "$PROJECT_DIR/config.env.example" "$PROJECT_DIR/release_macos/"
+    cp "$PROJECT_DIR/.env.config.example" "$PROJECT_DIR/release_macos/"
     cp "$PROJECT_DIR/dify_chat_tester_template.xlsx" "$PROJECT_DIR/release_macos/"
     
     # 复制文档文件（如果存在）
@@ -99,8 +99,8 @@ EOF
     echo ""
     echo "📋 使用说明:"
     echo "1. 解压 $RELEASE_NAME"
-    echo "2. 复制 config.env.example 为 config.env"
-    echo "3. 编辑 config.env 配置 API 信息"
+    echo "2. 复制 .env.config.example 为 .env.config"
+    echo "3. 编辑 .env.config 配置 API 信息"
     echo "4. 运行 ./run.sh 启动程序"
     echo ""
     echo "🎉 打包完成！"
