@@ -85,7 +85,7 @@ cp .env.config.example .env.config
 | 🌐 **官网**     | [https://console.anthropic.com](https://console.anthropic.com) |
 | 🎯 **支持模型** | claude-3-5-sonnet-20241022、claude-3-opus-20240229 等          |
 
-### 4. iFlow
+### 4. iFlow（推荐）
 
 | 特性            | 说明                                            |
 | --------------- | ----------------------------------------------- |
@@ -93,6 +93,7 @@ cp .env.config.example .env.config
 | 🔗 **预设 URL** | `https://apis.iflow.cn/v1`                      |
 | 🎯 **内置模型** | qwen3-max, kimi-k2-0905, glm-4.6, deepseek-v3.2 |
 | 📱 **获取密钥** | [iFlow 控制台](https://platform.iflow.cn)       |
+| ⭐ **推荐理由** | 稳定性好、响应速度快、支持多种主流模型          |
 
 ## 💻 运行模式
 
