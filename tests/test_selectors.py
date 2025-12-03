@@ -5,7 +5,13 @@
 
 from unittest.mock import patch
 
-from dify_chat_tester.selectors import select_model, select_role
+from dify_chat_tester.selectors import (
+    select_folder_path,
+    select_main_function,
+    select_mode,
+    select_model,
+    select_role,
+)
 
 
 class TestSelectModel:
@@ -93,3 +99,102 @@ class TestSelectRole:
         result = select_role(available_roles)
 
         assert result == "产品经理"
+
+
+class TestSelectMode:
+    """测试 select_mode 函数"""
+    
+    @patch("dify_chat_tester.selectors.print_input_prompt")
+    def test_select_chat_mode(self, mock_input):
+        mock_input.return_value = "1"
+        result = select_mode()
+        assert result == "1"
+        
+    @patch("dify_chat_tester.selectors.print_input_prompt")
+    def test_select_batch_mode(self, mock_input):
+        mock_input.return_value = "2"
+        result = select_mode()
+        assert result == "2"
+        
+    @patch("dify_chat_tester.selectors.print_input_prompt")
+    def test_select_exit(self, mock_input):
+        mock_input.return_value = "3"
+        result = select_mode()
+        assert result == "3"
+        
+    @patch("dify_chat_tester.selectors.print_input_prompt")
+    def test_invalid_retry(self, mock_input):
+        mock_input.side_effect = ["invalid", "1"]
+        result = select_mode()
+        assert result == "1"
+
+
+class TestSelectMainFunction:
+    """测试 select_main_function 函数"""
+    
+    @patch("dify_chat_tester.selectors.print_input_prompt")
+    def test_select_chat_mode(self, mock_input):
+        mock_input.return_value = "1"
+        result = select_main_function()
+        assert result == "1"
+        
+    @patch("dify_chat_tester.selectors.print_input_prompt")
+    def test_select_question_gen_mode(self, mock_input):
+        mock_input.return_value = "2"
+        result = select_main_function()
+        assert result == "2"
+        
+    @patch("dify_chat_tester.selectors.print_input_prompt")
+    def test_select_exit(self, mock_input):
+        mock_input.return_value = "0"
+        result = select_main_function()
+        assert result == "0"
+
+
+class TestSelectFolderPath:
+    """测试 select_folder_path 函数"""
+    
+    @patch("dify_chat_tester.selectors.print_input_prompt")
+    def test_select_default_path(self, mock_input):
+        """测试选择默认路径"""
+        mock_input.return_value = "1"
+        result = select_folder_path("./default/path")
+        assert result == "./default/path"
+        
+    @patch("dify_chat_tester.selectors.print_input_prompt")
+    def test_select_custom_path(self, mock_input):
+        """测试输入自定义路径"""
+        mock_input.side_effect = ["2", "/custom/path"]
+        result = select_folder_path("./default/path")
+        assert result == "/custom/path"
+        
+    @patch("dify_chat_tester.selectors.print_input_prompt")
+    @patch("pathlib.Path.iterdir")
+    def test_select_existing_folder(self, mock_iterdir, mock_input):
+        """测试选择当前目录下的文件夹"""
+        from unittest.mock import MagicMock
+        
+        # 模拟 Path 对象
+        mock_folder1 = MagicMock()
+        mock_folder1.is_dir.return_value = True
+        mock_folder1.name = "folder1"
+        mock_folder1.__str__.return_value = "folder1"
+
+        mock_folder2 = MagicMock()
+        mock_folder2.is_dir.return_value = True
+        mock_folder2.name = "folder2"
+        mock_folder2.__str__.return_value = "folder2"
+
+        mock_file1 = MagicMock()
+        mock_file1.is_dir.return_value = False
+        mock_file1.name = "file1"
+
+        mock_iterdir.return_value = [mock_folder1, mock_file1, mock_folder2]
+        
+        # 选择列表中的第一个文件夹 (folder1)
+        # 菜单项: 1.默认, 2.自定义, 3.folder1, 4.folder2
+        mock_input.return_value = "3"
+        
+        result = select_folder_path("./default/path")
+        # 注意：select_folder_path 返回的是 str(folder)
+        assert result == "folder1"

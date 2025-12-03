@@ -79,3 +79,73 @@ def test_generate_questions_for_document_handles_empty_content():
         document_content="",
     )
     assert questions == []
+
+
+    assert questions == []
+
+
+def test_read_markdown_files(tmp_path):
+    """测试读取 Markdown 文件"""
+    from dify_chat_tester.question_generator import read_markdown_files
+    
+    # 创建测试文件
+    d = tmp_path / "docs"
+    d.mkdir()
+    (d / "test1.md").write_text("内容1", encoding="utf-8")
+    (d / "test2.md").write_text("内容2", encoding="utf-8")
+    (d / "ignore.txt").write_text("忽略", encoding="utf-8")
+    
+    file_names, file_contents = read_markdown_files(str(d))
+    
+    assert len(file_names) == 2
+    assert "test1.md" in file_names
+    assert "test2.md" in file_names
+    assert file_contents["test1.md"] == "内容1"
+    assert file_contents["test2.md"] == "内容2"
+
+
+def test_run_question_generation(tmp_path, monkeypatch):
+    """测试问题生成主流程"""
+    from dify_chat_tester.question_generator import run_question_generation
+    from unittest.mock import MagicMock, patch
+    
+    # 准备测试文件
+    doc_dir = tmp_path / "docs"
+    doc_dir.mkdir()
+    (doc_dir / "test.md").write_text("测试文档内容", encoding="utf-8")
+    
+    # Mock Provider
+    mock_provider = MagicMock()
+    # 返回: (response, success, error, conv_id)
+    mock_provider.send_message.return_value = ('["问题1", "问题2"]', True, None, None)
+    
+    # Mock UI functions
+    monkeypatch.setattr("dify_chat_tester.question_generator.print_info", lambda x: None)
+    monkeypatch.setattr("dify_chat_tester.question_generator.print_success", lambda x: None)
+    monkeypatch.setattr("dify_chat_tester.question_generator.print_error", lambda x: None)
+    monkeypatch.setattr("dify_chat_tester.question_generator.print_warning", lambda x: None)
+    monkeypatch.setattr("dify_chat_tester.question_generator.console.print", lambda *args, **kwargs: None)
+    
+    # Mock export_questions_to_excel to verify calls and avoid actual file I/O
+    with patch("dify_chat_tester.question_generator.export_questions_to_excel") as mock_export:
+        mock_export.return_value = True
+        
+        run_question_generation(
+            provider=mock_provider,
+            role="user",
+            provider_name="TestProvider",
+            selected_model="gpt-4o",
+            folder_path=str(doc_dir)
+        )
+        
+        # Verify export was called
+        assert mock_export.called
+        # Check arguments of the last call
+        args, _ = mock_export.call_args
+        questions_data, output_path = args
+        
+        assert len(questions_data) == 2
+        assert questions_data[0] == ("test.md", "问题1")
+        assert questions_data[1] == ("test.md", "问题2")
+        assert output_path.startswith("question_generation_")
+        assert output_path.endswith(".xlsx")

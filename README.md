@@ -1,6 +1,6 @@
 <div align="center">
   <h1>🤖 AI 聊天客户端测试工具</h1>
-  <p>支持多AI供应商的聊天测试工具（Dify、OpenAI、iFlow） v1.3.0</p>
+  <p>支持多AI供应商的聊天测试工具（Dify、OpenAI、iFlow） v3.0.0</p>
   
   <img src="https://img.shields.io/badge/Python-3.7+-blue?logo=python" alt="Python版本">
   <img src="https://img.shields.io/badge/License-MIT-green" alt="许可证">
@@ -87,10 +87,16 @@ cp .env.config.example .env.config
 
 ## 💻 运行模式
 
-### 1️⃣ 会话模式
+本工具提供两大主功能：
+
+### 功能 1️⃣：AI 问答测试
+
+**运行方式：** 启动后选择功能 `1`
+
+#### 模式 1. 会话模式
 
 ```bash
-# 启动后选择 1
+# 在 AI问答测试 中选择 1
 ✅ 实时多轮对话
 ✅ 上下文自动维护
 ✅ 命令控制：
@@ -100,10 +106,10 @@ cp .env.config.example .env.config
 ✅ 退出时静默返回，无额外提示
 ```
 
-### 2️⃣ 批量询问模式
+#### 模式 2. 批量询问模式
 
 ```bash
-# 启动后选择 2
+# 在 AI问答测试 中选择 2
 📁 从 Excel 文件读取问题
 🚀 批量发送到 AI 供应商
 💾 实时写入结果到 Excel
@@ -111,10 +117,11 @@ cp .env.config.example .env.config
 📈 生成详细统计信息
 ```
 
-### 3️⃣ AI 生成测试提问点
+### 功能 2️⃣：AI 生成测试提问点
+
+**运行方式：** 启动后选择功能 `2`
 
 ```bash
-# 启动后选择 3
 📂 读取指定目录下的 Markdown 文档
 🤖 AI 智能分析文档内容
 ❓ 自动生成高质量测试问题
