@@ -1,8 +1,8 @@
 <div align="center">
   <h1>🤖 AI 聊天客户端测试工具</h1>
-  <p>支持多AI供应商的聊天测试工具（Dify、OpenAI、iFlow） v1.3.0</p>
+  <p>支持多AI供应商的聊天测试工具（Dify、OpenAI、Anthropic、iFlow） v1.3.0</p>
   
-  <img src="https://img.shields.io/badge/Python-3.7+-blue?logo=python" alt="Python版本">
+  <img src="https://img.shields.io/badge/Python-3.9+-blue?logo=python" alt="Python版本">
   <img src="https://img.shields.io/badge/License-MIT-green" alt="许可证">
   <img src="https://img.shields.io/badge/PRs-Welcome-brightgreen" alt="欢迎PR">
 </div>
@@ -11,7 +11,7 @@
 
 ## ✨ 功能特性
 
-- 🌐 **多 AI 供应商支持** - 集成 Dify、OpenAI 兼容接口、iFlow
+- 🌐 **多 AI 供应商支持** - 集成 Dify、OpenAI 兼容接口、Anthropic、iFlow
 - 💬 **实时对话模式** - 支持多轮对话，智能上下文维护
 - 📊 **批量询问模式** - Excel 批量处理，实时保存结果
 - 🤖 **AI 生成测试问题** - 智能分析文档，自动生成测试提问点
@@ -76,7 +76,16 @@ cp .env.config.example .env.config
 | 🤖 **模型支持**   | 支持自定义模型名称           |
 | 📡 **API 格式**   | 标准 OpenAI Chat Completions |
 
-### 3. iFlow
+### 3. Anthropic（Claude）
+
+| 特性            | 说明                                                           |
+| --------------- | -------------------------------------------------------------- |
+| 🤖 **平台类型** | Anthropic Claude AI 平台                                       |
+| 🔑 **API 格式** | `sk-ant-xxxxx`                                                 |
+| 🌐 **官网**     | [https://console.anthropic.com](https://console.anthropic.com) |
+| 🎯 **支持模型** | claude-3-5-sonnet-20241022、claude-3-opus-20240229 等          |
+
+### 4. iFlow
 
 | 特性            | 说明                                            |
 | --------------- | ----------------------------------------------- |
@@ -206,6 +215,8 @@ LOG_FILE_NAME=dify_chat_tester.log   # 日志文件名
 # DIFY_APP_ID=your-app-id
 # OPENAI_BASE_URL=https://api.openai.com/v1
 # OPENAI_API_KEY=sk-xxx
+# ANTHROPIC_API_KEY=sk-ant-xxx
+# ANTHROPIC_MODEL=claude-3-5-sonnet-20241022
 # IFLOW_API_KEY=sk-xxx
 ```
 
