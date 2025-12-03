@@ -99,8 +99,8 @@ if exist "%PROJECT_DIR%\release_windows\dify_chat_tester.exe" (
     echo.
     echo Usage instructions:
     echo 1. Extract dify_chat_tester_windows_*.zip
-    echo 2. Copy config.env.example to config.env
-    echo 3. Edit config.env to configure API information
+    echo 2. Copy .env.config.example to .env.config
+    echo 3. Edit .env.config to configure API information
     echo 4. Double-click dify_chat_tester.exe to start the program
     echo.
     echo Packaging complete!

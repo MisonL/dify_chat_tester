@@ -33,9 +33,9 @@ def create_zip():
         print("Copied executable")
     
     # Copy config template
-    config_file = os.path.join(project_dir, 'config.env.example')
+    config_file = os.path.join(project_dir, '.env.config.example')
     if os.path.exists(config_file):
-        shutil.copy2(config_file, os.path.join(source_dir, 'config.env.example'))
+        shutil.copy2(config_file, os.path.join(source_dir, '.env.config.example'))
         print("Copied config template")
     
     # Copy Excel template
