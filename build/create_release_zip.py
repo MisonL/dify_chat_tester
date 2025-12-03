@@ -4,13 +4,27 @@ import datetime
 import shutil
 
 def create_zip():
-    now = datetime.datetime.now()
-    datestamp = now.strftime('%Y%m%d_%H%M%S')
-    zip_filename = f'dify_chat_tester_windows_{datestamp}.zip'
-    
     # Get script directory and set paths relative to project root
     script_dir = os.path.dirname(os.path.abspath(__file__))
     project_dir = os.path.dirname(script_dir)
+    
+    # Get version from pyproject.toml
+    version = "unknown"
+    try:
+        pyproject_path = os.path.join(project_dir, 'pyproject.toml')
+        if os.path.exists(pyproject_path):
+            with open(pyproject_path, 'r', encoding='utf-8') as f:
+                for line in f:
+                    if line.strip().startswith('version = '):
+                        version = line.split('=')[1].strip().strip('"').strip("'")
+                        break
+    except Exception as e:
+        print(f"Warning: Could not read version: {e}")
+
+    now = datetime.datetime.now()
+    datestamp = now.strftime('%Y%m%d_%H%M%S')
+    zip_filename = f'dify_chat_tester_windows_v{version}_{datestamp}.zip'
+    
     source_dir = os.path.join(project_dir, 'release_windows')
     zip_path = os.path.join(project_dir, zip_filename)
     
