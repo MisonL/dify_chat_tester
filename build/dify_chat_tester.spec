@@ -35,7 +35,7 @@ datas = [
     # README文件（如果存在）
     (os.path.join(project_root, 'README.md'), '.',) if os.path.exists(os.path.join(project_root, 'README.md')) else None,
     
-    # 用户指南（如果存在）
+    # 用户使用指南（如果存在）- 只包含这一个文件，不包含整个 docs 文件夹
     (os.path.join(project_root, 'docs', '用户使用指南.md'), '.',) if os.path.exists(os.path.join(project_root, 'docs', '用户使用指南.md')) else None,
 ]
 
@@ -43,59 +43,7 @@ datas = [
 datas = [d for d in datas if d is not None]
 
 # 收集隐藏导入
-hiddenimports = [
-    'dify_chat_tester.ai_providers',
-    'dify_chat_tester.config_loader',
-    'dify_chat_tester.terminal_ui',
-    'dify_chat_tester.windows_console',
-    'rich.console',
-    'rich.panel',
-    'rich.prompt',
-    'rich.table',
-    'rich.text',
-    'rich.progress',
-    'rich.spinner',
-    'rich.live',
-    'rich.align',
-    'rich.box',
-    'rich.style',
-    'rich.theme',
-    'rich.color',
-    'rich.ansi',
-    'rich.markup',
-    'rich.pretty',
-    'rich.tree',
-    'rich.columns',
-    'rich.rule',
-    'requests',
-    'requests.adapters',
-    'requests.auth',
-    'requests.exceptions',
-    'requests.models',
-    'requests.sessions',
-    'requests.utils',
-    'openpyxl',
-    'openpyxl.workbook',
-    'openpyxl.worksheet',
-    'openpyxl.cell',
-    'openpyxl.styles',
-    'openpyxl.utils',
-    'colorama',
-    'colorama.ansi',
-    'colorama.initialise',
-    'colorama.win32',
-    'ctypes',
-    'ctypes.wintypes',
-    'datetime',
-    'json',
-    'os',
-    'sys',
-    'time',
-    're',
-    'urllib.parse',
-    'threading',
-    'uuid',
-]
+hiddenimports = []
 
 # 收集二进制文件
 binaries = []

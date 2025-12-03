@@ -77,18 +77,7 @@ if [ -f "$PROJECT_DIR/dist/dify_chat_tester" ]; then
     
     # 复制文档文件（如果存在）
     [ -f "$PROJECT_DIR/README.md" ] && cp "$PROJECT_DIR/README.md" "$PROJECT_DIR/release_macos/"
-    [ -d "$PROJECT_DIR/docs" ] && cp -r "$PROJECT_DIR/docs" "$PROJECT_DIR/release_macos/"
-    
-    # 创建启动脚本
-    cat > "$PROJECT_DIR/release_macos/run.sh" << 'EOF'
-#!/bin/bash
-# 获取脚本所在目录
-DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# 切换到脚本目录并运行
-cd "$DIR"
-./dify_chat_tester
-EOF
-    chmod +x "$PROJECT_DIR/release_macos/run.sh"
+    [ -f "$PROJECT_DIR/docs/用户使用指南.md" ] && cp "$PROJECT_DIR/docs/用户使用指南.md" "$PROJECT_DIR/release_macos/"
     
     # 获取版本号
     VERSION=$(grep -m 1 'version = ' "$PROJECT_DIR/pyproject.toml" | sed 's/version = "//;s/"//')
@@ -107,7 +96,8 @@ EOF
     echo "1. 解压 $RELEASE_NAME"
     echo "2. 复制 .env.config.example 为 .env.config"
     echo "3. 编辑 .env.config 配置 API 信息"
-    echo "4. 运行 ./run.sh 启动程序"
+    echo "4. 赋予可执行权限: chmod +x ./dify_chat_tester"
+    echo "5. 运行 ./dify_chat_tester 启动程序"
     echo ""
     echo "🎉 打包完成！"
     

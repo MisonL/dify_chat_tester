@@ -2,7 +2,7 @@
 
 ## Project Type
 
-这是一个基于 Python 的 AI 聊天客户端测试工具，支持多个 AI 供应商。项目采用模块化架构，使用 uv 作为包管理器，支持中文界面和国际化。
+这是一个基于 Python 的 AI 聊天客户端测试工具，支持多个 AI 供应商。项目采用模块化架构，使用 uv 作为包管理器，支持中文界面和国际化。项目现已支持 AI 生成测试提问点功能，可从文档自动生成测试问题。
 
 ## Directory Overview
 
@@ -12,6 +12,11 @@
 - **dify_chat_tester/**: 核心模块，包含 AI 供应商实现和工具函数
 - **build/**: 构建脚本和打包配置
 - **dist/**: 构建输出目录（通过 PyInstaller 打包）
+- **docs/**: 项目文档，包含用户指南和功能说明
+- **tests/**: 完整的单元测试套件
+- **kb-docs/**: 知识库文档，用于 AI 生成测试提问点功能
+- **logs/**: 日志文件输出目录
+- **htmlcov/**: 测试覆盖率报告
 - **配置文件**: 使用 .env.config 进行运行时配置
 
 ## Key Files and Their Purpose
@@ -36,13 +41,41 @@
 - **chat_manager.py**: 聊天管理器，处理交互式聊天模式功能
 - **batch_manager.py**: 批量管理器，处理批量询问模式
 - **provider_setup.py**: 供应商设置模块，处理不同 AI 供应商的初始化配置
-- **selectors.py**: 选择器模块，处理用户选择逻辑（模型、角色、模式）
+- **selectors.py**: 选择器模块，处理用户选择逻辑（模型、角色、模式、主功能选择）
 - **config_loader.py**: 配置管理系统，从 .env.config 加载设置
-- **terminal_ui.py**: 终端 UI 工具，使用 Rich 库提供美观的 CLI 界面
+- **terminal_ui.py**: 终端 UI 工具，使用 Rich 库提供美观的 CLI 界面，包含 StreamDisplay 组件
 - **excel_utils.py**: Excel 操作工具，提供安全写入、初始化日志、清理非法字符等功能（109 行）
+- **question_generator.py**: 问题生成器模块，支持从 MD 文档生成测试问题（360 行）
+- **logging_utils.py**: 统一日志工具，支持自动目录检测和权限处理（124 行）
 - **console_background.py**: 控制台背景设置模块（已禁用）
 - **windows_console.py**: Windows 控制台增强支持，提供剪贴板粘贴功能（73 行）
 - \***\*init**.py\*\*: 模块初始化，定义版本和作者信息
+
+### docs/ Directory
+
+- **用户使用指南.md**: 详细的中文用户指南，包含安装、配置和使用说明
+- **AI_PROMPT_CONFIG.md**: AI 提示词自定义配置详细说明
+- **AI生成测试提问点功能报告.md**: AI 生成测试提问点功能的完整开发报告
+
+### tests/ Directory
+
+完整的单元测试套件，包含以下测试文件：
+- **test_ai_providers.py**: AI 供应商测试
+- **test_ai_providers_streaming.py**: 流式响应测试
+- **test_app_controller.py**: 应用控制器测试
+- **test_batch_and_chat_manager.py**: 批量和聊天管理器测试
+- **test_batch_manager_extended.py**: 批量管理器扩展测试
+- **test_config_loader.py**: 配置加载器测试
+- **test_excel_utils.py**: Excel 工具测试
+- **test_logging_utils.py**: 日志工具测试
+- **test_provider_setup.py**: 供应商设置测试
+- **test_question_generator.py**: 问题生成器测试
+- **test_question_generator_flow.py**: 问题生成器流程测试
+- **test_question_generator_utils.py**: 问题生成器工具测试
+- **test_selectors.py**: 选择器测试
+- **test_terminal_ui.py**: 终端 UI 测试
+- **test_terminal_ui_extended.py**: 终端 UI 扩展测试
+- **conftest.py**: pytest 配置文件
 
 ### build/ Directory
 
@@ -59,7 +92,7 @@
 - API 密钥格式: `app-xxxxx`
 - 特性: 应用 ID 提取、重定向处理、会话管理、真正的流式输出
 - 注意: 不需要选择模型，直接使用应用 ID
-- 更新: 修复应用 ID 传递方式，通过 inputs 参数传递
+- 更新: 修复应用 ID 传递方式，通过 inputs 参数传递，修复供应商识别逻辑使用唯一 ID
 
 ### 2. OpenAI 兼容接口
 
@@ -74,7 +107,7 @@
 - 多模型 AI 平台
 - 预配置基础 URL: `https://apis.iflow.cn/v1`
 - 内置模型: qwen3-max, kimi-k2-0905, glm-4.6, deepseek-v3.2
-- 特性: 流式响应自动回退到非流式
+- 特性: 流式响应自动回退到非流式，k2sonnet API 特殊支持和自动流式检测
 - 更新: 修复响应解析逻辑，支持更稳定的流式处理
 
 ## Running the Application
@@ -111,8 +144,11 @@ python main.py
 ### Testing
 
 ```bash
-# 运行测试（如果已实现）
+# 运行测试（完整单元测试套件）
 uv run pytest
+
+# 运行测试并生成覆盖率报告
+uv run pytest --cov=dify_chat_tester --cov-report=html
 
 # 代码质量检查
 uv run ruff check .
@@ -168,6 +204,20 @@ python build/create_release_zip.py
 - `IFLOW_MODELS`: iFlow 可用模型列表
 - `OPENAI_MODELS`: OpenAI 可用模型列表
 
+### AI 提示词配置
+
+- `SYSTEM_PROMPT`: 自定义系统提示词，支持 `{role}` 占位符
+- 示例: `SYSTEM_PROMPT=你是一位经验丰富的{role}，拥有10年行业经验。请提供详细、专业的建议。`
+
+### 日志配置
+
+- `LOG_LEVEL`: 日志级别（DEBUG/INFO/WARNING/ERROR/CRITICAL）
+- `LOG_TO_FILE`: 是否写入文件（true/false）
+- `LOG_FILE_NAME`: 日志文件名
+- `LOG_DIR`: 日志目录
+- `LOG_MAX_BYTES`: 单个日志文件最大字节数
+- `LOG_BACKUP_COUNT`: 保留的备份文件数量
+
 ### 等待指示器配置
 
 - `WAITING_INDICATORS`: 等待动画字符
@@ -182,6 +232,7 @@ python build/create_release_zip.py
 - 支持多轮对话
 - 命令: `/exit` 或 `/quit` 返回模式选择, `/new` 重置上下文
 - 特性: 退出时静默返回，无额外提示
+- 新增: StreamDisplay 组件提供更友好的 AI 思考过程展示
 
 ### Batch Query Mode
 
@@ -190,28 +241,46 @@ python build/create_release_zip.py
 - 带时间戳的详细日志
 - 可配置的请求间隔
 - 新特性: 默认显示响应内容（Y/n），可通过配置控制
+- 新增: 生成的测试问题文件包含美化的表头和自动调整的列宽
+
+### AI 生成测试提问点模式
+
+- 读取指定目录下的 Markdown 文档
+- 使用 AI 生成符合实际提问场景的测试问题
+- 支持自定义文档文件夹路径（默认 `./kb-docs`）
+- 自动导出为 Excel 文件，包含问题、来源文档和生成时间
+- 支持批量处理多个文档
+- 命令: 主菜单选择"AI 生成测试提问点"功能
 
 ## Architecture
 
 ### Application Flow
 
-1. **Main Entry** (`main.py`): 简洁的程序入口
+1. **Main Entry** (`main.py`): 简洁的程序入口，支持命令行启动
 2. **App Controller** (`app_controller.py`):
    - 管理主程序循环
+   - 处理主功能选择（AI 问答测试/AI 生成测试提问点）
    - 处理供应商选择、设置
    - 内层循环处理运行模式选择
 3. **Mode Managers**:
    - `chat_manager.py`: 处理会话模式
    - `batch_manager.py`: 处理批量模式
+   - `question_generator.py`: 处理 AI 生成测试提问点模式
 4. **Support Modules**:
    - `provider_setup.py`: 供应商初始化
-   - `selectors.py`: 用户选择处理
-   - `terminal_ui.py`: UI 组件
+   - `selectors.py`: 用户选择处理（包含主功能选择）
+   - `terminal_ui.py`: UI 组件（包含 StreamDisplay）
+   - `logging_utils.py`: 统一日志管理
+   - `config_loader.py`: 配置管理（支持 AI 提示词自定义）
 
 ### Key Features
 
 - 带指示器的流式响应（Dify 渠道真正的实时流式输出）
-- 批量处理的 Excel 集成（默认显示响应内容）
+- 批量处理的 Excel 集成（默认显示响应内容，美化的表头和自动列宽）
+- **AI 生成测试提问点**：从文档自动生成测试问题并导出为 Excel
+- **AI 提示词自定义**：通过配置文件调整 AI 对话风格和行为
+- **智能日志系统**：自动目录检测和权限处理，支持轮转日志
+- **StreamDisplay 组件**：友好的 AI 思考过程展示（带机器人图标和边框）
 - 多供应商支持（Dify、OpenAI 兼容接口、iFlow）
 - Rich 终端 UI 体验
 - Windows 控制台增强
@@ -219,6 +288,7 @@ python build/create_release_zip.py
 - 模块化的代码架构
 - 流式响应失败自动回退机制
 - 优化的错误处理和异常管理
+- 完整的单元测试覆盖率和测试报告
 
 ## Development Conventions
 
@@ -230,6 +300,8 @@ python build/create_release_zip.py
 - 使用 Optional 类型提示
 - 抽象基类用于扩展性
 - 流式操作的线程安全
+- 统一的配置管理（config_loader.py）
+- 完整的类型注解和文档字符串
 
 ### Error Handling
 
@@ -279,6 +351,20 @@ python build/create_release_zip.py
 - 编辑 `excel_utils.py` 添加新的 Excel 操作
 - 使用 `write_cell_safely()` 处理合并单元格
 - 使用 `clean_excel_text()` 清理非法字符
+- 支持美化的表头和自动列宽调整
+
+### Adding AI Question Generation Features
+
+- 编辑 `question_generator.py` 添加新的问题生成逻辑
+- 支持从不同格式的文档读取内容
+- 自定义 AI 提示词模板以生成特定类型的问题
+- 扩展 Excel 导出格式和字段
+
+### Configuring Logging
+
+- 编辑 `logging_utils.py` 自定义日志行为
+- 通过 `.env.config` 配置日志级别、输出格式和轮转策略
+- 支持自动目录检测和权限处理
 
 ### Building and Distribution
 
@@ -303,20 +389,49 @@ python build/create_release_zip.py
 
 ## Version Information
 
-- **当前版本**: 1.1.0
+- **当前版本**: 1.3.0
 - **Python 要求**: >=3.7
 - **许可证**: MIT
 - **作者**: Mison
 - **邮箱**: 1360962086@qq.com
 - **仓库**: https://github.com/MisonL/dify_chat_tester
 
-## Recent Changes (v1.1.0)
+## Recent Changes (v1.3.0)
+
+### 新增功能
+
+- **智能日志系统**：改进日志目录检测逻辑，自动处理权限问题（优先程序目录，无权限时回退至用户目录）
+- **流式输出优化**：新增 `StreamDisplay` 组件，提供更友好的 AI 思考过程展示（带机器人图标和边框）
+- **Excel 导出增强**：生成的测试问题文件现在包含美化的表头和自动调整的列宽
+- **AI 提示词自定义**：支持通过 `.env.config` 配置文件自定义系统提示词，新增 `SYSTEM_PROMPT` 配置项
+- **测试增强**：全面提升单元测试覆盖率，新增 `selectors`、`terminal_ui` 和 `question_generator` 模块的测试用例
+- **UI 优化**：改进 API 密钥隐藏逻辑，优化输入提示交互
+
+### 优化改进
+
+- **配置管理重构**：统一供应商设置模块 (`provider_setup.py`) 的配置读取逻辑
+- **代码规范**：引入 `isort` 进行导入排序，统一代码格式
+- **文档完善**：大幅更新《用户使用指南》，补充了详细的环境准备、安装步骤和多种运行方式说明
+
+## Previous Changes (v1.2.0)
+
+### 新增功能
+
+- **AI 生成测试提问点**：支持读取指定目录下的 Markdown 文档，自动生成测试问题并导出为 Excel 文件
+- 完善了单元测试覆盖率
+
+### 重要修复
+
+- 修复了 Dify 供应商识别逻辑，现在使用唯一 ID 而不是显示名称进行判断，解决了自定义名称导致多轮对话失效的问题
+- 修复了代码中的未使用的变量和导入，提升代码质量
+- 优化了终端 UI 的面板宽度一致性
+
+## Previous Changes (v1.1.0)
 
 ### 新增功能
 
 - 批量查询模式默认显示响应内容（Y/n）
-- 流式响应失败自动回退机制
-- 改进的流式响应解析，支持实时显示
+- k2sonnet API 特殊支持和自动流式检测
 
 ### 重要修复
 
@@ -330,7 +445,6 @@ python build/create_release_zip.py
 - 增加请求超时时间到 60 秒
 - 优化错误处理和异常信息
 - 清理代码质量问题（清理未使用导入）
-- 删除所有测试文件和调试文件，优化项目结构
 
 ### 构建和发布
 
@@ -350,6 +464,8 @@ python build/create_release_zip.py
 ### Development Dependencies
 
 - **pytest**: 测试框架
+- **pytest-cov**: 测试覆盖率工具
 - **black**: 代码格式化工具
 - **isort**: 导入排序工具
 - **pyinstaller**: 可执行文件打包工具
+- **hatchling**: 构建后端（用于包分发）

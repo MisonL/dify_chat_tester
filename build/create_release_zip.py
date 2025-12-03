@@ -39,13 +39,16 @@ def create_zip():
     os.makedirs(source_dir, exist_ok=True)
 
     # Copy files to release directory
-    dist_dir = os.path.join(project_dir, "dist")
-    exe_file = os.path.join(dist_dir, "dify_chat_tester.exe")
-
-    # Copy executable
-    if os.path.exists(exe_file):
-        shutil.copy2(exe_file, os.path.join(source_dir, "dify_chat_tester.exe"))
-        print("Copied executable")
+    # Note: PyInstaller output is already in source_dir (release_windows), so we verify it exists
+    
+    exe_name = "dify_chat_tester.exe"
+    exe_path = os.path.join(source_dir, exe_name)
+    
+    # Verify executable exists
+    if os.path.exists(exe_path):
+        print(f"Found executable: {exe_path}")
+    else:
+        print(f"Warning: Executable not found at {exe_path}")
 
     # Copy config template
     config_file = os.path.join(project_dir, ".env.config.example")
@@ -67,11 +70,11 @@ def create_zip():
         shutil.copy2(readme_file, os.path.join(source_dir, "README.md"))
         print("Copied README")
 
-    # Copy docs folder
-    docs_dir = os.path.join(project_dir, "docs")
-    if os.path.exists(docs_dir):
-        shutil.copytree(docs_dir, os.path.join(source_dir, "docs"), dirs_exist_ok=True)
-        print("Copied docs folder")
+    # Copy User Guide
+    user_guide_path = os.path.join(project_dir, "docs", "用户使用指南.md")
+    if os.path.exists(user_guide_path):
+        shutil.copy2(user_guide_path, os.path.join(source_dir, "用户使用指南.md"))
+        print("Copied User Guide")
 
     # Create ZIP
     print(f"Creating ZIP archive: {zip_filename}")

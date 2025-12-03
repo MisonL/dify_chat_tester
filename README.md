@@ -48,12 +48,18 @@ uv run python main.py -- --mode question-generation --folder ./kb-docs
 ### 配置设置
 
 ```bash
-# 复制配置模板
+# 复制配置模板（推荐做法）
 cp .env.config.example .env.config
 
 # 编辑配置文件
 # 设置 API 密钥、角色列表等
 ```
+
+> 提示：如果在没有 `.env.config` 的情况下直接运行程序，
+> 工具会在程序所在目录自动创建一个默认的 `.env.config`：
+> - 若存在 `.env.config.example`，会基于该模板生成；
+> - 若不存在模板，则按照内置默认值生成一个基础配置文件；
+> - 创建过程中的提示会显示在终端（stderr），首次运行后建议立即打开并修改该文件。
 
 ## 🎯 支持的 AI 供应商
 

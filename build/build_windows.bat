@@ -64,8 +64,8 @@ if exist "%PROJECT_DIR%\build\dify_chat_tester.build\" (
     rmdir /s /q "%PROJECT_DIR%\build\dify_chat_tester.build\" 2>nul
 )
 
-REM Use spec file from build directory (where it should be)
-set SPEC_FILE=%SCRIPT_DIR%\dify_chat_tester.spec
+REM Use spec file from build directory
+set SPEC_FILE=%SCRIPT_DIR%dify_chat_tester.spec
 if not exist "%SPEC_FILE%" (
     echo Error: Spec file not found at %SPEC_FILE%
     pause
@@ -91,18 +91,17 @@ echo Creating compressed package...
 
 cd /d "%PROJECT_DIR%"
 
-REM Create ZIP archive
+REM Ensure kb-docs directory exists in release
+if not exist "%PROJECT_DIR%\release_windows\kb-docs" (
+    mkdir "%PROJECT_DIR%\release_windows\kb-docs"
+)
+
+REM Create ZIP archive (Python script handles file copying and zipping)
 echo Creating ZIP archive...
 py "%SCRIPT_DIR%create_release_zip.py"
 
 echo.
-echo Usage instructions:
-echo 1. Extract dify_chat_tester_windows_v*.zip
-echo 2. Copy .env.config.example to .env.config
-echo 3. Edit .env.config to configure API information
-echo 4. Double-click dify_chat_tester.exe to start the program
-echo.
-echo Packaging complete!
+echo Packaging complete! Please refer to "使用说明.md" in the extracted folder for detailed usage on Windows and macOS.
 
 REM Clean up temporary build directories
 echo Cleaning up temporary files...
