@@ -103,6 +103,20 @@ echo 3. Edit .env.config to configure API information
 echo 4. Double-click dify_chat_tester.exe to start the program
 echo.
 echo Packaging complete!
+
+REM Clean up temporary build directories
+echo Cleaning up temporary files...
+if exist "%PROJECT_DIR%\build\dify_chat_tester\" (
+    rmdir /s /q "%PROJECT_DIR%\build\dify_chat_tester\" 2>nul
+)
+if exist "%PROJECT_DIR%\build\dify_chat_tester.dist\" (
+    rmdir /s /q "%PROJECT_DIR%\build\dify_chat_tester.dist\" 2>nul
+)
+if exist "%PROJECT_DIR%\build\dify_chat_tester.build\" (
+    rmdir /s /q "%PROJECT_DIR%\build\dify_chat_tester.build\" 2>nul
+)
+echo Cleanup complete.
+
 goto :END
 
 :FAILURE
