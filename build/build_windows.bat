@@ -2,7 +2,7 @@
 setlocal enabledelayedexpansion
 
 echo ==========================================
-echo Windows Build Script
+echo Windows Build Script (v1.3.1 Fixed)
 echo ==========================================
 
 REM Get script directory
@@ -79,37 +79,38 @@ echo Starting packaging...
 py -m uv run pyinstaller --distpath "%PROJECT_DIR%\release_windows" "%SPEC_FILE%"
 
 REM Check build result
-if exist "%PROJECT_DIR%\release_windows\dify_chat_tester.exe" (
-    echo.
-    echo Build successful!
-    echo Executable location: %PROJECT_DIR%\release_windows\dify_chat_tester.exe
-    
-    REM Create compressed package
-    echo Creating compressed package...
-    
-    REM Get timestamp for filename
-    for /f "tokens=2 delims==" %%a in ('powershell -Command "Get-Date -Format yyyyMMdd_HHmmss"') do set "datestamp=%%a"
-    
-    cd /d "%PROJECT_DIR%"
-    
-    REM Create ZIP archive
-    echo Creating ZIP archive...
-    py "%SCRIPT_DIR%create_release_zip.py"
-    
-    echo.
-    echo Usage instructions:
-    echo 1. Extract dify_chat_tester_windows_v*.zip
-    echo 2. Copy .env.config.example to .env.config
-    echo 3. Edit .env.config to configure API information
-    echo 4. Double-click dify_chat_tester.exe to start the program
-    echo.
-    echo Packaging complete!
-) else (
-    echo.
-    echo Build failed!
-    echo Please check error messages and retry
-    pause
-    exit /b 1
-)
+if not exist "%PROJECT_DIR%\release_windows\dify_chat_tester.exe" goto :FAILURE
 
+:SUCCESS
+echo.
+echo Build successful!
+echo Executable location: %PROJECT_DIR%\release_windows\dify_chat_tester.exe
+
+REM Create compressed package
+echo Creating compressed package...
+
+cd /d "%PROJECT_DIR%"
+
+REM Create ZIP archive
+echo Creating ZIP archive...
+py "%SCRIPT_DIR%create_release_zip.py"
+
+echo.
+echo Usage instructions:
+echo 1. Extract dify_chat_tester_windows_v*.zip
+echo 2. Copy .env.config.example to .env.config
+echo 3. Edit .env.config to configure API information
+echo 4. Double-click dify_chat_tester.exe to start the program
+echo.
+echo Packaging complete!
+goto :END
+
+:FAILURE
+echo.
+echo Build failed!
+echo Please check error messages and retry
+pause
+exit /b 1
+
+:END
 pause
