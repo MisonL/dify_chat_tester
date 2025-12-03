@@ -2,7 +2,7 @@
 setlocal enabledelayedexpansion
 
 echo ==========================================
-echo Windows Build Script (v1.3.1 Fixed)
+echo Dify Chat Tester Windows Build Script
 echo ==========================================
 
 REM Get script directory
