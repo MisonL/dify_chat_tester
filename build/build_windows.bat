@@ -101,7 +101,7 @@ echo Creating ZIP archive...
 py "%SCRIPT_DIR%create_release_zip.py"
 
 echo.
-echo Packaging complete! Please refer to "使用说明.md" in the extracted folder for detailed usage on Windows and macOS.
+echo Packaging complete! Please refer to the user guide in the extracted folder for detailed usage on Windows and macOS.
 
 REM Clean up temporary build directories
 echo Cleaning up temporary files...
