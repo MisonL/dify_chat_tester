@@ -154,14 +154,15 @@ def select_main_function():
     """选择主功能"""
     print("请选择功能:")
     print("1. AI问答测试")
-    print("2. AI生成测试提问点")
+    print("2. AI生成单一知识点测试提问点")
+    print("3. AI生成跨知识点测试提问点")
     print("0. 退出程序")
     console.print()
 
     while True:
         function_choice = print_input_prompt("请输入功能序号")
 
-        if function_choice in ["1", "2", "0"]:
+        if function_choice in ["1", "2", "3", "0"]:
             return function_choice
         else:
             print_error("无效的功能选择，请重新输入。")

@@ -1,8 +1,6 @@
 """batch_manager.run_batch_query 的集成式单元测试（大量使用临时目录和 mock）。"""
 
-import os
 from pathlib import Path
-
 from unittest.mock import MagicMock
 
 
@@ -87,9 +85,10 @@ def test_run_batch_query_basic_flow(tmp_path, monkeypatch):
 
 def test_run_batch_query_with_resume_state(tmp_path, monkeypatch):
     """构造带进度 state 文件的场景，覆盖恢复逻辑与“全部处理完”分支。"""
-    from dify_chat_tester.batch_manager import run_batch_query
-    import dify_chat_tester.batch_manager as bm
     import json
+
+    import dify_chat_tester.batch_manager as bm
+    from dify_chat_tester.batch_manager import run_batch_query
 
     input_path = tmp_path / "input.xlsx"
     _create_sample_excel(input_path)

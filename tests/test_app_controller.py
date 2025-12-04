@@ -206,8 +206,9 @@ class TestAppControllerAdditional:
         self, mock_welcome, controller, monkeypatch
     ):
         """测试 AppController.run 的主循环：先走问题生成，再正常退出。"""
-        import dify_chat_tester.app_controller as ac
         import pytest
+
+        import dify_chat_tester.app_controller as ac
 
         # select_main_function: 第一次选择 "2" (AI 生成测试提问点)，第二次选择 "0" 退出
         choices = iter(["2", "0"])
@@ -231,7 +232,9 @@ class TestAppControllerAdditional:
         monkeypatch.setattr(controller, "_run_question_generation", MagicMock())
 
         # sys.exit 在第二轮主循环中被调用，抛出 SystemExit 以终止测试
-        monkeypatch.setattr(ac.sys, "exit", lambda code=0: (_ for _ in ()).throw(SystemExit(code)))
+        monkeypatch.setattr(
+            ac.sys, "exit", lambda code=0: (_ for _ in ()).throw(SystemExit(code))
+        )
 
         with pytest.raises(SystemExit):
             controller.run()

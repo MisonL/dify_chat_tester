@@ -293,10 +293,12 @@ class TestiFlowProvider:
 
 def test_post_with_retry(monkeypatch):
     """测试重试逻辑"""
-    from dify_chat_tester.ai_providers import _post_with_retry
-    from requests.exceptions import Timeout, ConnectionError
     from unittest.mock import MagicMock, patch
+
     import pytest
+    from requests.exceptions import ConnectionError, Timeout
+
+    from dify_chat_tester.ai_providers import _post_with_retry
 
     mock_post = MagicMock()
     # 前两次失败，第三次成功
@@ -383,8 +385,8 @@ class TestDifyProviderAdditional:
     @patch("requests.post")
     def test_send_message_invalid_json(self, mock_post):
         """测试返回无效 JSON"""
-        from unittest.mock import MagicMock
         import json
+        from unittest.mock import MagicMock
 
         resp = MagicMock()
         resp.status_code = 200
@@ -435,6 +437,7 @@ class TestDifyProviderExtended:
     def test_send_message_http_error_with_indicator(self, mock_post):
         """测试 HTTPError 并带指示器"""
         from unittest.mock import MagicMock
+
         from requests.exceptions import HTTPError
 
         resp = MagicMock()
@@ -498,8 +501,9 @@ class TestOpenAIProviderExtended:
     @patch("requests.post")
     def test_send_message_http_error_openai(self, mock_post):
         """OpenAIProvider 顶层 HTTPError 分支应返回友好错误。"""
-        from requests.exceptions import HTTPError
         from unittest.mock import MagicMock
+
+        from requests.exceptions import HTTPError
 
         resp = MagicMock()
         resp.status_code = 502
@@ -657,8 +661,8 @@ class TestOpenAIProviderExtended:
     @patch("dify_chat_tester.ai_providers._post_with_retry")
     def test_stream_fallback_non_stream_json_decode_error(self, mock_post_with_retry):
         """流式无内容时回退到非流式，非流式 JSON 解析异常分支。"""
-        from unittest.mock import MagicMock
         import json
+        from unittest.mock import MagicMock
 
         resp_stream = MagicMock()
         resp_stream.status_code = 200
@@ -743,8 +747,8 @@ class TestiFlowProviderExtended:
     @patch("dify_chat_tester.ai_providers._post_with_retry")
     def test_non_stream_json_decode_error(self, mock_post_with_retry):
         """非流式 fallback 分支：JSONDecodeError。"""
-        from unittest.mock import MagicMock
         import json
+        from unittest.mock import MagicMock
 
         resp_stream = MagicMock()
         resp_stream.status_code = 200
@@ -792,7 +796,7 @@ class TestiFlowProviderExtended:
 
 def test_get_provider_dify():
     """测试获取 Dify Provider"""
-    from dify_chat_tester.ai_providers import get_provider, DifyProvider
+    from dify_chat_tester.ai_providers import DifyProvider, get_provider
 
     provider = get_provider("dify", base_url="http://url", api_key="key", app_id="app")
     assert isinstance(provider, DifyProvider)
@@ -800,7 +804,7 @@ def test_get_provider_dify():
 
 def test_get_provider_openai():
     """测试获取 OpenAI Provider"""
-    from dify_chat_tester.ai_providers import get_provider, OpenAIProvider
+    from dify_chat_tester.ai_providers import OpenAIProvider, get_provider
 
     provider = get_provider("openai", base_url="http://url", api_key="key")
     assert isinstance(provider, OpenAIProvider)
@@ -1235,8 +1239,9 @@ class TestErrorHandlingComprehensive:
     @patch("requests.post")
     def test_400_bad_request(self, mock_post):
         """测试 400 错误"""
-        from requests.exceptions import HTTPError
         from unittest.mock import MagicMock
+
+        from requests.exceptions import HTTPError
 
         resp = MagicMock()
         resp.status_code = 400
@@ -1254,8 +1259,9 @@ class TestErrorHandlingComprehensive:
     @patch("requests.post")
     def test_403_forbidden(self, mock_post):
         """测试 403 权限错误"""
-        from requests.exceptions import HTTPError
         from unittest.mock import MagicMock
+
+        from requests.exceptions import HTTPError
 
         resp = MagicMock()
         resp.status_code = 403

@@ -495,9 +495,11 @@ class OpenAIProvider(AIProvider):
         messages = [
             {
                 "role": "system",
-                "content": config.get_system_prompt(role)
-                if config
-                else f"你是一个AI助手。当前角色：{role}。请以专业、友好的方式回答问题。",
+                "content": (
+                    config.get_system_prompt(role)
+                    if config
+                    else f"你是一个AI助手。当前角色：{role}。请以专业、友好的方式回答问题。"
+                ),
             }
         ]
         if history:
@@ -945,9 +947,11 @@ class iFlowProvider(AIProvider):
         messages = [
             {
                 "role": "system",
-                "content": config.get_system_prompt(role)
-                if config
-                else f"你是一个AI助手。当前角色：{role}。请以专业、友好的方式回答问题。",
+                "content": (
+                    config.get_system_prompt(role)
+                    if config
+                    else f"你是一个AI助手。当前角色：{role}。请以专业、友好的方式回答问题。"
+                ),
             }
         ]
         if history:

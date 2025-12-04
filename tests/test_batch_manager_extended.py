@@ -4,7 +4,6 @@ import os
 import tempfile
 from unittest.mock import MagicMock, patch
 
-
 from dify_chat_tester.batch_manager import run_batch_query
 
 

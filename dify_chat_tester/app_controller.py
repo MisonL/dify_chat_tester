@@ -206,6 +206,7 @@ class AppController:
         provider_name,
         selected_model,
         folder_path: str | None = None,
+        is_cross_knowledge: bool = False,
     ):
         """运行问题生成功能
 
@@ -217,22 +218,40 @@ class AppController:
             folder_path: 文档文件夹路径；
                 - 为 None 时，进入交互式选择；
                 - 非 None 时，直接使用指定路径。
+            is_cross_knowledge: 是否为跨知识点生成模式
         """
         console.print()
-        print_info("已选择: AI生成测试提问点")
+        mode_name = (
+            "AI生成跨知识点测试提问点"
+            if is_cross_knowledge
+            else "AI生成单一知识点测试提问点"
+        )
+        print_info(f"已选择: {mode_name}")
 
         # 选择文档文件夹路径（未指定时走交互）
         if not folder_path:
             folder_path = select_folder_path(default_path="./kb-docs")
 
-        # 运行问题生成
-        run_question_generation(
-            provider=provider,
-            role=selected_role,
-            provider_name=provider_name,
-            selected_model=selected_model,
-            folder_path=folder_path,
-        )
+        if is_cross_knowledge:
+            from dify_chat_tester.question_generator import (
+                run_cross_knowledge_generation,
+            )
+
+            run_cross_knowledge_generation(
+                provider=provider,
+                role=selected_role,
+                provider_name=provider_name,
+                selected_model=selected_model,
+                folder_path=folder_path,
+            )
+        else:
+            run_question_generation(
+                provider=provider,
+                role=selected_role,
+                provider_name=provider_name,
+                selected_model=selected_model,
+                folder_path=folder_path,
+            )
 
     def run_question_generation_cli(self, folder_path: str | None = None) -> None:
         """从命令行直接运行“AI生成测试提问点”流程。
@@ -295,14 +314,19 @@ class AppController:
             selected_model = select_model(available_models, provider_name)
 
             # 根据主功能选择执行不同的流程
-            if function_choice == "2":
+            if function_choice in ["2", "3"]:
                 # AI生成测试提问点 - 使用默认角色 "user"
                 selected_role = "user"
+
+                # 根据选择决定模式
+                is_cross_knowledge = function_choice == "3"
+
                 self._run_question_generation(
                     provider=provider,
                     selected_role=selected_role,
                     provider_name=provider_name,
                     selected_model=selected_model,
+                    is_cross_knowledge=is_cross_knowledge,
                 )
                 console.print()
                 print_welcome()

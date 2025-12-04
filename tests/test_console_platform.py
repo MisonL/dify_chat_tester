@@ -65,9 +65,9 @@ def test_windows_console_win32_path_success(monkeypatch):
 def test_windows_console_win32_path_failure(monkeypatch):
     """在 win32 模拟下让 enable_console_paste 返回 False，覆盖备用 subprocess 路径。"""
     import importlib
+    import subprocess as real_subprocess
     import sys
     import types
-    import subprocess as real_subprocess
 
     monkeypatch.setattr(sys, "platform", "win32")
 
@@ -100,7 +100,9 @@ def test_windows_console_win32_path_failure(monkeypatch):
     # 拦截 subprocess.run，防止真的执行命令
     import subprocess
 
-    monkeypatch.setattr(subprocess, "run", lambda *a, **k: real_subprocess.CompletedProcess(a, 0))
+    monkeypatch.setattr(
+        subprocess, "run", lambda *a, **k: real_subprocess.CompletedProcess(a, 0)
+    )
 
     import dify_chat_tester.windows_console as win_mod
 

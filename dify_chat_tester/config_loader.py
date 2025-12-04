@@ -47,15 +47,65 @@ class ConfigLoader:
             self._read_config_file(config_file_path)
 
     def _read_config_file(self, config_file_path: str):
-        """从指定路径读取配置文件"""
+        """从指定路径读取配置文件
+
+        支持两种形式的配置：
+        1. 单行键值：KEY=value
+        2. 使用三引号包裹的多行值（KEY= 后面的值写在接下来的多行中，以三引号结束）
+        """
+        multiline_key: Optional[str] = None
+        multiline_buffer: list[str] = []
+
         with open(config_file_path, "r", encoding="utf-8") as f:
-            for line in f:
-                line = line.strip()
-                if not line or line.startswith("#"):
+            for raw_line in f:
+                line = raw_line.rstrip("\n")
+                stripped = line.strip()
+
+                # 处理多行值收集阶段
+                if multiline_key is not None:
+                    # 查找结束标记 """
+                    if '"""' in stripped:
+                        # 截取结束标记之前的内容
+                        end_idx = line.find('"""')
+                        content_part = line[:end_idx]
+                        if content_part:
+                            multiline_buffer.append(content_part)
+                        # 合并为最终值
+                        self.config[multiline_key] = "\n".join(multiline_buffer)
+                        multiline_key = None
+                        multiline_buffer = []
+                    else:
+                        multiline_buffer.append(line)
                     continue
-                if "=" in line:
-                    key, value = line.split("=", 1)
-                    self.config[key.strip()] = value.strip()
+
+                # 跳过空行和注释
+                if not stripped or stripped.startswith("#"):
+                    continue
+
+                if "=" not in line:
+                    continue
+
+                key, value = line.split("=", 1)
+                key = key.strip()
+                value_stripped = value.lstrip()
+
+                # 多行值起始：KEY=""" ...
+                if value_stripped.startswith('"""'):
+                    after = value_stripped[3:]
+                    # 同一行就结束：KEY="""single line"""
+                    if '"""' in after:
+                        end_idx = after.find('"""')
+                        content = after[:end_idx]
+                        self.config[key] = content
+                    else:
+                        multiline_key = key
+                        multiline_buffer = []
+                        if after:
+                            multiline_buffer.append(after)
+                    continue
+
+                # 普通单行键值
+                self.config[key] = value_stripped.strip()
 
     def _get_config_file_path(self):
         """获取配置文件的完整路径"""
@@ -132,6 +182,9 @@ class ConfigLoader:
             # 网络重试配置
             "NETWORK_MAX_RETRIES": "3",
             "NETWORK_RETRY_DELAY": "1.0",
+            # 跨知识点生成配置
+            "CROSS_KNOWLEDGE_MIN_ITERATIONS": "5",
+            "CROSS_KNOWLEDGE_MAX_ITERATIONS": "20",
             # 日志配置
             "LOG_LEVEL": "INFO",
             "LOG_TO_FILE": "false",
@@ -248,6 +301,74 @@ class ConfigLoader:
         # 替换占位符
         template = value or default_template
         return template.format(role=role)
+
+    def get_single_knowledge_prompt(self) -> str:
+        """
+        获取单一知识点生成问题的提示词模板
+        """
+        # 默认提示词模板（保留代码中原有的逻辑）
+        default_template = """你是一个专业的测试问题生成助手。请仔细阅读以下文档内容，生成尽可能多的测试问题。
+
+当前为第 {idx}/{total_chunks} 个内容分块，请尽量覆盖本分块中的知识点。
+
+要求：
+1. 先识别本分块中有哪些独立的知识点或主题，并大致评估每个知识点被真实用户询问的概率（高/中/低）。
+2. 问题需要模仿普通用户的真实提问语气，口语化、自然。
+3. 问题应该覆盖文档中的各个知识点。
+4. 问题的难度应该有所变化，包括简单查询、复杂推理等。
+5. 每个问题都应该能从文档中找到答案依据。
+6. 生成的问题数量不做固定限制：
+   - 知识点较少时，覆盖所有知识点即可；
+   - 对"高概率"知识点，多写几个不同角度的提问；
+   - 对"中概率"知识点，至少生成 1-2 个提问；
+   - 对"低概率"知识点，可适当精简。
+7. 最终只输出问题列表，不要输出对知识点或概率的解释。
+8. 以 JSON 数组格式返回，每个元素是一个问题字符串。
+
+文档名称：{document_name}
+
+文档内容（第 {idx}/{total_chunks} 块）：
+{chunk}
+
+请生成问题列表（必须是 JSON 数组格式，例如:["问题1","问题2","问题3"]）："""
+
+        # 优先从环境变量获取
+        value = os.getenv("SINGLE_KNOWLEDGE_PROMPT")
+        if value is None:
+            # 从配置文件获取
+            value = self.get("SINGLE_KNOWLEDGE_PROMPT", default_template)
+
+        return value or default_template
+
+    def get_cross_knowledge_prompt(self) -> str:
+        """
+        获取跨知识点生成问题的提示词模板
+        """
+        # 默认提示词模板
+        default_template = """你是一个专业的测试问题生成助手。请阅读以下来自不同（或相同）文档的多个知识点片段，尝试寻找它们之间的关联，生成跨知识点的测试问题。
+
+要求：
+1. 先从“真实用户在一个具体场景中”的角度出发，思考这些知识点在实际工作中可能如何被组合使用。
+2. 分析提供的多个知识点来源，寻找逻辑关联（例如：同一流程的前后步骤、不同工具在同一任务中的配合、概念/方案的对比、不同角色围绕同一问题的协同等）。
+3. 评估这些关联在用户真实场景中出现的概率：
+   - 关联度和场景概率较高时，可以多设计几个不同角度的问题；
+   - 关联度一般但仍有合理使用场景时，也可以适当生成少量问题；
+   - 只有在你几乎无法找到合理关联、强行组合才会误导用户时，才不要生成问题（可以返回空数组）。
+4. 每个问题都应该需要结合多个知识点来源的内容才能完整回答（即真正的“跨知识点问题”，不是简单拷贝单一文档的问题）。
+5. 问题要模仿真实用户的自然提问，用口语化的方式表达需求。
+6. 以 JSON 数组格式返回问题列表；如果最终确实没有合适的问题，再返回空数组 []。
+
+{context_text}
+
+请生成问题列表（必须是 JSON 数组格式，例如: ["问题1", "问题2"]）："""
+
+        # 优先从环境变量获取
+        value = os.getenv("CROSS_KNOWLEDGE_PROMPT")
+        if value is None:
+            # 从配置文件获取
+            value = self.get("CROSS_KNOWLEDGE_PROMPT", default_template)
+
+        return value or default_template
 
 
 # 全局配置实例

@@ -1,6 +1,6 @@
 <div align="center">
   <h1>🤖 AI 聊天客户端测试工具</h1>
-  <p>支持多AI供应商的聊天测试工具（Dify、OpenAI、iFlow） v1.3.0</p>
+  <p>支持多AI供应商的聊天测试工具（Dify、OpenAI、iFlow） v1.3.1</p>
   
   <img src="https://img.shields.io/badge/Python-3.9+-blue?logo=python" alt="Python版本">
   <img src="https://img.shields.io/badge/License-MIT-green" alt="许可证">

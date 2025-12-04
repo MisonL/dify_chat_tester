@@ -2,7 +2,6 @@
 
 from unittest.mock import MagicMock, patch
 
-
 from dify_chat_tester.ai_providers import DifyProvider, OpenAIProvider, iFlowProvider
 
 

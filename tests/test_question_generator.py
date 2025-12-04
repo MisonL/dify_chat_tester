@@ -105,8 +105,9 @@ def test_read_markdown_files(tmp_path):
 
 def test_run_question_generation(tmp_path, monkeypatch):
     """测试问题生成主流程"""
-    from dify_chat_tester.question_generator import run_question_generation
     from unittest.mock import MagicMock, patch
+
+    from dify_chat_tester.question_generator import run_question_generation
 
     # 准备测试文件
     doc_dir = tmp_path / "docs"

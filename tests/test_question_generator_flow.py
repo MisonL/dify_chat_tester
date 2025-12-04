@@ -2,7 +2,6 @@
 
 from unittest.mock import MagicMock, patch
 
-
 from dify_chat_tester.question_generator import run_question_generation
 
 

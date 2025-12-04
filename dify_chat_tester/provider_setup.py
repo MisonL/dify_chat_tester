@@ -3,6 +3,8 @@
 负责处理不同AI供应商的初始化配置
 """
 
+import sys
+
 from dify_chat_tester.ai_providers import get_provider
 from dify_chat_tester.config_loader import get_config
 from dify_chat_tester.terminal_ui import (
@@ -15,6 +17,18 @@ from dify_chat_tester.terminal_ui import (
 )
 
 _config = get_config()
+
+
+def _is_interactive() -> bool:
+    """判断当前环境是否为交互式终端。
+
+    在非交互环境（如 pytest、重定向等）下，避免等待用户输入，
+    直接使用配置中的预设值，以保证自动化执行不会被阻塞。
+    """
+    try:
+        return sys.stdin is not None and sys.stdin.isatty()
+    except Exception:
+        return False
 
 
 def _normalize_base_url(base_url: str) -> str:
@@ -42,14 +56,37 @@ def setup_dify_provider():
     api_key = cfg_api_key
     app_id = cfg_app_id
 
-    if base_url:
-        print_info("已从配置文件读取 Dify API 基础 URL，将直接使用。")
+    # 如果配置中已有值，允许用户在交互式环境下一键确认或重新输入；
+    # 在非交互环境（如自动化测试）中则直接使用配置值，避免阻塞。
+    if base_url and _is_interactive():
+        confirm = (
+            print_input_prompt(
+                f"检测到配置文件中的 Dify API 基础 URL: {base_url}，是否直接使用？(Y/n)"
+            )
+            .strip()
+            .lower()
+        )
+        if confirm not in ("", "y", "yes"):
+            base_url = ""  # 清空以便后续走交互输入
 
     if api_key:
-        print_info("已从配置文件读取 Dify API 密钥，将直接使用。")
+        if _is_interactive():
+            print_info("检测到配置文件中的 Dify API 密钥。")
+            # 复用统一的密钥确认逻辑，必要时允许用户选择重新输入
+            if not print_api_key_confirmation(api_key):
+                api_key = ""
+        # 非交互环境下直接使用配置的密钥
 
-    if app_id:
-        print_info("已从配置文件读取 Dify 应用 ID，将直接使用。")
+    if app_id and _is_interactive():
+        confirm = (
+            print_input_prompt(
+                f"检测到配置文件中的 Dify 应用 ID: {app_id}，是否直接使用？(Y/n)"
+            )
+            .strip()
+            .lower()
+        )
+        if confirm not in ("", "y", "yes"):
+            app_id = ""
 
     # 仅对缺失的字段进行交互式补全
     if not base_url:
@@ -127,11 +164,23 @@ def setup_openai_provider():
     base_url = cfg_base_url
     api_key = cfg_api_key
 
-    if base_url:
-        print_info("已从配置文件读取 OpenAI 兼容接口基础 URL，将直接使用。")
+    # 如果配置中已有值，允许用户在交互式环境下一键确认或重新输入；
+    # 在非交互环境（如自动化测试）中则直接使用配置值。
+    if base_url and _is_interactive():
+        confirm = (
+            print_input_prompt(
+                f"检测到配置文件中的 OpenAI 兼容接口基础 URL: {base_url}，是否直接使用？(Y/n)"
+            )
+            .strip()
+            .lower()
+        )
+        if confirm not in ("", "y", "yes"):
+            base_url = ""
 
-    if api_key:
-        print_info("已从配置文件读取 OpenAI 兼容接口 API 密钥，将直接使用。")
+    if api_key and _is_interactive():
+        print_info("检测到配置文件中的 OpenAI 兼容接口 API 密钥。")
+        if not print_api_key_confirmation(api_key):
+            api_key = ""
 
     # 对缺失的字段进行交互式补全
     if not base_url:
@@ -172,8 +221,15 @@ def setup_iflow_provider():
     cfg_api_key = _config.get_str("IFLOW_API_KEY", "").strip()
 
     if cfg_api_key:
-        print_info("已从配置文件读取 iFlow 配置，将直接使用。")
-        return get_provider("iflow", api_key=cfg_api_key)
+        api_key = cfg_api_key
+        if _is_interactive():
+            print_info("检测到配置文件中的 iFlow API 密钥。")
+            if print_api_key_confirmation(api_key):
+                return get_provider("iflow", api_key=api_key)
+            # 用户不确认，则继续走交互式输入
+        else:
+            # 非交互环境下直接使用配置密钥
+            return get_provider("iflow", api_key=api_key)
 
     # 2. 回退到交互式输入
     while True:
