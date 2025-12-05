@@ -39,9 +39,13 @@ from dify_chat_tester.terminal_ui import (
 class AppController:
     """应用控制器类"""
 
-    def __init__(self):
-        """初始化控制器"""
-        self.config = get_config()
+    def __init__(self, config=None):
+        """初始化控制器
+
+        Args:
+            config: 配置加载器实例（可选，默认通过 get_config() 获取）
+        """
+        self.config = config if config is not None else get_config()
         self._load_config()
 
     def _load_config(self):
