@@ -242,124 +242,134 @@ def run_batch_query(
     print(
         f"\n开始批量询问... (共 {total_rows} 行数据，当前从第 {resume_from_row} 行开始)"
     )
-    for row_idx in range(
-        resume_from_row, batch_worksheet.max_row + 1
-    ):  # 从指定行开始读取数据
-        # 获取文档名称（如果输入表中存在对应列）
-        doc_name = ""
-        if doc_name_col_index is not None:
-            doc_cell_value = batch_worksheet.cell(
-                row=row_idx, column=doc_name_col_index + 1
+    try:
+        for row_idx in range(
+            resume_from_row, batch_worksheet.max_row + 1
+        ):  # 从指定行开始读取数据
+            # 获取文档名称（如果输入表中存在对应列）
+            doc_name = ""
+            if doc_name_col_index is not None:
+                doc_cell_value = batch_worksheet.cell(
+                    row=row_idx, column=doc_name_col_index + 1
+                ).value
+                doc_name = str(doc_cell_value) if doc_cell_value is not None else ""
+
+            question_cell_value = batch_worksheet.cell(
+                row=row_idx, column=question_col_index + 1
             ).value
-            doc_name = str(doc_cell_value) if doc_cell_value is not None else ""
+            question = (
+                str(question_cell_value) if question_cell_value is not None else ""
+            )  # 确保转换为字符串
 
-        question_cell_value = batch_worksheet.cell(
-            row=row_idx, column=question_col_index + 1
-        ).value
-        question = (
-            str(question_cell_value) if question_cell_value is not None else ""
-        )  # 确保转换为字符串
+            if not question.strip():  # 检查问题是否为空或只包含空格
+                print(f"警告: 第 {row_idx} 行问题为空，跳过。", file=console.file)
+                failed_queries += 1  # 空问题也算作失败
+                log_to_excel(
+                    output_worksheet,
+                    [
+                        datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                        selected_role,
+                        doc_name,
+                        question,  # 原始问题为空
+                        "",
+                        False,
+                        "问题为空",
+                        0,
+                        "",
+                    ],
+                )
+                continue  # 跳过当前循环的剩余部分
 
-        if not question.strip():  # 检查问题是否为空或只包含空格
-            print(f"警告: 第 {row_idx} 行问题为空，跳过。", file=console.file)
-            failed_queries += 1  # 空问题也算作失败
+            total_queries += 1  # 只有非空问题才计入总数
+
+            # 计算进度
+            current_progress = row_idx - 1
+            pending_count = total_rows - current_progress
+            progress_percent = (current_progress / total_rows) * 100
+
+            # 美化问题显示（加粗和颜色）
+            question_display = (
+                f"[bold bright_magenta]处理进度 ({current_progress}/{total_rows} - {progress_percent:.1f}%) "
+                f"| 待处理: {pending_count} | 问题:[/bold bright_magenta] "
+                f"[bold yellow]{question[:50]}{'...' if len(question) > 50 else ''}[/bold yellow]"
+            )
+            console.print(f"\n{question_display}")
+
+            response, success, error, conversation_id = provider.send_message(
+                message=question,
+                model=selected_model,
+                role=selected_role,
+                stream=True,
+                show_indicator=batch_show_indicator,
+                show_thinking=enable_thinking,
+            )
+
+            if success:
+                successful_queries += 1
+                print(f"问题 (第 {total_queries} 个) 处理完成。")  # 简洁提示
+            else:
+                failed_queries += 1
+                print(f"问题 (第 {total_queries} 个) 处理失败。错误: {error}")  # 简洁提示
+
+            # 记录详细日志到日志文件
             log_to_excel(
                 output_worksheet,
                 [
                     datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                     selected_role,
                     doc_name,
-                    question,  # 原始问题为空
-                    "",
-                    False,
-                    "问题为空",
-                    0,
-                    "",
+                    question,
+                    response,
+                    success,
+                    error,
+                    conversation_id or "",
                 ],
             )
-            continue  # 跳过当前循环的剩余部分
 
-        total_queries += 1  # 只有非空问题才计入总数
+            # 按批次保存日志，减少磁盘 IO
+            queries_since_last_save += 1
+            if queries_since_last_save >= SAVE_EVERY_N_QUERIES:
+                try:
+                    output_workbook.save(output_file_name)
+                    queries_since_last_save = 0
+                except PermissionError:
+                    print_error(
+                        f"警告：无法保存日志文件 '{output_file_name}'。请确保文件未被其他程序打开。"
+                    )
+                except Exception as e:
+                    print_error(f"警告：保存日志时出错：{e}")
 
-        # 计算进度
-        current_progress = row_idx - 1
-        pending_count = total_rows - current_progress
-        progress_percent = (current_progress / total_rows) * 100
-
-        # 美化问题显示（加粗和颜色）
-        question_display = (
-            f"[bold bright_magenta]处理进度 ({current_progress}/{total_rows} - {progress_percent:.1f}%) "
-            f"| 待处理: {pending_count} | 问题:[/bold bright_magenta] "
-            f"[bold yellow]{question[:50]}{'...' if len(question) > 50 else ''}[/bold yellow]"
-        )
-        console.print(f"\n{question_display}")
-
-        response, success, error, conversation_id = provider.send_message(
-            message=question,
-            model=selected_model,
-            role=selected_role,
-            stream=True,
-            show_indicator=batch_show_indicator,
-            show_thinking=enable_thinking,
-        )
-
-        if success:
-            successful_queries += 1
-            print(f"问题 (第 {total_queries} 个) 处理完成。")  # 简洁提示
-        else:
-            failed_queries += 1
-            print(f"问题 (第 {total_queries} 个) 处理失败。错误: {error}")  # 简洁提示
-
-        # 记录详细日志到日志文件
-        log_to_excel(
-            output_worksheet,
-            [
-                datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                selected_role,
-                doc_name,
-                question,
-                response,
-                success,
-                error,
-                conversation_id or "",
-            ],
-        )
-
-        # 按批次保存日志，减少磁盘 IO
-        queries_since_last_save += 1
-        if queries_since_last_save >= SAVE_EVERY_N_QUERIES:
+            # 每处理一行更新一次进度状态，便于中断后恢复
             try:
-                output_workbook.save(output_file_name)
-                queries_since_last_save = 0
-            except PermissionError:
-                print_error(
-                    f"警告：无法保存日志文件 '{output_file_name}'。请确保文件未被其他程序打开。"
-                )
-            except Exception as e:
-                print_error(f"警告：保存日志时出错：{e}")
+                current_state = {
+                    "excel_file_path": os.path.abspath(selected_excel_file),
+                    "batch_log_file": output_file_name,
+                    "last_processed_row": row_idx,
+                    "question_col_index": question_col_index,
+                    "doc_name_col_index": doc_name_col_index,
+                    "total_rows": batch_worksheet.max_row,
+                    "provider_name": provider_name,
+                    "selected_model": selected_model,
+                    "selected_role": selected_role,
+                }
+                with open(state_file_path, "w", encoding="utf-8") as f:
+                    json.dump(current_state, f, ensure_ascii=False, indent=2)
+            except Exception:
+                # 进度文件写入失败不影响主流程
+                pass
 
-        # 每处理一行更新一次进度状态，便于中断后恢复
+            # 原始文件保持不变，只记录到日志文件
+
+            time.sleep(request_interval)  # 间隔时间
+
+    except KeyboardInterrupt:
+        print_warning("\n⚠️  用户中断批量处理。正在保存当前进度...")
         try:
-            current_state = {
-                "excel_file_path": os.path.abspath(selected_excel_file),
-                "batch_log_file": output_file_name,
-                "last_processed_row": row_idx,
-                "question_col_index": question_col_index,
-                "doc_name_col_index": doc_name_col_index,
-                "total_rows": batch_worksheet.max_row,
-                "provider_name": provider_name,
-                "selected_model": selected_model,
-                "selected_role": selected_role,
-            }
-            with open(state_file_path, "w", encoding="utf-8") as f:
-                json.dump(current_state, f, ensure_ascii=False, indent=2)
-        except Exception:
-            # 进度文件写入失败不影响主流程
-            pass
-
-        # 原始文件保持不变，只记录到日志文件
-
-        time.sleep(request_interval)  # 间隔时间
+            output_workbook.save(output_file_name)
+            print_success(f"进度已保存到: {output_file_name}")
+        except Exception as e:
+            print_error(f"保存进度失败: {e}")
+        raise
 
     # 循环结束后做一次最终保存
     try:

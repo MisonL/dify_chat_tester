@@ -52,6 +52,10 @@ def main():
             app.run()
         print("\n\n程序已退出。")
         sys.exit(0)
+    except KeyboardInterrupt:
+        # 优雅处理 Ctrl+C
+        print("\n\n⚠️  用户取消操作，程序退出")
+        sys.exit(0)
     except Exception as e:
         print(f"\n程序发生错误: {e}")
         sys.exit(1)
