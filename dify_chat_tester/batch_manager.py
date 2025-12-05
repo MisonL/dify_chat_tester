@@ -24,8 +24,9 @@ from dify_chat_tester.terminal_ui import (
     print_success,
 )
 
-# 每多少条问题保存一次批量日志
-SAVE_EVERY_N_QUERIES = 10
+# 从配置中获取批量保存间隔，默认每 10 条保存一次
+_config = get_config()
+SAVE_EVERY_N_QUERIES = _config.get_int("BATCH_SAVE_INTERVAL", 10) if _config else 10
 
 
 def run_batch_query(
