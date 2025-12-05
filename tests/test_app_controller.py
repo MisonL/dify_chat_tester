@@ -92,10 +92,10 @@ class TestAppController:
 
         mock_exit.assert_called_with(0)
 
-    @patch("dify_chat_tester.app_controller.run_question_generation")
+    @patch("dify_chat_tester.services.QuestionService")
     @patch("dify_chat_tester.app_controller.select_model")
     def test_run_question_generation_cli(
-        self, mock_select_model, mock_run_gen, controller
+        self, mock_select_model, mock_service_class, controller
     ):
         """测试 CLI 模式运行问题生成"""
         # Mock _select_provider
@@ -107,15 +107,24 @@ class TestAppController:
 
         mock_select_model.return_value = "model1"
 
+        # Mock QuestionService instance
+        mock_service_instance = MagicMock()
+        mock_service_class.return_value = mock_service_instance
+
         # Run
         controller.run_question_generation_cli(folder_path="/test/path")
 
-        # Verify
-        mock_run_gen.assert_called_once()
-        args, kwargs = mock_run_gen.call_args
-        assert kwargs["provider"] == mock_provider
-        assert kwargs["role"] == "user"
-        assert kwargs["folder_path"] == "/test/path"
+        # Verify QuestionService was instantiated correctly
+        mock_service_class.assert_called_once_with(
+            provider=mock_provider,
+            role="user",
+            provider_name="Dify",
+            model="model1",
+        )
+        # Verify single knowledge generation was called
+        mock_service_instance.run_single_knowledge_generation.assert_called_once_with(
+            "/test/path"
+        )
 
 
 class TestAppControllerAdditional:

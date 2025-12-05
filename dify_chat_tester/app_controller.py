@@ -224,38 +224,19 @@ class AppController:
                 - 非 None 时，直接使用指定路径。
             is_cross_knowledge: 是否为跨知识点生成模式
         """
-        console.print()
-        mode_name = (
-            "AI生成跨知识点测试提问点"
-            if is_cross_knowledge
-            else "AI生成单一知识点测试提问点"
-        )
-        print_info(f"已选择: {mode_name}")
+        from dify_chat_tester.services import QuestionService
 
-        # 选择文档文件夹路径（未指定时走交互）
-        if not folder_path:
-            folder_path = select_folder_path(default_path="./kb-docs")
+        service = QuestionService(
+            provider=provider,
+            role=selected_role,
+            provider_name=provider_name,
+            model=selected_model,
+        )
 
         if is_cross_knowledge:
-            from dify_chat_tester.question_generator import (
-                run_cross_knowledge_generation,
-            )
-
-            run_cross_knowledge_generation(
-                provider=provider,
-                role=selected_role,
-                provider_name=provider_name,
-                selected_model=selected_model,
-                folder_path=folder_path,
-            )
+            service.run_cross_knowledge_generation(folder_path)
         else:
-            run_question_generation(
-                provider=provider,
-                role=selected_role,
-                provider_name=provider_name,
-                selected_model=selected_model,
-                folder_path=folder_path,
-            )
+            service.run_single_knowledge_generation(folder_path)
 
     def run_question_generation_cli(self, folder_path: str | None = None) -> None:
         """从命令行直接运行“AI生成测试提问点”流程。
