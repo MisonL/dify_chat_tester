@@ -209,6 +209,9 @@ release_windows/
 *.dmg
 *.exe
 
+# Local release helper scripts (do not sync to GitHub)
+build/publish_release.sh
+
 # uv lock files (keep only in root)
 dify_chat_tester/uv.lock
 
