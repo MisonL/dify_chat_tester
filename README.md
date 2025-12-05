@@ -1,6 +1,6 @@
 <div align="center">
   <h1>🤖 AI 聊天客户端测试工具</h1>
-  <p>支持多AI供应商的聊天测试工具（Dify、OpenAI、iFlow） v1.3.1</p>
+  <p>支持多AI供应商的聊天测试工具（Dify、OpenAI、iFlow） v1.3.2</p>
   
   <img src="https://img.shields.io/badge/Python-3.9+-blue?logo=python" alt="Python版本">
   <img src="https://img.shields.io/badge/License-MIT-green" alt="许可证">
@@ -57,6 +57,7 @@ cp .env.config.example .env.config
 
 > 提示：如果在没有 `.env.config` 的情况下直接运行程序，
 > 工具会在程序所在目录自动创建一个默认的 `.env.config`：
+>
 > - 若存在 `.env.config.example`，会基于该模板生成；
 > - 若不存在模板，则按照内置默认值生成一个基础配置文件；
 > - 创建过程中的提示会显示在终端（stderr），首次运行后建议立即打开并修改该文件。
