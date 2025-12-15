@@ -64,18 +64,26 @@ class AppController:
             "BATCH_DEFAULT_SHOW_RESPONSE", False
         )
         
-        # 合并插件供应商
+        # 合并插件供应商（仅添加不重复的）
         try:
             from dify_chat_tester.provider_setup import get_plugin_providers_config
             plugin_configs = get_plugin_providers_config()
             
-            # 为插件分配序号 (接在现有序号后面)
+            # 获取已有的供应商 ID
+            existing_provider_ids = {p["id"] for p in self.ai_providers.values()}
+            
+            # 为新插件分配序号 (接在现有序号后面)
             existing_indices = [int(k) for k in self.ai_providers.keys() if k.isdigit()]
             start_index = max(existing_indices) + 1 if existing_indices else 4
             
-            for i, pdata in enumerate(plugin_configs.values()):
-                idx = str(start_index + i)
+            added_count = 0
+            for pdata in plugin_configs.values():
+                # 跳过已存在的供应商
+                if pdata["id"] in existing_provider_ids:
+                    continue
+                idx = str(start_index + added_count)
                 self.ai_providers[idx] = pdata
+                added_count += 1
         except ImportError:
             pass
 
