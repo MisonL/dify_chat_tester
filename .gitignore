@@ -179,7 +179,16 @@ cython_debug/
 .env.test
 .env.production
 .env.config
+! .env.config.example
 .env.new
+
+# Plugins (keep built-in plugins, ignore private ones)
+dify_chat_tester/plugins/*
+!dify_chat_tester/plugins/__init__.py
+!dify_chat_tester/plugins/README.md
+!dify_chat_tester/plugins/dify/
+!dify_chat_tester/plugins/openai_compat/
+!dify_chat_tester/plugins/iflow/
 
 # Logs
 *.log

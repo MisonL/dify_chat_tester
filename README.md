@@ -184,15 +184,23 @@ dify_chat_tester/
 │   ├── batch_manager.py       # 批量管理器
 │   ├── question_generator.py  # 问题生成器
 │   ├── provider_setup.py      # 供应商设置
+│   ├── plugin_manager.py      # 插件管理器
 │   ├── selectors.py           # 选择器
-│   ├── ai_providers.py        # AI供应商实现
+│   ├── ai_providers.py        # AI供应商基类
 │   ├── config_loader.py       # 配置管理
 │   ├── terminal_ui.py         # 终端界面
 │   ├── excel_utils.py         # Excel工具
-│   └── logging_utils.py       # 日志工具
-├── .env.config.example         # 配置模板
-├── pyproject.toml            # 项目配置
-└── README.md                 # 项目文档
+│   ├── logging_utils.py       # 日志工具
+│   └── plugins/               # 插件目录
+│       ├── dify/              # Dify 供应商插件
+│       ├── openai_compat/     # OpenAI 兼容接口插件
+│       └── iflow/             # iFlow 供应商插件
+├── docs/
+│   ├── PLUGIN_GUIDE.md        # 插件开发指南
+│   └── ...
+├── .env.config.example        # 配置模板
+├── pyproject.toml             # 项目配置
+└── README.md                  # 项目文档
 ```
 
 ## 📝 日志文件

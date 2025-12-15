@@ -63,6 +63,21 @@ class AppController:
         self.batch_default_show_response = self.config.get_bool(
             "BATCH_DEFAULT_SHOW_RESPONSE", False
         )
+        
+        # 合并插件供应商
+        try:
+            from dify_chat_tester.provider_setup import get_plugin_providers_config
+            plugin_configs = get_plugin_providers_config()
+            
+            # 为插件分配序号 (接在现有序号后面)
+            existing_indices = [int(k) for k in self.ai_providers.keys() if k.isdigit()]
+            start_index = max(existing_indices) + 1 if existing_indices else 4
+            
+            for i, pdata in enumerate(plugin_configs.values()):
+                idx = str(start_index + i)
+                self.ai_providers[idx] = pdata
+        except ImportError:
+            pass
 
     def _print_header(self):
         """打印程序头部信息"""
@@ -157,8 +172,16 @@ class AppController:
             else:
                 all_models = available_models
         else:
-            print_error("未知的供应商！")
-            return None, None
+            # 尝试加载插件供应商
+            from dify_chat_tester.provider_setup import setup_plugin_provider
+            
+            provider = setup_plugin_provider(provider_id)
+            if provider:
+                # 插件供应商的模型列表
+                all_models = provider.get_models()
+            else:
+                print_error("未知的供应商！")
+                return None, None
 
         return provider, all_models
 

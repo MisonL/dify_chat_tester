@@ -247,3 +247,52 @@ def setup_iflow_provider():
         break  # 密钥有效且用户确认，跳出循环
 
     return get_provider("iflow", api_key=api_key)
+
+
+# --- 插件系统集成 ---
+from dify_chat_tester.plugin_manager import PluginManager
+
+_plugin_manager = PluginManager()
+try:
+    _plugin_manager.load_plugins()
+except Exception as e:
+    # 插件加载不应影响主程序启动
+    print_error(f"警告: 插件加载失败: {e}")
+
+def setup_plugin_provider(provider_id: str):
+    """设置插件提供的 AI 供应商
+    
+    Args:
+        provider_id: 供应商唯一ID
+        
+    Returns:
+        AIProvider: 初始化的供应商实例
+    """
+    plugin_config = _plugin_manager.plugin_configs.get(provider_id)
+    if not plugin_config:
+        return None
+        
+    # 如果注册的是实例，直接返回
+    if plugin_config.get("type") == "instance":
+        return plugin_config.get("instance")
+        
+    # 如果注册的是类，尝试实例化 (假设不需要参数，或插件在注册时已处理配置)
+    if plugin_config.get("type") == "class":
+        provider_cls = plugin_config.get("class")
+        try:
+            return provider_cls()
+        except Exception as e:
+            print_error(f"无法实例化插件供应商 {provider_id}: {e}")
+            return None
+            
+    return None
+
+def get_plugin_providers_config():
+    """获取所有插件供应商的配置信息 (用于菜单显示)"""
+    configs = {}
+    for pid, pdata in _plugin_manager.plugin_configs.items():
+        configs[str(len(configs) + 100)] = {  # 使用 100+ 的序号避免冲突
+            "name": pdata["name"],
+            "id": pid
+        }
+    return configs
