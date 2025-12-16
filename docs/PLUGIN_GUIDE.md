@@ -37,10 +37,10 @@ def setup(manager):
 
 ### 2.2 实现 AIProvider
 
-供应商类必须继承自 `dify_chat_tester.ai_providers.AIProvider` 并实现抽象方法。
+供应商类必须继承自 `dify_chat_tester.providers.base.AIProvider` 并实现抽象方法。
 
 ```python
-from dify_chat_tester.ai_providers import AIProvider
+from dify_chat_tester.providers.base import AIProvider
 from typing import List, Optional
 
 class MyCustomProvider(AIProvider):

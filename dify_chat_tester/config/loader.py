@@ -107,46 +107,33 @@ class ConfigLoader:
                 # 普通单行键值
                 self.config[key] = value_stripped.strip()
 
+    def _get_project_root(self):
+        """获取项目根目录"""
+        if getattr(sys, "frozen", False):
+            return os.path.dirname(sys.executable)
+        
+        # 开发环境：当前文件在 dify_chat_tester/config/loader.py
+        # 需要向上两级：dify_chat_tester/config -> dify_chat_tester -> root
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        package_dir = os.path.dirname(current_dir)
+        return os.path.dirname(package_dir)
+
     def _get_config_file_path(self):
         """获取配置文件的完整路径"""
-        # 如果是打包后的程序
-        if getattr(sys, "frozen", False):
-            # 配置文件在程序所在目录
-            return os.path.join(os.path.dirname(sys.executable), self.env_file)
-        else:
-            # 开发环境，配置文件在项目根目录
-            current_dir = os.path.dirname(os.path.abspath(__file__))
-            project_dir = os.path.dirname(current_dir)
-            return os.path.join(project_dir, self.env_file)
+        return os.path.join(self._get_project_root(), self.env_file)
 
     def _create_default_config_file(self):
         """创建默认配置文件"""
-        # 获取程序运行目录（对于打包后的程序，这是程序所在目录）
-        if getattr(sys, "frozen", False):
-            # PyInstaller 打包后的程序
-            base_dir = os.path.dirname(sys.executable)
-        else:
-            # 开发环境
-            current_dir = os.path.dirname(os.path.abspath(__file__))
-            base_dir = os.path.dirname(current_dir)
-
-        # 优先从程序目录查找 .env.config.example（向后兼容旧位置）
-        example_file = os.path.join(base_dir, ".env.config.example")
-
-        # 如果程序目录没有，尝试从 config/ 目录查找
+        base_dir = self._get_project_root()
+        
+        # 优先从 config/ 目录查找模板文件（新标准位置）
+        example_file = os.path.join(base_dir, "config", ".env.config.example")
+        
+        # 如果没找到，尝试从根目录查找（旧位置）
         if not os.path.exists(example_file):
-            example_file = os.path.join(base_dir, "config", ".env.config.example")
+            example_file = os.path.join(base_dir, ".env.config.example")
 
-        # 如果还没找到且在开发环境，尝试从源码目录查找
-        if not os.path.exists(example_file) and not getattr(sys, "frozen", False):
-            current_dir = os.path.dirname(os.path.abspath(__file__))
-            project_dir = os.path.dirname(current_dir)
-            example_file = os.path.join(project_dir, "config", ".env.config.example")
-            # 仍然支持旧位置
-            if not os.path.exists(example_file):
-                example_file = os.path.join(project_dir, ".env.config.example")
-
-        # 配置文件创建在程序运行目录
+        # 配置文件创建在项目根目录（或程序运行目录）
         config_file_path = os.path.join(base_dir, self.env_file)
 
         # 如果 .env.config.example 存在，复制它作为默认配置
@@ -165,6 +152,7 @@ class ConfigLoader:
         else:
             # 如果模板文件不存在，创建一个基本的配置文件
             self._create_basic_config_file(base_dir)
+
 
     def _get_default_config_dict(self) -> dict:
         """返回默认配置字典

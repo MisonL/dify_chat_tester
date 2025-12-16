@@ -69,7 +69,7 @@ SYSTEM_PROMPT=你是{role}。你的回答必须符合公司政策和行业法规
 
 ```bash
 # 测试系统提示词是否正确加载
-uv run python -c "from dify_chat_tester.config_loader import ConfigLoader; cfg = ConfigLoader(); print(cfg.get_system_prompt('测试员工'))"
+uv run python -c "from dify_chat_tester.config.loader import ConfigLoader; cfg = ConfigLoader(); print(cfg.get_system_prompt('测试员工'))"
 ```
 
 ## 实际效果对比
