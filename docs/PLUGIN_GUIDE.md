@@ -72,7 +72,7 @@ class MyCustomProvider(AIProvider):
 # 项目结构
 dify_chat_tester/          # 开源代码 (GitHub)
 private_plugins/           # 私有插件 (可独立管理)
-  └── qianxiaoyin/
+  └── my_plugin/
       ├── __init__.py
       └── provider.py
 ```

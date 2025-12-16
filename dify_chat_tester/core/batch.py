@@ -22,6 +22,7 @@ from dify_chat_tester.cli.terminal import (
     print_input_prompt,
     print_statistics,
     print_success,
+    print_warning,
 )
 
 # 从配置中获取批量保存间隔，默认每 10 条保存一次
