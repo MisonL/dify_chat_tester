@@ -78,6 +78,9 @@ if [ -f "$PROJECT_DIR/dist/dify_chat_tester" ]; then
     # 复制文档文件（如果存在）
     [ -f "$PROJECT_DIR/README.md" ] && cp "$PROJECT_DIR/README.md" "$PROJECT_DIR/release_macos/"
     [ -f "$PROJECT_DIR/docs/用户使用指南.md" ] && cp "$PROJECT_DIR/docs/用户使用指南.md" "$PROJECT_DIR/release_macos/"
+    
+    # 复制知识库文档目录（如果存在）
+    [ -d "$PROJECT_DIR/kb-docs" ] && cp -r "$PROJECT_DIR/kb-docs" "$PROJECT_DIR/release_macos/"
 
     # 创建并复制外部插件目录（包含说明文档）
     mkdir -p "$PROJECT_DIR/release_macos/external_plugins"
