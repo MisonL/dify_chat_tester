@@ -439,7 +439,7 @@ class StreamDisplay:
         from rich.live import Live
 
         self.panel = Panel(
-            "",
+            self.content,  # 使用当前内容初始化，而不是空字符串
             title=f"{Icons.ROBOT} {self.title}",
             border_style=Colors.PRIMARY,
             box=box.ROUNDED,
@@ -469,3 +469,21 @@ class StreamDisplay:
             self.live = None
         elif not USE_RICH_UI:
             print()  # 换行
+
+    def persist(self):
+        """停止显示并将当前内容持久化打印，然后清空缓冲"""
+        self.stop()
+        if USE_RICH_UI and self.content.strip():
+            # 创建一个静态面板打印出来
+            static_panel = Panel(
+                self.content,
+                title=f"{Icons.ROBOT} {self.title} (记录)",
+                border_style=Colors.PRIMARY,
+                box=box.ROUNDED,
+                padding=(1, 2),
+                width=100,
+            )
+            console.print(static_panel)
+            # 清空内容，以便后续重新开始
+            self.content = ""
+
