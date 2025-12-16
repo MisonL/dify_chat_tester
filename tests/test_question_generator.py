@@ -120,18 +120,10 @@ def test_run_question_generation(tmp_path, monkeypatch):
     mock_provider.send_message.return_value = ('["问题1", "问题2"]', True, None, None)
 
     # Mock UI functions
-    monkeypatch.setattr(
-        "dify_chat_tester.core.question.print_info", lambda x: None
-    )
-    monkeypatch.setattr(
-        "dify_chat_tester.core.question.print_success", lambda x: None
-    )
-    monkeypatch.setattr(
-        "dify_chat_tester.core.question.print_error", lambda x: None
-    )
-    monkeypatch.setattr(
-        "dify_chat_tester.core.question.print_warning", lambda x: None
-    )
+    monkeypatch.setattr("dify_chat_tester.core.question.print_info", lambda x: None)
+    monkeypatch.setattr("dify_chat_tester.core.question.print_success", lambda x: None)
+    monkeypatch.setattr("dify_chat_tester.core.question.print_error", lambda x: None)
+    monkeypatch.setattr("dify_chat_tester.core.question.print_warning", lambda x: None)
     monkeypatch.setattr(
         "dify_chat_tester.core.question.console.print",
         lambda *args, **kwargs: None,

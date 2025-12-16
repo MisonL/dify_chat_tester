@@ -134,24 +134,25 @@ def select_role(available_roles):
 def select_mode():
     """选择运行模式"""
     from dify_chat_tester.providers.setup import get_plugin_manager
+
     manager = get_plugin_manager()
-    
+
     # 定义默认菜单项
     default_items = [
         {"id": "1", "label": "会话模式 (实时对话)"},
         {"id": "2", "label": "批量询问模式 (通过 Excel 文件批量询问)"},
     ]
-    
+
     # 获取合并后的菜单项
     menu_items = manager.get_menu_items("run_mode", default_items)
-    
+
     # 打印菜单
     print("请选择运行模式:")
     for item in menu_items:
         print(f"{item['id']}. {item['label']}")
-    print("0. 退出程序") # 统一退出选项
+    print("0. 退出程序")  # 统一退出选项
     console.print()
-    
+
     # 获取合法选项列表
     valid_choices = [item["id"] for item in menu_items] + ["0"]
 
@@ -169,25 +170,26 @@ def select_mode():
 def select_main_function():
     """选择主功能"""
     from dify_chat_tester.providers.setup import get_plugin_manager
+
     manager = get_plugin_manager()
-    
+
     # 定义默认菜单项
     default_items = [
         {"id": "1", "label": "AI问答测试"},
         {"id": "2", "label": "AI生成单一知识点测试提问点"},
         {"id": "3", "label": "AI生成跨知识点测试提问点"},
     ]
-    
+
     # 获取合并后的菜单项
     menu_items = manager.get_menu_items("main_function", default_items)
-    
+
     # 打印菜单
     print("请选择功能:")
     for item in menu_items:
         print(f"{item['id']}. {item['label']}")
     print("0. 退出程序")
     console.print()
-    
+
     # 获取合法选项列表
     valid_choices = [item["id"] for item in menu_items] + ["0"]
 

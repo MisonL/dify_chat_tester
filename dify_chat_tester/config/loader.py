@@ -111,7 +111,7 @@ class ConfigLoader:
         """获取项目根目录"""
         if getattr(sys, "frozen", False):
             return os.path.dirname(sys.executable)
-        
+
         # 开发环境：当前文件在 dify_chat_tester/config/loader.py
         # 需要向上两级：dify_chat_tester/config -> dify_chat_tester -> root
         current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -125,10 +125,10 @@ class ConfigLoader:
     def _create_default_config_file(self):
         """创建默认配置文件"""
         base_dir = self._get_project_root()
-        
+
         # 优先从 config/ 目录查找模板文件（新标准位置）
         example_file = os.path.join(base_dir, "config", ".env.config.example")
-        
+
         # 如果没找到，尝试从根目录查找（旧位置）
         if not os.path.exists(example_file):
             example_file = os.path.join(base_dir, ".env.config.example")
@@ -152,7 +152,6 @@ class ConfigLoader:
         else:
             # 如果模板文件不存在，创建一个基本的配置文件
             self._create_basic_config_file(base_dir)
-
 
     def _get_default_config_dict(self) -> dict:
         """返回默认配置字典

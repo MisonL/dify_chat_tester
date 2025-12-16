@@ -9,12 +9,7 @@ Dify Chat Tester - AI 聊天客户端测试工具
 许可证：MIT
 """
 
-from dify_chat_tester._version import __version__, __author__, __email__
-
-# 向后兼容导出 - 保持旧的导入路径可用
-# 配置
-from dify_chat_tester.config.loader import get_config, parse_ai_providers, ConfigLoader
-from dify_chat_tester.config.logging import get_logger
+from dify_chat_tester._version import __author__, __email__, __version__
 
 # CLI
 from dify_chat_tester.cli.app import run_app
@@ -26,6 +21,11 @@ from dify_chat_tester.cli.terminal import (
     print_warning,
 )
 
+# 向后兼容导出 - 保持旧的导入路径可用
+# 配置
+from dify_chat_tester.config.loader import ConfigLoader, get_config, parse_ai_providers
+from dify_chat_tester.config.logging import get_logger
+
 # 核心业务
 from dify_chat_tester.core.batch import run_batch_query
 from dify_chat_tester.core.chat import run_interactive_chat
@@ -35,17 +35,17 @@ from dify_chat_tester.providers.base import (
     AIProvider,
     DifyProvider,
     OpenAIProvider,
-    iFlowProvider,
     get_provider,
+    iFlowProvider,
 )
 
 # 工具
 from dify_chat_tester.utils.excel import init_excel_log, log_to_excel
 from dify_chat_tester.utils.exceptions import (
-    DifyChatTesterError,
     ConfigError,
-    ProviderError,
+    DifyChatTesterError,
     NetworkError,
+    ProviderError,
 )
 
 __all__ = [

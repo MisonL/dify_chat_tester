@@ -37,9 +37,7 @@ class QuestionService:
         """
         self._run_generation(folder_path, is_cross_knowledge=False)
 
-    def run_cross_knowledge_generation(
-        self, folder_path: Optional[str] = None
-    ) -> None:
+    def run_cross_knowledge_generation(self, folder_path: Optional[str] = None) -> None:
         """运行跨知识点问题生成
 
         Args:

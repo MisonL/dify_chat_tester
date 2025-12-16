@@ -5,8 +5,6 @@
 
 from datetime import datetime
 
-from dify_chat_tester.config.loader import get_config
-from dify_chat_tester.utils.excel import init_excel_log, log_to_excel
 from dify_chat_tester.cli.terminal import (
     Icons,
     console,
@@ -14,6 +12,8 @@ from dify_chat_tester.cli.terminal import (
     print_input_prompt,
     print_success,
 )
+from dify_chat_tester.config.loader import get_config
+from dify_chat_tester.utils.excel import init_excel_log, log_to_excel
 
 # 每多少轮对话保存一次聊天日志
 SAVE_EVERY_N_ROUNDS = 5

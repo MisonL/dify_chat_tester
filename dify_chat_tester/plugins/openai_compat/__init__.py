@@ -1,7 +1,8 @@
 """OpenAI 兼容接口插件"""
 
-from dify_chat_tester.config.loader import get_config
 import sys
+
+from dify_chat_tester.config.loader import get_config
 
 
 def _is_interactive() -> bool:
@@ -23,13 +24,13 @@ def _normalize_base_url(base_url: str) -> str:
 def setup(manager):
     """插件入口：注册 OpenAI 兼容接口供应商"""
     from .provider import OpenAIProvider
-    
+
     config = get_config()
-    
+
     # 读取配置
     cfg_base_url = _normalize_base_url(config.get_str("OPENAI_BASE_URL", ""))
     cfg_api_key = config.get_str("OPENAI_API_KEY", "").strip()
-    
+
     # 如果配置完整，直接注册实例
     if cfg_base_url and cfg_api_key:
         provider = OpenAIProvider(base_url=cfg_base_url, api_key=cfg_api_key)

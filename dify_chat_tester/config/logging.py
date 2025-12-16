@@ -14,16 +14,20 @@
 import logging
 import sys
 from pathlib import Path
+
 from loguru import logger
+
 from dify_chat_tester.config.loader import get_config
 
 _config = get_config()
+
 
 class InterceptHandler(logging.Handler):
     """
     拦截标准 logging 库的日志并转发给 loguru
     这样像 requests, urllib3 等第三方库的日志也能统一管理
     """
+
     def emit(self, record):
         # 获取对应的 loguru 级别
         try:
@@ -40,6 +44,7 @@ class InterceptHandler(logging.Handler):
         logger.opt(depth=depth, exception=record.exc_info).log(
             level, record.getMessage()
         )
+
 
 def _get_log_directory(log_dir: str) -> Path:
     """获取日志目录路径"""
@@ -64,6 +69,7 @@ def _get_log_directory(log_dir: str) -> Path:
         fallback_log_dir.mkdir(parents=True, exist_ok=True)
         return fallback_log_dir
 
+
 def get_logger(name: str = "dify_chat_tester"):
     """
     获取配置好的 loguru logger
@@ -71,7 +77,7 @@ def get_logger(name: str = "dify_chat_tester"):
     但为了兼容标准 logging 的用法，我们返回原生的 loguru.logger
     或者根据需要返回 bind 后的 logger
     """
-    
+
     # 防止重复配置
     if hasattr(sys, "_dify_loguru_configured"):
         return logger.bind(name=name)
@@ -82,12 +88,12 @@ def get_logger(name: str = "dify_chat_tester"):
     # 2. 读取配置
     level_str = _config.get_str("LOG_LEVEL", "INFO").upper()
     log_to_file = _config.get_bool("LOG_TO_FILE", True)
-    
+
     # 3. 配置控制台输出 (stderr)
     logger.add(
         sys.stderr,
         level=level_str,
-        format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>"
+        format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>",
     )
 
     # 4. 配置文件输出
@@ -95,9 +101,9 @@ def get_logger(name: str = "dify_chat_tester"):
         log_dir_name = _config.get_str("LOG_DIR", "logs")
         file_name = _config.get_str("LOG_FILE_NAME", "dify_chat_tester.log")
         # 10MB 切割，保留 7 天，旧文件压缩为 zip
-        max_bytes = "10 MB" 
+        max_bytes = "10 MB"
         retention = "7 days"
-        
+
         try:
             actual_log_dir = _get_log_directory(log_dir_name)
             log_path = actual_log_dir / file_name
@@ -108,7 +114,7 @@ def get_logger(name: str = "dify_chat_tester"):
             # 策略：主日志包含所有 logger 的内容（作为全量备份），
             # 或者：主日志排除特定的 channel。
             # 这里我们保持简单：主日志记录所有标准输出。
-            
+
             logger.add(
                 str(log_path),
                 level=level_str,
@@ -116,19 +122,19 @@ def get_logger(name: str = "dify_chat_tester"):
                 retention=retention,
                 compression="zip",
                 encoding="utf-8",
-                enqueue=True, # 异步写入，线程安全
-                format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {name}:{function}:{line} - {message}"
+                enqueue=True,  # 异步写入，线程安全
+                format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {name}:{function}:{line} - {message}",
             )
-            
+
             # 记录日志位置
             logger.debug(f"主日志文件: {log_path}")
-            
+
         except Exception as e:
             print(f"警告: 无法初始化文件日志: {e}", file=sys.stderr)
 
     # 5. 拦截标准 logging 库的日志
     logging.basicConfig(handlers=[InterceptHandler()], level=0, force=True)
-    
+
     # 标记已配置
     setattr(sys, "_dify_loguru_configured", True)
 

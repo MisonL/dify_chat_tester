@@ -5,8 +5,6 @@
 
 import sys
 
-from dify_chat_tester.providers.base import get_provider
-from dify_chat_tester.config.loader import get_config
 from dify_chat_tester.cli.terminal import (
     console,
     input_api_key,
@@ -15,6 +13,8 @@ from dify_chat_tester.cli.terminal import (
     print_info,
     print_input_prompt,
 )
+from dify_chat_tester.config.loader import get_config
+from dify_chat_tester.providers.base import get_provider
 
 _config = get_config()
 
@@ -256,47 +256,48 @@ _plugin_manager = PluginManager()
 try:
     # 1. 加载内置插件
     _plugin_manager.load_plugins()
-    
+
     # 2. 加载外部私有插件（如果配置了路径）
     external_plugins_path = _config.get_str("EXTERNAL_PLUGINS_PATH", "").strip()
     if external_plugins_path:
         import os
         from pathlib import Path
-        
+
         # 处理相对路径
         if not os.path.isabs(external_plugins_path):
             # 判断运行模式：打包后的可执行文件 vs 源码运行
-            if getattr(sys, 'frozen', False):
+            if getattr(sys, "frozen", False):
                 # PyInstaller 打包后，基于可执行文件所在目录
                 base_dir = Path(sys.executable).parent
             else:
                 # 源码运行，基于当前工作目录
                 base_dir = Path.cwd()
-            
+
             external_plugins_path = str(base_dir / external_plugins_path)
-        
+
         _plugin_manager.load_external_plugins(external_plugins_path)
 except Exception as e:
     # 插件加载不应影响主程序启动
     print_error(f"警告: 插件加载失败: {e}")
 
+
 def setup_plugin_provider(provider_id: str):
     """设置插件提供的 AI 供应商
-    
+
     Args:
         provider_id: 供应商唯一ID
-        
+
     Returns:
         AIProvider: 初始化的供应商实例
     """
     plugin_config = _plugin_manager.plugin_configs.get(provider_id)
     if not plugin_config:
         return None
-        
+
     # 如果注册的是实例，直接返回
     if plugin_config.get("type") == "instance":
         return plugin_config.get("instance")
-        
+
     # 如果注册的是类，尝试实例化 (假设不需要参数，或插件在注册时已处理配置)
     if plugin_config.get("type") == "class":
         provider_cls = plugin_config.get("class")
@@ -305,8 +306,9 @@ def setup_plugin_provider(provider_id: str):
         except Exception as e:
             print_error(f"无法实例化插件供应商 {provider_id}: {e}")
             return None
-            
+
     return None
+
 
 def get_plugin_providers_config():
     """获取所有插件供应商的配置信息 (用于菜单显示)"""
@@ -314,10 +316,10 @@ def get_plugin_providers_config():
     for pid, pdata in _plugin_manager.plugin_configs.items():
         configs[str(len(configs) + 100)] = {  # 使用 100+ 的序号避免冲突
             "name": pdata["name"],
-            "id": pid
+            "id": pid,
         }
     return configs
-    
+
 
 def get_plugin_manager():
     """获取插件管理器实例"""

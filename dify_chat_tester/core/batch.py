@@ -10,8 +10,6 @@ from datetime import datetime
 
 import openpyxl
 
-from dify_chat_tester.config.loader import get_config
-from dify_chat_tester.utils.excel import init_excel_log, log_to_excel
 from dify_chat_tester.cli.terminal import (
     Panel,
     Text,
@@ -24,6 +22,8 @@ from dify_chat_tester.cli.terminal import (
     print_success,
     print_warning,
 )
+from dify_chat_tester.config.loader import get_config
+from dify_chat_tester.utils.excel import init_excel_log, log_to_excel
 
 # 从配置中获取批量保存间隔，默认每 10 条保存一次
 _config = get_config()
@@ -127,7 +127,7 @@ def run_batch_query(
 
     # 默认从第二行开始（第一行为表头）
     resume_from_row = 2
-    
+
     # 检测是否存在日志文件以判断进度
     if os.path.exists(output_file_name):
         try:
@@ -142,18 +142,20 @@ def run_batch_query(
                 # 例如：日志有表头(1) + 1条数据(2) -> max_row=2 ->已处理1条 -> 下一条是输入文件的第3行
                 # 验证：输入头(1) + 数据1(2). 输出头(1) + 数据1(2). resume = 2 + 1 = 3. 正确.
                 potential_resume_row = last_row + 1
-                
+
                 if potential_resume_row <= batch_worksheet.max_row + 1:
                     processed_count = last_row - 1
-                    console.print(Panel(
-                        f"检测到历史日志文件: [bold cyan]{output_file_name}[/bold cyan]\n"
-                        f"已处理记录数: [bold green]{processed_count}[/bold green]\n"
-                        f"上次结束位置: 第 {last_row} 行 (对应输入文件第 {potential_resume_row-1} 行)",
-                        title="[bold yellow]📋 恢复进度提示[/bold yellow]",
-                        border_style="yellow",
-                        box=box.ROUNDED
-                    ))
-                    
+                    console.print(
+                        Panel(
+                            f"检测到历史日志文件: [bold cyan]{output_file_name}[/bold cyan]\n"
+                            f"已处理记录数: [bold green]{processed_count}[/bold green]\n"
+                            f"上次结束位置: 第 {last_row} 行 (对应输入文件第 {potential_resume_row-1} 行)",
+                            title="[bold yellow]📋 恢复进度提示[/bold yellow]",
+                            border_style="yellow",
+                            box=box.ROUNDED,
+                        )
+                    )
+
                     resume_choice = (
                         print_input_prompt(
                             f"是否从第 {potential_resume_row} 行继续处理？(Y/n，选择 n 将覆盖旧日志)"
@@ -161,7 +163,7 @@ def run_batch_query(
                         .strip()
                         .lower()
                     )
-                    
+
                     if not resume_choice or resume_choice in ("y", "yes"):
                         resume_from_row = potential_resume_row
                         print_success(f"已恢复进度，将从第 {resume_from_row} 行开始。")
@@ -186,9 +188,7 @@ def run_batch_query(
     # 让用户通过序号选择问题列
     from dify_chat_tester.cli.terminal import select_column_by_index
 
-    question_col_index = select_column_by_index(
-        column_names, "请选择问题所在列的序号"
-    )
+    question_col_index = select_column_by_index(column_names, "请选择问题所在列的序号")
 
     # 注意：不再创建或使用回答列，所有结果只记录到日志文件
 
@@ -327,7 +327,9 @@ def run_batch_query(
                 print(f"问题 (第 {total_queries} 个) 处理完成。")  # 简洁提示
             else:
                 failed_queries += 1
-                print(f"问题 (第 {total_queries} 个) 处理失败。错误: {error}")  # 简洁提示
+                print(
+                    f"问题 (第 {total_queries} 个) 处理失败。错误: {error}"
+                )  # 简洁提示
 
             # 记录详细日志到日志文件
             log_to_excel(
@@ -392,7 +394,9 @@ def run_batch_query(
         f"  • 问题列: {column_names[question_col_index]} (第{question_col_index + 1}列)\n",
         style="white",
     )
-    summary_text.append(f"  • 日志文件: {output_file_name} (自动关联)\n\n", style="white")
+    summary_text.append(
+        f"  • 日志文件: {output_file_name} (自动关联)\n\n", style="white"
+    )
 
     summary_text.append("🤖 模型配置\n", style="bold yellow")
     summary_text.append(f"  • AI 供应商: {provider_name}\n", style="white")
@@ -414,7 +418,7 @@ def run_batch_query(
     summary_text.append("📊 执行统计\n", style="bold yellow")
     summary_text.append(f"  • 成功率: {success_rate:.1f}%\n", style="white")
     summary_text.append(f"  • 请求间隔: {batch_request_interval}秒\n", style="white")
-    
+
     summary_panel = Panel(
         summary_text,
         title="[bold]📋 执行信息汇总[/bold]",

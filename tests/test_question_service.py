@@ -78,4 +78,3 @@ class TestQuestionService:
             selected_model=service.model,
             folder_path="/test/cross/path",
         )
-

@@ -86,6 +86,7 @@ def test_run_batch_query_basic_flow(tmp_path, monkeypatch):
 def test_run_batch_query_with_resume_state(tmp_path, monkeypatch):
     """构造带现有日志 Excel 文件的场景，覆盖恢复逻辑与“全部处理完”分支。"""
     from openpyxl import Workbook
+
     import dify_chat_tester.core.batch as bm
     from dify_chat_tester.core.batch import run_batch_query
 
@@ -98,7 +99,9 @@ def test_run_batch_query_with_resume_state(tmp_path, monkeypatch):
     wb_log = Workbook()
     ws_log = wb_log.active
     # 表头
-    ws_log.append(["Timestamp", "Role", "Doc", "Question", "Answer", "Success", "Error", "ConvID"])
+    ws_log.append(
+        ["Timestamp", "Role", "Doc", "Question", "Answer", "Success", "Error", "ConvID"]
+    )
     # 第一条记录
     ws_log.append(["2025-01-01", "tester", "doc1", "q1", "ans1", True, "", "id1"])
     wb_log.save(log_path)
@@ -116,7 +119,7 @@ def test_run_batch_query_with_resume_state(tmp_path, monkeypatch):
     # 2) 检测到日志文件，提示恢复 -> "" (默认 Y, 从下一行继续)
     # 3) 请选择问题列 -> "1" (因为移除了 JSON 状态还原列功能，这里需要重新选择列)
     # 4) 是否显示响应 -> "" (默认配置)
-    inputs = iter(["1", "", "1", ""]) 
+    inputs = iter(["1", "", "1", ""])
 
     def fake_prompt(_msg: str) -> str:
         try:
@@ -135,6 +138,7 @@ def test_run_batch_query_with_resume_state(tmp_path, monkeypatch):
     # 并 mock select_column_by_index 返回 1
     inputs = iter(["1", "", ""])
     import dify_chat_tester.cli.terminal as tui_mod
+
     monkeypatch.setattr(tui_mod, "select_column_by_index", lambda cols, msg: 1)
 
     # 静音输出 & sleep

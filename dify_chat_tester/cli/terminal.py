@@ -486,4 +486,3 @@ class StreamDisplay:
             console.print(static_panel)
             # 清空内容，以便后续重新开始
             self.content = ""
-
