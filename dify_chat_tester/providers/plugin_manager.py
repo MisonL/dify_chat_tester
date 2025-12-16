@@ -161,3 +161,84 @@ class PluginManager:
     def get_provider_class(self, provider_id: str) -> Type[AIProvider]:
         """获取指定ID的供应商类"""
         return self.providers.get(provider_id)
+
+    # --- 增强功能: 菜单与样式定制 ---
+
+    def register_menu_item(self, menu_id: str, item: dict):
+        """
+        注册自定义菜单项
+        
+        Args:
+            menu_id: 菜单ID, 例如 "main_function", "run_mode", "role_select"
+            item: 菜单项配置, 例如:
+                  {
+                      "id": "my_custom_action",
+                      "label": "执行我的自定义动作",
+                      "callback": my_function,  # 可选，用于执行动作
+                      "order": 100              # 可选，排序权重
+                  }
+        """
+        if not hasattr(self, "_menu_registry"):
+            self._menu_registry = {}
+            
+        if menu_id not in self._menu_registry:
+            self._menu_registry[menu_id] = []
+            
+        # 验证必要字段
+        if "label" not in item:
+            logger.warning(f"注册菜单项失败: 缺少 label 字段 - {item}")
+            return
+            
+        # 自动生成 ID
+        if "id" not in item:
+            item["id"] = f"plugin_item_{len(self._menu_registry[menu_id]) + 1}"
+            
+        self._menu_registry[menu_id].append(item)
+        logger.debug(f"已注册插件菜单项 [{menu_id}]: {item['label']}")
+
+    def get_menu_items(self, menu_id: str, default_items: List[dict] = None) -> List[dict]:
+        """
+        获取合并后的菜单项列表
+        
+        Args:
+            menu_id: 菜单ID
+            default_items: 默认菜单项列表 [ {"id": "1", "label": "..."} ]
+            
+        Returns:
+            List[dict]: 合并后的菜单项列表
+        """
+        if not hasattr(self, "_menu_registry"):
+            self._menu_registry = {}
+            
+        items = list(default_items) if default_items else []
+        
+        # 获取插件注册的项目
+        plugin_items = self._menu_registry.get(menu_id, [])
+        if plugin_items:
+            # 排序: order 小的在前 (默认放在最后)
+            plugin_items_sorted = sorted(plugin_items, key=lambda x: x.get("order", 999))
+            
+            # 这里简单策略：追加到默认列表后面
+            # 如果需要更复杂的插入逻辑（比如插入到中间），需要在 item 中指定 position
+            items.extend(plugin_items_sorted)
+            
+        return items
+
+    def register_style_config(self, config: dict):
+        """
+        注册样式配置 (用于覆盖默认样式)
+        
+        Args:
+            config: 样式配置字典, 例如 {"prompt_color": "green", "banner_style": "minimal"}
+        """
+        if not hasattr(self, "_style_config"):
+            self._style_config = {}
+            
+        self._style_config.update(config)
+        logger.debug(f"已更新插件样式配置: {config}")
+        
+    def get_style_config(self) -> dict:
+        """获取当前样式配置"""
+        if not hasattr(self, "_style_config"):
+            self._style_config = {}
+        return self._style_config

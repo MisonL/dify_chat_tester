@@ -240,3 +240,6 @@ kb-docs/
 # OS generated files
 Icon?
 nohup.out
+
+# Local data backup
+my_data_backup.xlsx

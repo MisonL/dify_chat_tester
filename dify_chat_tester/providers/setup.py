@@ -302,3 +302,8 @@ def get_plugin_providers_config():
             "id": pid
         }
     return configs
+    
+
+def get_plugin_manager():
+    """获取插件管理器实例"""
+    return _plugin_manager

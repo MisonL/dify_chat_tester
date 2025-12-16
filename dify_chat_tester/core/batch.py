@@ -118,64 +118,76 @@ def run_batch_query(
             )
             continue
 
-    # 为当前输入文件构建进度状态文件路径
-    state_dir = os.path.dirname(selected_excel_file) or "."
-    state_file_name = f".batch_state_{os.path.basename(selected_excel_file)}.json"
-    state_file_path = os.path.join(state_dir, state_file_name)
+    # 为当前输入文件构建固定的日志文件路径
+    # 规则：输入文件名（不含扩展名） + _log.xlsx
+    input_dir = os.path.dirname(selected_excel_file) or "."
+    input_basename = os.path.splitext(os.path.basename(selected_excel_file))[0]
+    output_file_name = os.path.join(input_dir, f"{input_basename}_log.xlsx")
 
     # 默认从第二行开始（第一行为表头）
     resume_from_row = 2
-    batch_state = None
-
-    if os.path.exists(state_file_path):
+    
+    # 检测是否存在日志文件以判断进度
+    if os.path.exists(output_file_name):
         try:
-            with open(state_file_path, "r", encoding="utf-8") as f:
-                loaded_state = json.load(f)
-        except Exception:
-            loaded_state = None
-
-        if loaded_state and os.path.abspath(
-            loaded_state.get("excel_file_path", "")
-        ) == os.path.abspath(selected_excel_file):
-            last_row = int(loaded_state.get("last_processed_row", 1))
-            # 仅当之前确实处理过数据行时才提供恢复选项
-            if last_row >= 2 and last_row < batch_worksheet.max_row:
-                resume_choice = (
-                    print_input_prompt(
-                        f"检测到历史进度记录：已处理到第 {last_row} 行，是否从下一行继续？(Y/n)"
+            # 尝试读取现有的日志文件
+            existing_wb = openpyxl.load_workbook(output_file_name)
+            existing_ws = existing_wb.active
+            if existing_ws and existing_ws.max_row > 1:
+                # 日志文件存在且有数据（不止表头）
+                last_row = existing_ws.max_row
+                # 理论上，日志行数 = 已处理行数 + 1 (表头)
+                # 所以下一行输入行号 = 日志最大行号 + 1
+                # 例如：日志有表头(1) + 1条数据(2) -> max_row=2 ->已处理1条 -> 下一条是输入文件的第3行
+                # 验证：输入头(1) + 数据1(2). 输出头(1) + 数据1(2). resume = 2 + 1 = 3. 正确.
+                potential_resume_row = last_row + 1
+                
+                if potential_resume_row <= batch_worksheet.max_row + 1:
+                    processed_count = last_row - 1
+                    console.print(Panel(
+                        f"检测到历史日志文件: [bold cyan]{output_file_name}[/bold cyan]\n"
+                        f"已处理记录数: [bold green]{processed_count}[/bold green]\n"
+                        f"上次结束位置: 第 {last_row} 行 (对应输入文件第 {potential_resume_row-1} 行)",
+                        title="[bold yellow]📋 恢复进度提示[/bold yellow]",
+                        border_style="yellow",
+                        box=box.ROUNDED
+                    ))
+                    
+                    resume_choice = (
+                        print_input_prompt(
+                            f"是否从第 {potential_resume_row} 行继续处理？(Y/n，选择 n 将覆盖旧日志)"
+                        )
+                        .strip()
+                        .lower()
                     )
-                    .strip()
-                    .lower()
-                )
-                if not resume_choice or resume_choice in ("y", "yes"):
-                    resume_from_row = last_row + 1
-                    batch_state = loaded_state
-                else:
-                    batch_state = None
+                    
+                    if not resume_choice or resume_choice in ("y", "yes"):
+                        resume_from_row = potential_resume_row
+                        print_success(f"已恢复进度，将从第 {resume_from_row} 行开始。")
+                    else:
+                        print_warning("已选择重新开始，旧的日志文件将被覆盖！")
+                        resume_from_row = 2
+        except Exception as e:
+            print_error(f"读取现有日志文件失败: {e}，将重新开始。")
+            resume_from_row = 2
 
     # 获取列名
     column_names = [cell.value for cell in batch_worksheet[1]]
     print_success(f"已选择文件: {selected_excel_file}")
 
-    # 检查是否存在“文档名称”列（如果存在则复用）
+    # 检查是否存在“文档名称”列
     doc_name_col_index = None
     try:
-        if batch_state and "doc_name_col_index" in batch_state:
-            doc_name_col_index = int(batch_state["doc_name_col_index"])
-        else:
-            doc_name_col_index = column_names.index("文档名称")
+        doc_name_col_index = column_names.index("文档名称")
     except ValueError:
         doc_name_col_index = None
 
     # 让用户通过序号选择问题列
     from dify_chat_tester.cli.terminal import select_column_by_index
 
-    if batch_state and "question_col_index" in batch_state:
-        question_col_index = int(batch_state["question_col_index"])
-    else:
-        question_col_index = select_column_by_index(
-            column_names, "请选择问题所在列的序号"
-        )
+    question_col_index = select_column_by_index(
+        column_names, "请选择问题所在列的序号"
+    )
 
     # 注意：不再创建或使用回答列，所有结果只记录到日志文件
 
@@ -194,17 +206,17 @@ def run_batch_query(
     # 为批量模式设置 show_indicator（只有在用户选择显示响应时才启用）
     batch_show_indicator = show_batch_response
 
-    # 详细日志文件，用于记录每次请求的详细信息
-    if (
-        batch_state
-        and batch_state.get("batch_log_file")
-        and os.path.exists(batch_state["batch_log_file"])
-    ):
-        output_file_name = batch_state["batch_log_file"]
-    else:
-        output_file_name = (
-            f"batch_query_log_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
-        )
+    # 初始化日志文件（如果是恢复模式，init_excel_log 会加载现有文件；否则若不恢复，我们需要确保是覆盖还是追加？
+    # init_excel_log逻辑是：存在则加载。
+    # 如果我们选择了"不恢复"（resume_from_row=2），意味着我们想重写。
+    # 所以如果 resume_from_row == 2 且文件存在，我们需要删除它以便 init_excel_log 创建新的（或者清空内容）。
+    # 简单做法：如果 resume_from_row == 2，先尝试删除旧文件。
+    if resume_from_row == 2 and os.path.exists(output_file_name):
+        try:
+            os.remove(output_file_name)
+        except Exception:
+            pass
+
     batch_log_headers = [
         "时间戳",
         "角色",
@@ -231,12 +243,6 @@ def run_batch_query(
     # 如果上次已经处理到文件末尾，则直接结束
     if resume_from_row > batch_worksheet.max_row:
         print_success("检测到该文件的所有问题均已处理完成，无需继续。")
-        # 清理历史进度文件
-        try:
-            if os.path.exists(state_file_path):
-                os.remove(state_file_path)
-        except Exception:
-            pass
         return
 
     print(
@@ -306,6 +312,17 @@ def run_batch_query(
 
             if success:
                 successful_queries += 1
+                # 如果开启了显示响应，在流式结束后（因 transient=True 会消失），需要重新打印一次最终结果使其保留在屏幕上
+                if show_batch_response:
+                    console.print(
+                        Panel(
+                            response,
+                            title=f"🤖 {provider_name} 最终响应",
+                            border_style="green",
+                            box=box.ROUNDED,
+                            padding=(0, 2),
+                        )
+                    )
                 print(f"问题 (第 {total_queries} 个) 处理完成。")  # 简洁提示
             else:
                 failed_queries += 1
@@ -339,27 +356,6 @@ def run_batch_query(
                 except Exception as e:
                     print_error(f"警告：保存日志时出错：{e}")
 
-            # 每处理一行更新一次进度状态，便于中断后恢复
-            try:
-                current_state = {
-                    "excel_file_path": os.path.abspath(selected_excel_file),
-                    "batch_log_file": output_file_name,
-                    "last_processed_row": row_idx,
-                    "question_col_index": question_col_index,
-                    "doc_name_col_index": doc_name_col_index,
-                    "total_rows": batch_worksheet.max_row,
-                    "provider_name": provider_name,
-                    "selected_model": selected_model,
-                    "selected_role": selected_role,
-                }
-                with open(state_file_path, "w", encoding="utf-8") as f:
-                    json.dump(current_state, f, ensure_ascii=False, indent=2)
-            except Exception:
-                # 进度文件写入失败不影响主流程
-                pass
-
-            # 原始文件保持不变，只记录到日志文件
-
             time.sleep(request_interval)  # 间隔时间
 
     except KeyboardInterrupt:
@@ -381,13 +377,6 @@ def run_batch_query(
     except Exception as e:
         print_error(f"警告：保存日志时出错：{e}")
 
-    # 批量执行全部完成后，清理进度状态文件
-    try:
-        if os.path.exists(state_file_path):
-            os.remove(state_file_path)
-    except Exception:
-        pass
-
     end_time = time.time()
     total_duration = end_time - start_time
 
@@ -402,7 +391,7 @@ def run_batch_query(
         f"  • 问题列: {column_names[question_col_index]} (第{question_col_index + 1}列)\n",
         style="white",
     )
-    summary_text.append("  • 日志文件: 所有结果保存到独立日志文件\n\n", style="white")
+    summary_text.append(f"  • 日志文件: {output_file_name} (自动关联)\n\n", style="white")
 
     summary_text.append("🤖 模型配置\n", style="bold yellow")
     summary_text.append(f"  • AI 供应商: {provider_name}\n", style="white")
@@ -424,8 +413,7 @@ def run_batch_query(
     summary_text.append("📊 执行统计\n", style="bold yellow")
     summary_text.append(f"  • 成功率: {success_rate:.1f}%\n", style="white")
     summary_text.append(f"  • 请求间隔: {batch_request_interval}秒\n", style="white")
-    summary_text.append(f"  • 详细日志: {output_file_name}", style="white")
-
+    
     summary_panel = Panel(
         summary_text,
         title="[bold]📋 执行信息汇总[/bold]",

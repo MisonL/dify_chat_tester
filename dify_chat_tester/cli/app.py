@@ -347,6 +347,23 @@ class AppController:
                 console.print()
                 print_welcome()
                 continue
+            
+            # 检查是否有插件注册的回调函数
+            from dify_chat_tester.providers.setup import get_plugin_manager
+            manager = get_plugin_manager()
+            menu_items = manager.get_menu_items("main_function")
+            for item in menu_items:
+                if item["id"] == function_choice and "callback" in item:
+                    try:
+                        print_info(f"正在执行插件功能: {item['label']}")
+                        # 执行回调，传入 self (AppController) 允许插件操作控制器
+                        item["callback"](self)
+                    except Exception as e:
+                        print_error(f"插件功能执行失败: {e}")
+                    
+                    console.print()
+                    print_welcome()
+                    continue
 
             # AI问答测试功能 - 需要选择角色
             selected_role = select_role(self.roles)

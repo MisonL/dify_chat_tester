@@ -84,29 +84,24 @@ def test_run_batch_query_basic_flow(tmp_path, monkeypatch):
 
 
 def test_run_batch_query_with_resume_state(tmp_path, monkeypatch):
-    """构造带进度 state 文件的场景，覆盖恢复逻辑与“全部处理完”分支。"""
-    import json
-
+    """构造带现有日志 Excel 文件的场景，覆盖恢复逻辑与“全部处理完”分支。"""
+    from openpyxl import Workbook
     import dify_chat_tester.core.batch as bm
     from dify_chat_tester.core.batch import run_batch_query
 
     input_path = tmp_path / "input.xlsx"
     _create_sample_excel(input_path)
 
-    # 构造 state 文件：假设已处理到第 2 行
-    state_file = tmp_path / f".batch_state_{input_path.name}.json"
-    state = {
-        "excel_file_path": str(input_path),
-        "batch_log_file": str(tmp_path / "log.xlsx"),
-        "last_processed_row": 2,
-        "question_col_index": 1,
-        "doc_name_col_index": 0,
-        "total_rows": 3,
-        "provider_name": "OpenAI",
-        "selected_model": "gpt-4o",
-        "selected_role": "tester",
-    }
-    state_file.write_text(json.dumps(state), encoding="utf-8")
+    # 构造 log 文件：文件名规则 input_log.xlsx
+    # 假设已处理到第 2 行（即表头 + 1条数据）
+    log_path = tmp_path / "input_log.xlsx"
+    wb_log = Workbook()
+    ws_log = wb_log.active
+    # 表头
+    ws_log.append(["Timestamp", "Role", "Doc", "Question", "Answer", "Success", "Error", "ConvID"])
+    # 第一条记录
+    ws_log.append(["2025-01-01", "tester", "doc1", "q1", "ans1", True, "", "id1"])
+    wb_log.save(log_path)
 
     # 工作目录切到临时目录
     monkeypatch.chdir(tmp_path)
@@ -117,19 +112,29 @@ def test_run_batch_query_with_resume_state(tmp_path, monkeypatch):
     monkeypatch.setattr(bm, "get_config", lambda: mock_config)
 
     # 输入顺序：
-    # 1) 选择文件序号 "1"
-    # 2) 回答是否从上次进度继续 -> "" (默认 Y)
-    # 3) 是否显示响应 -> "" (默认配置)
-    inputs = iter(["1", "", ""])  # 文件选择 + 恢复确认 + 是否显示响应
+    # 1) 选择文件序号 "1" ("input.xlsx")
+    # 2) 检测到日志文件，提示恢复 -> "" (默认 Y, 从下一行继续)
+    # 3) 请选择问题列 -> "1" (因为移除了 JSON 状态还原列功能，这里需要重新选择列)
+    # 4) 是否显示响应 -> "" (默认配置)
+    inputs = iter(["1", "", "1", ""]) 
 
     def fake_prompt(_msg: str) -> str:
-        return next(inputs)
+        try:
+            return next(inputs)
+        except StopIteration:
+            return ""
 
     monkeypatch.setattr(bm, "print_input_prompt", fake_prompt)
 
-    # select_column_by_index 在恢复场景下不会被调用（使用 state），但这里仍 patch 掉以防万一
+    # select_column_by_index 在恢复场景下会被调用（不再从 state 恢复列索引）
+    # 但由于我们在 inputs 里已经塞入了 "1"，这里我们不需要 mock lambda 为常量，
+    # 而是让它真正调用 print_input_prompt (已被 mock) 或者 mock 它自己。
+    # 为了简化， mock 它直接返回 1 (因为 input 里的 "1" 是给它用的吗？不，select_column_by_index 内部调用 print_input_prompt)
+    # 如果 mock 了 select_column_by_index，那么 inputs 列表里的 "1" 就不需要了。
+    # 让 inputs 变更为: ["1", "", ""] (文件, 恢复确认, 显示响应)
+    # 并 mock select_column_by_index 返回 1
+    inputs = iter(["1", "", ""])
     import dify_chat_tester.cli.terminal as tui_mod
-
     monkeypatch.setattr(tui_mod, "select_column_by_index", lambda cols, msg: 1)
 
     # 静音输出 & sleep
@@ -154,5 +159,8 @@ def test_run_batch_query_with_resume_state(tmp_path, monkeypatch):
         batch_default_show_response=False,
     )
 
-    # 由于状态文件记录已到第 2 行，本次应只处理第 3 行
+    # input.xlsx 有 头 + 2行数据。
+    # log.xlsx 有 头 + 1行记录。
+    # 恢复后，resume_from_row 应该是 3。
+    # 所以应该只处理剩下的一行（第3行）。
     assert provider.send_message.call_count == 1
