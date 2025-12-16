@@ -191,7 +191,7 @@ dify_chat_tester/plugins/*
 !dify_chat_tester/plugins/iflow/
 
 # Private plugins directory (external, not committed to GitHub)
-private_plugins/
+external_plugins/
 
 # Logs
 *.log
