@@ -152,12 +152,12 @@ SYSTEM_PROMPT=你是{role}，请用简洁明了的语言回答问题，避免冗
 
 ### 如何使用私有插件？
 
-1. **准备插件目录**：将您的私有插件放在任意位置（例如 `../my_private_plugins`）。
-2. **配置环境变量**：在 `.env.config` 中设置 `PRIVATE_PLUGINS_PATH`。
+1. **准备插件目录**：将您的自定义插件放在任意位置（例如 `../my_plugins`）。
+2. **配置环境变量**：在 `.env.config` 中设置 `EXTERNAL_PLUGINS_PATH`。
 
-```ini
-# .env.config
-PRIVATE_PLUGINS_PATH=../my_private_plugins
+```bash
+# 示例
+EXTERNAL_PLUGINS_PATH=../my_plugins
 ```
 
 程序启动时会自动扫描该目录下的插件并加载。详细开发指南请见 [PLUGIN_GUIDE.md](docs/PLUGIN_GUIDE.md)。
@@ -225,7 +225,7 @@ dify_chat_tester/
 │       ├── dify/              # Dify 供应商
 │       ├── openai_compat/     # OpenAI 兼容接口
 │       └── iflow/             # iFlow 供应商
-├── private_plugins/           # 外部私有插件目录（.gitignore）
+├── external_plugins/          # 外部自定义插件目录（.gitignore）
 ├── tests/                     # 测试目录
 ├── docs/                      # 文档
 │   ├── PLUGIN_GUIDE.md        # 插件开发指南

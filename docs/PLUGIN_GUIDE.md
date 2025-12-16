@@ -39,7 +39,7 @@ def setup(manager):
 
 供应商类必须继承自 `dify_chat_tester.providers.base.AIProvider` 并实现抽象方法。
 
-```python
+````python
 from dify_chat_tester.providers.base import AIProvider
 from typing import List, Optional
 
@@ -60,33 +60,32 @@ class MyCustomProvider(AIProvider):
     ) -> tuple:
         # 实现发送逻辑
         return "回复内容", True, None, None
-```
 
-## 3. 私有插件管理
+### 4.2 加载外部插件
 
-### 方案一：外部插件目录（推荐）
+为了避免核心代码与特定业务逻辑耦合，建议将业务插件放在独立目录中，并通过环境变量加载。
 
-将私有插件放在项目目录外部或单独的 `private_plugins/` 目录中：
+将自定义插件放在项目目录外部或单独的 `external_plugins/` 目录中：
 
 ```bash
-# 项目结构
-dify_chat_tester/          # 开源代码 (GitHub)
-private_plugins/           # 私有插件 (可独立管理)
-  └── my_plugin/
-      ├── __init__.py
-      └── provider.py
-```
+my_project/
+├── dify_chat_tester/      # 核心代码
+├── external_plugins/      # 外部插件 (可独立管理)
+│   └── my_custom_plugin/
+│       ├── __init__.py
+│       └── provider.py
+└── .env.config
+````
 
-在 `.env.config` 中配置外部插件路径：
+在 `.env.config` 中配置路径：
 
 ```ini
-PRIVATE_PLUGINS_PATH=/path/to/private_plugins
+EXTERNAL_PLUGINS_PATH=/path/to/external_plugins
 ```
 
 **优势**：
 
 - ✅ 完全隔离：私有代码与开源代码无历史交叉
-- ✅ 独立版本控制：私有插件可用独立的 Git 仓库管理
 - ✅ 部署灵活：不同环境可配置不同的插件路径
 
 ### 方案二：内置目录（仅限本地）
