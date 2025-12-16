@@ -130,14 +130,21 @@ class ConfigLoader:
             current_dir = os.path.dirname(os.path.abspath(__file__))
             base_dir = os.path.dirname(current_dir)
 
-        # 优先从程序目录查找 .env.config.example
+        # 优先从程序目录查找 .env.config.example（向后兼容旧位置）
         example_file = os.path.join(base_dir, ".env.config.example")
 
-        # 如果程序目录没有，尝试从源码目录查找
+        # 如果程序目录没有，尝试从 config/ 目录查找
+        if not os.path.exists(example_file):
+            example_file = os.path.join(base_dir, "config", ".env.config.example")
+
+        # 如果还没找到且在开发环境，尝试从源码目录查找
         if not os.path.exists(example_file) and not getattr(sys, "frozen", False):
             current_dir = os.path.dirname(os.path.abspath(__file__))
             project_dir = os.path.dirname(current_dir)
-            example_file = os.path.join(project_dir, ".env.config.example")
+            example_file = os.path.join(project_dir, "config", ".env.config.example")
+            # 仍然支持旧位置
+            if not os.path.exists(example_file):
+                example_file = os.path.join(project_dir, ".env.config.example")
 
         # 配置文件创建在程序运行目录
         config_file_path = os.path.join(base_dir, self.env_file)

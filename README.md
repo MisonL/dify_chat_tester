@@ -57,7 +57,7 @@ uv run python main.py -- --mode question-generation --folder ./kb-docs
 
 ```bash
 # 复制配置模板（推荐做法）
-cp .env.config.example .env.config
+cp config/.env.config.example .env.config
 
 # 编辑配置文件
 # 设置 API 密钥、角色列表等
@@ -185,7 +185,10 @@ SYSTEM_PROMPT=你是{role}，请用简洁明了的语言回答问题，避免冗
 
 ```
 dify_chat_tester/
-├── main.py                    # 主程序入口（简洁委托）
+├── main.py                    # 主程序入口
+├── pyproject.toml             # 项目配置
+├── config/                    # 配置模板目录
+│   └── .env.config.example    # 配置模板
 ├── dify_chat_tester/          # 核心模块
 │   ├── app_controller.py      # 应用控制器
 │   ├── chat_manager.py        # 聊天管理器
@@ -193,22 +196,23 @@ dify_chat_tester/
 │   ├── question_generator.py  # 问题生成器
 │   ├── provider_setup.py      # 供应商设置
 │   ├── plugin_manager.py      # 插件管理器
-│   ├── selectors.py           # 选择器
-│   ├── ai_providers.py        # AI供应商基类
+│   ├── ai_providers.py        # AI 供应商基类和实现
 │   ├── config_loader.py       # 配置管理
+│   ├── selectors.py           # 选择器
 │   ├── terminal_ui.py         # 终端界面
-│   ├── excel_utils.py         # Excel工具
+│   ├── excel_utils.py         # Excel 工具
 │   ├── logging_utils.py       # 日志工具
-│   └── plugins/               # 插件目录
-│       ├── dify/              # Dify 供应商插件
-│       ├── openai_compat/     # OpenAI 兼容接口插件
-│       └── iflow/             # iFlow 供应商插件
-├── docs/
+│   └── plugins/               # 内置插件
+│       ├── dify/              # Dify 供应商
+│       ├── openai_compat/     # OpenAI 兼容接口
+│       └── iflow/             # iFlow 供应商
+├── private_plugins/           # 外部私有插件目录（.gitignore）
+├── tests/                     # 测试目录
+├── docs/                      # 文档
 │   ├── PLUGIN_GUIDE.md        # 插件开发指南
-│   └── ...
-├── .env.config.example        # 配置模板
-├── pyproject.toml             # 项目配置
-└── README.md                  # 项目文档
+│   └── 用户使用指南.md
+└── scripts/                   # 构建脚本
+    └── build/
 ```
 
 ## 📝 日志文件
