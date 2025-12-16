@@ -76,6 +76,16 @@ def create_zip():
         shutil.copy2(user_guide_path, os.path.join(source_dir, "用户使用指南.md"))
         print("Copied User Guide")
 
+    # Copy external_plugins directory with README
+    ext_plugins_src = os.path.join(project_dir, "external_plugins")
+    ext_plugins_dst = os.path.join(source_dir, "external_plugins")
+    os.makedirs(ext_plugins_dst, exist_ok=True)
+    
+    ext_readme_src = os.path.join(ext_plugins_src, "README.md")
+    if os.path.exists(ext_readme_src):
+        shutil.copy2(ext_readme_src, os.path.join(ext_plugins_dst, "README.md"))
+        print("Copied external_plugins README")
+
     # Create ZIP
     print(f"Creating ZIP archive: {zip_filename}")
     with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zipf:

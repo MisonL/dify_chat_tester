@@ -27,7 +27,7 @@ release_dir = os.path.join(project_root, 'release_windows')
 # 收集数据文件
 datas = [
     # 配置文件模板
-    (os.path.join(project_root, 'config', '.env.config.example'), 'config'),
+    (os.path.join(project_root, '.env.config.example'), '.'),
     
     # Excel模板文件
     (os.path.join(project_root, 'dify_chat_tester_template.xlsx'), '.'),
