@@ -1,6 +1,6 @@
 <div align="center">
   <h1>🤖 AI 聊天客户端测试工具</h1>
-  <p>支持多AI供应商的聊天测试工具（Dify、OpenAI、iFlow） v1.3.2</p>
+  <p>支持多AI供应商的聊天测试工具（Dify、OpenAI、iFlow） v1.4.1</p>
   
   <img src="https://img.shields.io/badge/Python-3.9+-blue?logo=python" alt="Python版本">
   <img src="https://img.shields.io/badge/License-MIT-green" alt="许可证">
@@ -220,7 +220,6 @@ dify_chat_tester/
 │   ├── selectors.py           # 选择器
 │   ├── terminal_ui.py         # 终端界面
 │   ├── excel_utils.py         # Excel 工具
-│   ├── logging_utils.py       # 日志工具
 │   └── plugins/               # 内置插件
 │       ├── dify/              # Dify 供应商
 │       ├── openai_compat/     # OpenAI 兼容接口

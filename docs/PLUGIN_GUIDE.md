@@ -146,4 +146,6 @@ another-package
 
 ## 8. 示例
 
-请参考 `external_plugins/qianxiaoyin/` 目录下的插件实现。
+## 8. 示例
+
+请参考 `external_plugins` 目录下的示例插件。
