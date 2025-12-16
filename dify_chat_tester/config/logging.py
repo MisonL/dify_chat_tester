@@ -112,8 +112,8 @@ def get_logger(name: str = "dify_chat_tester") -> logging.Logger:
             file_handler.setFormatter(formatter)
             logger.addHandler(file_handler)
 
-            # 记录日志目录位置
-            logger.info(f"日志目录: {actual_log_dir}")
+            # 记录日志目录位置（DEBUG 级别，避免冗余输出）
+            logger.debug(f"日志目录: {actual_log_dir}")
         except Exception as e:
             # 文件日志失败时输出警告，但不影响主流程
             logger.warning(f"无法初始化文件日志: {e}")
