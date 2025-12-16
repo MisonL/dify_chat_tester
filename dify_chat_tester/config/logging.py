@@ -11,113 +11,125 @@
 - LOG_BACKUP_COUNT: 保留的备份文件数量，默认 5
 """
 
-from __future__ import annotations
-
 import logging
 import sys
-from logging.handlers import RotatingFileHandler
 from pathlib import Path
-
+from loguru import logger
 from dify_chat_tester.config.loader import get_config
 
 _config = get_config()
 
+class InterceptHandler(logging.Handler):
+    """
+    拦截标准 logging 库的日志并转发给 loguru
+    这样像 requests, urllib3 等第三方库的日志也能统一管理
+    """
+    def emit(self, record):
+        # 获取对应的 loguru 级别
+        try:
+            level = logger.level(record.levelname).name
+        except ValueError:
+            level = record.levelno
 
-def _parse_level(level_str: str) -> int:
-    """将字符串形式的日志级别转换为 logging 级别。"""
-    level_str = (level_str or "INFO").upper()
-    return getattr(logging, level_str, logging.INFO)
+        # 查找调用者的帧，确保日志行号正确
+        frame, depth = logging.currentframe(), 2
+        while frame.f_code.co_filename == logging.__file__:
+            frame = frame.f_back
+            depth += 1
 
+        logger.opt(depth=depth, exception=record.exc_info).log(
+            level, record.getMessage()
+        )
 
 def _get_log_directory(log_dir: str) -> Path:
-    """
-    获取日志目录路径，优先使用程序所在目录，否则使用用户主目录
-
-    Args:
-        log_dir: 日志目录名称
-
-    Returns:
-        Path: 日志目录的绝对路径
-    """
+    """获取日志目录路径"""
     # 尝试获取程序所在目录
     if getattr(sys, "frozen", False):
-        # 打包后的程序
         app_dir = Path(sys.executable).parent
     else:
-        # 开发环境
         app_dir = Path.cwd()
 
-    # 首选：程序所在目录的logs文件夹
     preferred_log_dir = app_dir / log_dir
 
-    # 测试是否有写入权限
     try:
         preferred_log_dir.mkdir(parents=True, exist_ok=True)
-        # 尝试写入测试文件
+        # 测试写入权限
         test_file = preferred_log_dir / ".write_test"
         test_file.write_text("test")
         test_file.unlink()
         return preferred_log_dir
     except (OSError, PermissionError):
-        # 如果没有写入权限，使用用户主目录
         home_dir = Path.home()
         fallback_log_dir = home_dir / ".dify_chat_tester" / log_dir
         fallback_log_dir.mkdir(parents=True, exist_ok=True)
         return fallback_log_dir
 
-
-def get_logger(name: str = "dify_chat_tester") -> logging.Logger:
-    """获取带统一配置的 logger。
-
-    只在第一次调用时进行配置，后续重复调用直接复用同一个 logger。
+def get_logger(name: str = "dify_chat_tester"):
     """
-    logger = logging.getLogger(name)
-    if getattr(logger, "_dify_configured", False):  # type: ignore[attr-defined]
-        return logger
+    获取配置好的 loguru logger
+    注意：loguru 是单例，name 参数主要用于 bind 上下文，
+    但为了兼容标准 logging 的用法，我们返回原生的 loguru.logger
+    或者根据需要返回 bind 后的 logger
+    """
+    
+    # 防止重复配置
+    if hasattr(sys, "_dify_loguru_configured"):
+        return logger.bind(name=name)
 
-    level_str = _config.get_str("LOG_LEVEL", "INFO")
-    log_level = _parse_level(level_str)
-    logger.setLevel(log_level)
+    # 1. 移除 loguru 默认的 handler
+    logger.remove()
 
-    # 不向上冒泡到 root，避免重复输出
-    logger.propagate = False
-
-    # 控制台输出
-    stream_handler = logging.StreamHandler()
-    stream_handler.setLevel(log_level)
-    formatter = logging.Formatter(
-        fmt="[%(asctime)s] [%(levelname)s] [%(name)s] %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
+    # 2. 读取配置
+    level_str = _config.get_str("LOG_LEVEL", "INFO").upper()
+    log_to_file = _config.get_bool("LOG_TO_FILE", True)
+    
+    # 3. 配置控制台输出 (stderr)
+    logger.add(
+        sys.stderr,
+        level=level_str,
+        format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>"
     )
-    stream_handler.setFormatter(formatter)
-    logger.addHandler(stream_handler)
 
-    # 文件输出（默认启用，支持日志轮转）
-    if _config.get_bool("LOG_TO_FILE", True):
-        log_dir = _config.get_str("LOG_DIR", "logs")
+    # 4. 配置文件输出
+    if log_to_file:
+        log_dir_name = _config.get_str("LOG_DIR", "logs")
         file_name = _config.get_str("LOG_FILE_NAME", "dify_chat_tester.log")
-        max_bytes = _config.get_int("LOG_MAX_BYTES", 10 * 1024 * 1024)  # 10MB
-        backup_count = _config.get_int("LOG_BACKUP_COUNT", 5)
-
+        # 10MB 切割，保留 7 天，旧文件压缩为 zip
+        max_bytes = "10 MB" 
+        retention = "7 days"
+        
         try:
-            # 获取智能日志目录
-            actual_log_dir = _get_log_directory(log_dir)
+            actual_log_dir = _get_log_directory(log_dir_name)
             log_path = actual_log_dir / file_name
 
-            # 使用 RotatingFileHandler 实现日志轮转
-            file_handler = RotatingFileHandler(
-                log_path, maxBytes=max_bytes, backupCount=backup_count, encoding="utf-8"
+            # 主日志文件配置
+            # filter=None 表示记录所有（除非被 level 过滤）
+            # 但我们希望把特定的插件 debug 日志分流出去，不混在主日志里？
+            # 策略：主日志包含所有 logger 的内容（作为全量备份），
+            # 或者：主日志排除特定的 channel。
+            # 这里我们保持简单：主日志记录所有标准输出。
+            
+            logger.add(
+                str(log_path),
+                level=level_str,
+                rotation=max_bytes,
+                retention=retention,
+                compression="zip",
+                encoding="utf-8",
+                enqueue=True, # 异步写入，线程安全
+                format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {name}:{function}:{line} - {message}"
             )
-            file_handler.setLevel(log_level)
-            file_handler.setFormatter(formatter)
-            logger.addHandler(file_handler)
-
-            # 记录日志目录位置（DEBUG 级别，避免冗余输出）
-            logger.debug(f"日志目录: {actual_log_dir}")
+            
+            # 记录日志位置
+            logger.debug(f"主日志文件: {log_path}")
+            
         except Exception as e:
-            # 文件日志失败时输出警告，但不影响主流程
-            logger.warning(f"无法初始化文件日志: {e}")
+            print(f"警告: 无法初始化文件日志: {e}", file=sys.stderr)
 
+    # 5. 拦截标准 logging 库的日志
+    logging.basicConfig(handlers=[InterceptHandler()], level=0, force=True)
+    
     # 标记已配置
-    setattr(logger, "_dify_configured", True)
-    return logger
+    setattr(sys, "_dify_loguru_configured", True)
+
+    return logger.bind(name=name)

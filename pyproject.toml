@@ -13,6 +13,7 @@ dependencies = [
     "openpyxl",
     "colorama",
     "rich",
+    "loguru>=0.7.3",
 ]
 
 [project.scripts]
