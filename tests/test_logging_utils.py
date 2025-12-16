@@ -2,7 +2,7 @@
 
 import logging
 
-import dify_chat_tester.logging_utils as logging_utils
+import dify_chat_tester.config.logging as logging_utils
 
 
 class _FakeConfig:

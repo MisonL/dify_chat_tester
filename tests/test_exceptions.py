@@ -2,7 +2,7 @@
 
 import pytest
 
-from dify_chat_tester.exceptions import (
+from dify_chat_tester.utils.exceptions import (
     AuthenticationError,
     BatchProcessError,
     ConfigError,

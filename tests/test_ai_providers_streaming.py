@@ -2,7 +2,7 @@
 
 from unittest.mock import MagicMock, patch
 
-from dify_chat_tester.ai_providers import DifyProvider, OpenAIProvider, iFlowProvider
+from dify_chat_tester.providers.base import DifyProvider, OpenAIProvider, iFlowProvider
 
 
 class TestDifyStreamProcessing:
@@ -23,7 +23,7 @@ class TestDifyStreamProcessing:
 
         provider = DifyProvider("http://url", "key", "app")
 
-        with patch("dify_chat_tester.terminal_ui.StreamDisplay"):
+        with patch("dify_chat_tester.cli.terminal.StreamDisplay"):
             response, success, error, _ = provider.send_message(
                 "msg", "model", stream=True, show_indicator=False
             )
@@ -46,7 +46,7 @@ class TestDifyStreamProcessing:
 
         provider = DifyProvider("http://url", "key", "app")
 
-        with patch("dify_chat_tester.terminal_ui.StreamDisplay"):
+        with patch("dify_chat_tester.cli.terminal.StreamDisplay"):
             response, success, error, _ = provider.send_message(
                 "msg", "model", stream=True, show_indicator=False, show_thinking=True
             )
@@ -68,7 +68,7 @@ class TestDifyStreamProcessing:
 
         provider = DifyProvider("http://url", "key", "app")
 
-        with patch("dify_chat_tester.terminal_ui.StreamDisplay"):
+        with patch("dify_chat_tester.cli.terminal.StreamDisplay"):
             response, success, error, _ = provider.send_message(
                 "msg", "model", stream=True, show_indicator=False
             )
@@ -95,7 +95,7 @@ class TestOpenAIStreamProcessing:
 
         provider = OpenAIProvider("http://url", "key")
 
-        with patch("dify_chat_tester.terminal_ui.StreamDisplay"):
+        with patch("dify_chat_tester.cli.terminal.StreamDisplay"):
             response, success, error, _ = provider.send_message(
                 "msg", "model", stream=True, show_indicator=False
             )
@@ -118,7 +118,7 @@ class TestOpenAIStreamProcessing:
 
         provider = OpenAIProvider("http://url", "key")
 
-        with patch("dify_chat_tester.terminal_ui.StreamDisplay"):
+        with patch("dify_chat_tester.cli.terminal.StreamDisplay"):
             response, success, error, _ = provider.send_message(
                 "msg", "model", stream=True, show_indicator=False
             )
@@ -140,7 +140,7 @@ class TestOpenAIStreamProcessing:
 
         provider = OpenAIProvider("http://url", "key")
 
-        with patch("dify_chat_tester.terminal_ui.StreamDisplay"):
+        with patch("dify_chat_tester.cli.terminal.StreamDisplay"):
             response, success, error, _ = provider.send_message(
                 "msg", "model", stream=True, show_indicator=False
             )
@@ -162,7 +162,7 @@ class TestOpenAIStreamProcessing:
 
         provider = OpenAIProvider("http://url", "key")
 
-        with patch("dify_chat_tester.terminal_ui.StreamDisplay"):
+        with patch("dify_chat_tester.cli.terminal.StreamDisplay"):
             response, success, error, _ = provider.send_message(
                 "msg", "model", stream=True, show_indicator=False
             )
@@ -221,7 +221,7 @@ class TestiFlowStreamProcessing:
 
         provider = iFlowProvider("key")
 
-        with patch("dify_chat_tester.terminal_ui.StreamDisplay"):
+        with patch("dify_chat_tester.cli.terminal.StreamDisplay"):
             response, success, error, _ = provider.send_message(
                 "msg", "model", stream=True, show_indicator=False
             )
@@ -243,7 +243,7 @@ class TestiFlowStreamProcessing:
 
         provider = iFlowProvider("key")
 
-        with patch("dify_chat_tester.terminal_ui.StreamDisplay"):
+        with patch("dify_chat_tester.cli.terminal.StreamDisplay"):
             response, success, error, _ = provider.send_message(
                 "msg", "model", stream=True, show_indicator=False
             )
@@ -265,7 +265,7 @@ class TestiFlowStreamProcessing:
 
         provider = iFlowProvider("key")
 
-        with patch("dify_chat_tester.terminal_ui.StreamDisplay"):
+        with patch("dify_chat_tester.cli.terminal.StreamDisplay"):
             response, success, error, _ = provider.send_message(
                 "msg", "model", stream=True, show_indicator=False
             )

@@ -4,18 +4,18 @@ import os
 import tempfile
 from unittest.mock import MagicMock, patch
 
-from dify_chat_tester.batch_manager import run_batch_query
+from dify_chat_tester.core.batch import run_batch_query
 
 
 class TestBatchManagerExtended:
     """Batch Manager 扩展测试"""
 
-    @patch("dify_chat_tester.terminal_ui.select_column_by_index")
-    @patch("dify_chat_tester.batch_manager.get_config")
-    @patch("dify_chat_tester.batch_manager.init_excel_log")
-    @patch("dify_chat_tester.batch_manager.log_to_excel")
-    @patch("dify_chat_tester.batch_manager.print_input_prompt")
-    @patch("dify_chat_tester.batch_manager.print_file_list")
+    @patch("dify_chat_tester.cli.terminal.select_column_by_index")
+    @patch("dify_chat_tester.core.batch.get_config")
+    @patch("dify_chat_tester.core.batch.init_excel_log")
+    @patch("dify_chat_tester.core.batch.log_to_excel")
+    @patch("dify_chat_tester.core.batch.print_input_prompt")
+    @patch("dify_chat_tester.core.batch.print_file_list")
     def test_run_batch_query_flow(
         self,
         mock_print_list,
@@ -88,8 +88,8 @@ class TestBatchManagerExtended:
             assert mock_log.call_count == 2
             mock_wb.save.assert_called()
 
-    @patch("dify_chat_tester.batch_manager.print_file_list")
-    @patch("dify_chat_tester.batch_manager.print_input_prompt")
+    @patch("dify_chat_tester.core.batch.print_file_list")
+    @patch("dify_chat_tester.core.batch.print_input_prompt")
     def test_run_batch_query_no_files(self, mock_input, mock_print_list):
         """测试没有 Excel 文件的情况"""
         # 模拟 os.listdir 返回空（通过不创建任何文件，或者假设当前目录没有）
@@ -113,8 +113,8 @@ class TestBatchManagerExtended:
             # 验证是否提示了输入路径
             mock_input.assert_called()
 
-    @patch("dify_chat_tester.batch_manager.print_file_list")
-    @patch("dify_chat_tester.batch_manager.print_input_prompt")
+    @patch("dify_chat_tester.core.batch.print_file_list")
+    @patch("dify_chat_tester.core.batch.print_input_prompt")
     def test_run_batch_query_cancel_file_selection(self, mock_input, mock_print_list):
         """测试取消文件选择"""
         # 假设 os.listdir 返回文件

@@ -5,7 +5,7 @@
 
 import sys
 
-from dify_chat_tester.terminal_ui import (
+from dify_chat_tester.cli.terminal import (
     console,
     print_error,
     print_input_prompt,
@@ -125,7 +125,7 @@ def select_role(available_roles):
         except ValueError:
             print_error("请输入有效的数字！")
         except KeyboardInterrupt:
-            from dify_chat_tester.terminal_ui import print_warning
+            from dify_chat_tester.cli.terminal import print_warning
 
             print_warning("用户取消操作，程序退出。")
             sys.exit(0)

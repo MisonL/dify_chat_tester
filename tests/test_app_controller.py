@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from dify_chat_tester.app_controller import AppController
+from dify_chat_tester.cli.app import AppController
 
 
 class TestAppController:
@@ -13,7 +13,7 @@ class TestAppController:
     @pytest.fixture
     def controller(self):
         """创建一个 AppController 实例，并 mock 必要的依赖"""
-        with patch("dify_chat_tester.app_controller.get_config") as mock_get_config:
+        with patch("dify_chat_tester.cli.app.get_config") as mock_get_config:
             mock_config = MagicMock()
             mock_config.get.return_value = "dify,openai"
             mock_config.get_str.return_value = "chat_log.xlsx"
@@ -32,7 +32,7 @@ class TestAppController:
         assert controller.batch_request_interval == 1.0
         assert controller.batch_default_show_response is False
 
-    @patch("dify_chat_tester.app_controller.setup_dify_provider")
+    @patch("dify_chat_tester.cli.app.setup_dify_provider")
     def test_setup_provider_dify(self, mock_setup, controller):
         """测试设置 Dify Provider"""
         mock_provider = MagicMock()
@@ -45,7 +45,7 @@ class TestAppController:
         assert models == ["Dify App"]
         mock_setup.assert_called_once()
 
-    @patch("dify_chat_tester.app_controller.setup_openai_provider")
+    @patch("dify_chat_tester.cli.app.setup_openai_provider")
     def test_setup_provider_openai(self, mock_setup, controller):
         """测试设置 OpenAI Provider"""
         mock_provider = MagicMock()
@@ -60,7 +60,7 @@ class TestAppController:
         assert "gpt-4o" in models
         assert "default-model" in models
 
-    @patch("dify_chat_tester.app_controller.print_input_prompt")
+    @patch("dify_chat_tester.cli.app.print_input_prompt")
     def test_select_provider(self, mock_input, controller):
         """测试选择 Provider"""
         controller.ai_providers = {
@@ -78,8 +78,8 @@ class TestAppController:
         assert name == "OpenAI"
         assert pid == "openai"
 
-    @patch("dify_chat_tester.app_controller.sys.exit")
-    @patch("dify_chat_tester.app_controller.print_input_prompt")
+    @patch("dify_chat_tester.cli.app.sys.exit")
+    @patch("dify_chat_tester.cli.app.print_input_prompt")
     def test_select_provider_exit(self, mock_input, mock_exit, controller):
         """测试选择退出"""
         controller.ai_providers = {"1": {"name": "Dify", "id": "dify"}}
@@ -93,7 +93,7 @@ class TestAppController:
         mock_exit.assert_called_with(0)
 
     @patch("dify_chat_tester.services.QuestionService")
-    @patch("dify_chat_tester.app_controller.select_model")
+    @patch("dify_chat_tester.cli.app.select_model")
     def test_run_question_generation_cli(
         self, mock_select_model, mock_service_class, controller
     ):
@@ -133,7 +133,7 @@ class TestAppControllerAdditional:
     @pytest.fixture
     def controller(self):
         """创建测试用的 controller"""
-        with patch("dify_chat_tester.app_controller.get_config") as mock_get_config:
+        with patch("dify_chat_tester.cli.app.get_config") as mock_get_config:
             mock_config = MagicMock()
             mock_config.get.return_value = "dify,openai,iflow"
             mock_config.get_str.return_value = "chat_log.xlsx"
@@ -145,7 +145,7 @@ class TestAppControllerAdditional:
             controller = AppController()
             return controller
 
-    @patch("dify_chat_tester.app_controller.setup_iflow_provider")
+    @patch("dify_chat_tester.cli.app.setup_iflow_provider")
     def test_setup_provider_iflow(self, mock_setup, controller):
         """测试设置 iFlow Provider"""
         mock_provider = MagicMock()
@@ -159,7 +159,7 @@ class TestAppControllerAdditional:
         assert provider == mock_provider
         assert "qwen3-max" in models
 
-    @patch("dify_chat_tester.app_controller.setup_dify_provider")
+    @patch("dify_chat_tester.cli.app.setup_dify_provider")
     def test_setup_provider_dify_no_models(self, mock_setup, controller):
         """测试 Dify Provider 没有返回模型"""
         mock_provider = MagicMock()
@@ -171,7 +171,7 @@ class TestAppControllerAdditional:
         assert provider == mock_provider
         assert isinstance(models, list)
 
-    @patch("dify_chat_tester.app_controller.print_error")
+    @patch("dify_chat_tester.cli.app.print_error")
     def test_setup_provider_unknown(self, mock_error, controller):
         """测试未知的 Provider"""
         provider, models = controller._setup_provider("unknown")
@@ -180,9 +180,9 @@ class TestAppControllerAdditional:
         assert models is None
         mock_error.assert_called_once()
 
-    @patch("dify_chat_tester.app_controller.sys.exit")
-    @patch("dify_chat_tester.app_controller.print_info")
-    @patch("dify_chat_tester.app_controller.run_interactive_chat")
+    @patch("dify_chat_tester.cli.app.sys.exit")
+    @patch("dify_chat_tester.cli.app.print_info")
+    @patch("dify_chat_tester.cli.app.run_interactive_chat")
     def test_run_mode_interactive(
         self, mock_run_chat, mock_info, mock_exit, controller
     ):
@@ -196,9 +196,9 @@ class TestAppControllerAdditional:
         assert result == "continue"
         mock_run_chat.assert_called_once()
 
-    @patch("dify_chat_tester.app_controller.sys.exit")
-    @patch("dify_chat_tester.app_controller.print_info")
-    @patch("dify_chat_tester.app_controller.run_batch_query")
+    @patch("dify_chat_tester.cli.app.sys.exit")
+    @patch("dify_chat_tester.cli.app.print_info")
+    @patch("dify_chat_tester.cli.app.run_batch_query")
     def test_run_mode_batch(self, mock_run_batch, mock_info, mock_exit, controller):
         """测试运行批量模式"""
         mock_provider = MagicMock()
@@ -210,14 +210,14 @@ class TestAppControllerAdditional:
         assert result == "continue"
         mock_run_batch.assert_called_once()
 
-    @patch("dify_chat_tester.app_controller.print_welcome")
+    @patch("dify_chat_tester.cli.app.print_welcome")
     def test_run_main_loop_question_generation_and_exit(
         self, mock_welcome, controller, monkeypatch
     ):
         """测试 AppController.run 的主循环：先走问题生成，再正常退出。"""
         import pytest
 
-        import dify_chat_tester.app_controller as ac
+        import dify_chat_tester.cli.app as ac
 
         # select_main_function: 第一次选择 "2" (AI 生成测试提问点)，第二次选择 "0" 退出
         choices = iter(["2", "0"])

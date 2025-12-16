@@ -3,8 +3,8 @@ import os
 import pkgutil
 from typing import Dict, List, Type
 
-from dify_chat_tester.ai_providers import AIProvider
-from dify_chat_tester.logging_utils import get_logger
+from dify_chat_tester.providers.base import AIProvider
+from dify_chat_tester.config.logging import get_logger
 
 logger = get_logger("dify_chat_tester.plugin_manager")
 

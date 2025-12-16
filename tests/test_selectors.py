@@ -5,7 +5,7 @@
 
 from unittest.mock import patch
 
-from dify_chat_tester.selectors import (
+from dify_chat_tester.cli.selectors import (
     select_folder_path,
     select_main_function,
     select_mode,
@@ -17,7 +17,7 @@ from dify_chat_tester.selectors import (
 class TestSelectModel:
     """测试 select_model 函数"""
 
-    @patch("dify_chat_tester.selectors.print_input_prompt")
+    @patch("dify_chat_tester.cli.selectors.print_input_prompt")
     def test_select_model_by_number(self, mock_input):
         """测试通过数字选择模型"""
         mock_input.return_value = "1"
@@ -27,7 +27,7 @@ class TestSelectModel:
 
         assert result == "gpt-4o"
 
-    @patch("dify_chat_tester.selectors.print_input_prompt")
+    @patch("dify_chat_tester.cli.selectors.print_input_prompt")
     def test_select_model_by_name(self, mock_input):
         """测试直接输入模型名称"""
         mock_input.return_value = "custom-model"
@@ -44,7 +44,7 @@ class TestSelectModel:
 
         assert result == "Dify App (使用应用 ID)"
 
-    @patch("dify_chat_tester.selectors.print_input_prompt")
+    @patch("dify_chat_tester.cli.selectors.print_input_prompt")
     def test_select_custom_model(self, mock_input):
         """测试选择自定义模型"""
         # 先选择自定义模型选项，再输入模型名
@@ -59,7 +59,7 @@ class TestSelectModel:
 class TestSelectRole:
     """测试 select_role 函数"""
 
-    @patch("dify_chat_tester.selectors.print_input_prompt")
+    @patch("dify_chat_tester.cli.selectors.print_input_prompt")
     def test_select_role_by_number(self, mock_input):
         """测试通过数字选择角色"""
         mock_input.return_value = "1"
@@ -69,7 +69,7 @@ class TestSelectRole:
 
         assert result == "员工"
 
-    @patch("dify_chat_tester.selectors.print_input_prompt")
+    @patch("dify_chat_tester.cli.selectors.print_input_prompt")
     def test_select_user_role(self, mock_input):
         """测试选择内置用户角色"""
         mock_input.return_value = "4"  # len(available_roles) + 1
@@ -79,7 +79,7 @@ class TestSelectRole:
 
         assert result == "user"
 
-    @patch("dify_chat_tester.selectors.print_input_prompt")
+    @patch("dify_chat_tester.cli.selectors.print_input_prompt")
     def test_select_custom_role(self, mock_input):
         """测试选择自定义角色"""
         # 先选择自定义角色选项，再输入角色名
@@ -90,7 +90,7 @@ class TestSelectRole:
 
         assert result == "测试人员"
 
-    @patch("dify_chat_tester.selectors.print_input_prompt")
+    @patch("dify_chat_tester.cli.selectors.print_input_prompt")
     def test_select_role_by_name(self, mock_input):
         """测试直接输入角色名称"""
         mock_input.return_value = "产品经理"
@@ -104,25 +104,25 @@ class TestSelectRole:
 class TestSelectMode:
     """测试 select_mode 函数"""
 
-    @patch("dify_chat_tester.selectors.print_input_prompt")
+    @patch("dify_chat_tester.cli.selectors.print_input_prompt")
     def test_select_chat_mode(self, mock_input):
         mock_input.return_value = "1"
         result = select_mode()
         assert result == "1"
 
-    @patch("dify_chat_tester.selectors.print_input_prompt")
+    @patch("dify_chat_tester.cli.selectors.print_input_prompt")
     def test_select_batch_mode(self, mock_input):
         mock_input.return_value = "2"
         result = select_mode()
         assert result == "2"
 
-    @patch("dify_chat_tester.selectors.print_input_prompt")
+    @patch("dify_chat_tester.cli.selectors.print_input_prompt")
     def test_select_exit(self, mock_input):
         mock_input.return_value = "3"
         result = select_mode()
         assert result == "3"
 
-    @patch("dify_chat_tester.selectors.print_input_prompt")
+    @patch("dify_chat_tester.cli.selectors.print_input_prompt")
     def test_invalid_retry(self, mock_input):
         mock_input.side_effect = ["invalid", "1"]
         result = select_mode()
@@ -132,19 +132,19 @@ class TestSelectMode:
 class TestSelectMainFunction:
     """测试 select_main_function 函数"""
 
-    @patch("dify_chat_tester.selectors.print_input_prompt")
+    @patch("dify_chat_tester.cli.selectors.print_input_prompt")
     def test_select_chat_mode(self, mock_input):
         mock_input.return_value = "1"
         result = select_main_function()
         assert result == "1"
 
-    @patch("dify_chat_tester.selectors.print_input_prompt")
+    @patch("dify_chat_tester.cli.selectors.print_input_prompt")
     def test_select_question_gen_mode(self, mock_input):
         mock_input.return_value = "2"
         result = select_main_function()
         assert result == "2"
 
-    @patch("dify_chat_tester.selectors.print_input_prompt")
+    @patch("dify_chat_tester.cli.selectors.print_input_prompt")
     def test_select_exit(self, mock_input):
         mock_input.return_value = "0"
         result = select_main_function()
@@ -154,21 +154,21 @@ class TestSelectMainFunction:
 class TestSelectFolderPath:
     """测试 select_folder_path 函数"""
 
-    @patch("dify_chat_tester.selectors.print_input_prompt")
+    @patch("dify_chat_tester.cli.selectors.print_input_prompt")
     def test_select_default_path(self, mock_input):
         """测试选择默认路径"""
         mock_input.return_value = "1"
         result = select_folder_path("./default/path")
         assert result == "./default/path"
 
-    @patch("dify_chat_tester.selectors.print_input_prompt")
+    @patch("dify_chat_tester.cli.selectors.print_input_prompt")
     def test_select_custom_path(self, mock_input):
         """测试输入自定义路径"""
         mock_input.side_effect = ["2", "/custom/path"]
         result = select_folder_path("./default/path")
         assert result == "/custom/path"
 
-    @patch("dify_chat_tester.selectors.print_input_prompt")
+    @patch("dify_chat_tester.cli.selectors.print_input_prompt")
     @patch("pathlib.Path.iterdir")
     def test_select_existing_folder(self, mock_iterdir, mock_input):
         """测试选择当前目录下的文件夹"""

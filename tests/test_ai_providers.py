@@ -7,7 +7,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from dify_chat_tester.ai_providers import DifyProvider, OpenAIProvider, iFlowProvider
+from dify_chat_tester.providers.base import DifyProvider, OpenAIProvider, iFlowProvider
 
 
 class TestDifyProvider:
@@ -116,7 +116,7 @@ class TestDifyProvider:
         )
 
         # Patch terminal_ui.StreamDisplay because it's imported inside the method
-        with patch("dify_chat_tester.terminal_ui.StreamDisplay") as MockStreamDisplay:
+        with patch("dify_chat_tester.cli.terminal.StreamDisplay") as MockStreamDisplay:
             mock_display = MockStreamDisplay.return_value
             mock_display.update.return_value = None
 
@@ -202,7 +202,7 @@ class TestOpenAIProvider:
             base_url="https://api.openai.com/v1", api_key="sk-test-key"
         )
 
-        with patch("dify_chat_tester.terminal_ui.StreamDisplay"):
+        with patch("dify_chat_tester.cli.terminal.StreamDisplay"):
             response, success, error, conv_id = provider.send_message(
                 message="测试问题",
                 model="gpt-4o",
@@ -278,7 +278,7 @@ class TestiFlowProvider:
 
         provider = iFlowProvider(api_key="sk-test-key")
 
-        with patch("dify_chat_tester.terminal_ui.StreamDisplay"):
+        with patch("dify_chat_tester.cli.terminal.StreamDisplay"):
             response, success, error, conv_id = provider.send_message(
                 message="测试问题",
                 model="qwen3-max",
@@ -298,7 +298,7 @@ def test_post_with_retry(monkeypatch):
     import pytest
     from requests.exceptions import ConnectionError, Timeout
 
-    from dify_chat_tester.ai_providers import _post_with_retry
+    from dify_chat_tester.providers.base import _post_with_retry
 
     mock_post = MagicMock()
     # 前两次失败，第三次成功
@@ -322,7 +322,7 @@ def test_post_with_retry(monkeypatch):
 
 def test_friendly_error_message():
     """测试错误信息转换"""
-    from dify_chat_tester.ai_providers import _friendly_error_message
+    from dify_chat_tester.providers.base import _friendly_error_message
 
     assert "认证失败" in _friendly_error_message("", 401)
     assert "频率限制" in _friendly_error_message("", 429)
@@ -354,7 +354,7 @@ class TestDifyProviderAdditional:
 
         provider = DifyProvider("http://old-url", "key", "app")
 
-        with patch("dify_chat_tester.terminal_ui.StreamDisplay"):
+        with patch("dify_chat_tester.cli.terminal.StreamDisplay"):
             response, success, error, _ = provider.send_message(
                 "msg", "model", stream=False, show_indicator=False
             )
@@ -542,7 +542,7 @@ class TestOpenAIProviderExtended:
 
         provider = OpenAIProvider("http://url", "key")
 
-        with patch("dify_chat_tester.terminal_ui.StreamDisplay"):
+        with patch("dify_chat_tester.cli.terminal.StreamDisplay"):
             response, success, error, _ = provider.send_message(
                 "msg", "model", stream=True, show_indicator=False
             )
@@ -572,7 +572,7 @@ class TestOpenAIProviderExtended:
 
         provider = OpenAIProvider("http://url", "key")
 
-        with patch("dify_chat_tester.terminal_ui.StreamDisplay"):
+        with patch("dify_chat_tester.cli.terminal.StreamDisplay"):
             response, success, error, _ = provider.send_message(
                 "msg", "model", stream=True, show_indicator=False
             )
@@ -595,7 +595,7 @@ class TestOpenAIProviderExtended:
 
         provider = OpenAIProvider("http://url", "key")
 
-        with patch("dify_chat_tester.terminal_ui.StreamDisplay"):
+        with patch("dify_chat_tester.cli.terminal.StreamDisplay"):
             response, success, error, _ = provider.send_message(
                 "msg", "model", stream=True, show_indicator=False
             )
@@ -604,7 +604,7 @@ class TestOpenAIProviderExtended:
         # 根据实际实现，可能导致失败或忽略
         assert error is None or "HTML" in error or not success
 
-    @patch("dify_chat_tester.ai_providers._post_with_retry")
+    @patch("dify_chat_tester.providers.base._post_with_retry")
     def test_stream_fallback_non_stream_http_error(self, mock_post_with_retry):
         """流式无内容时回退到非流式，且非流式返回 HTTP 错误状态。"""
         from unittest.mock import MagicMock
@@ -632,7 +632,7 @@ class TestOpenAIProviderExtended:
         assert response == ""
         assert "非流式请求失败" in error
 
-    @patch("dify_chat_tester.ai_providers._post_with_retry")
+    @patch("dify_chat_tester.providers.base._post_with_retry")
     def test_stream_fallback_non_stream_empty_content(self, mock_post_with_retry):
         """流式无内容时回退到非流式，非流式返回空 content。"""
         from unittest.mock import MagicMock
@@ -658,7 +658,7 @@ class TestOpenAIProviderExtended:
         assert response == ""
         assert "非流式请求返回空响应" in error
 
-    @patch("dify_chat_tester.ai_providers._post_with_retry")
+    @patch("dify_chat_tester.providers.base._post_with_retry")
     def test_stream_fallback_non_stream_json_decode_error(self, mock_post_with_retry):
         """流式无内容时回退到非流式，非流式 JSON 解析异常分支。"""
         import json
@@ -690,7 +690,7 @@ class TestOpenAIProviderExtended:
 class TestiFlowProviderExtended:
     """iFlowProvider 的深入测试"""
 
-    @patch("dify_chat_tester.ai_providers._post_with_retry")
+    @patch("dify_chat_tester.providers.base._post_with_retry")
     def test_non_stream_http_error_status(self, mock_post_with_retry):
         """非流式 fallback 分支：status_code != 200。"""
         from unittest.mock import MagicMock
@@ -718,7 +718,7 @@ class TestiFlowProviderExtended:
         assert response == ""
         assert "非流式请求失败" in error
 
-    @patch("dify_chat_tester.ai_providers._post_with_retry")
+    @patch("dify_chat_tester.providers.base._post_with_retry")
     def test_non_stream_empty_content(self, mock_post_with_retry):
         """非流式 fallback 分支：content 为空。"""
         from unittest.mock import MagicMock
@@ -744,7 +744,7 @@ class TestiFlowProviderExtended:
         assert response == ""
         assert "非流式请求返回空响应" in error
 
-    @patch("dify_chat_tester.ai_providers._post_with_retry")
+    @patch("dify_chat_tester.providers.base._post_with_retry")
     def test_non_stream_json_decode_error(self, mock_post_with_retry):
         """非流式 fallback 分支：JSONDecodeError。"""
         import json
@@ -796,7 +796,7 @@ class TestiFlowProviderExtended:
 
 def test_get_provider_dify():
     """测试获取 Dify Provider"""
-    from dify_chat_tester.ai_providers import DifyProvider, get_provider
+    from dify_chat_tester.providers.base import DifyProvider, get_provider
 
     provider = get_provider("dify", base_url="http://url", api_key="key", app_id="app")
     assert isinstance(provider, DifyProvider)
@@ -804,7 +804,7 @@ def test_get_provider_dify():
 
 def test_get_provider_openai():
     """测试获取 OpenAI Provider"""
-    from dify_chat_tester.ai_providers import OpenAIProvider, get_provider
+    from dify_chat_tester.providers.base import OpenAIProvider, get_provider
 
     provider = get_provider("openai", base_url="http://url", api_key="key")
     assert isinstance(provider, OpenAIProvider)
@@ -812,7 +812,7 @@ def test_get_provider_openai():
 
 def test_get_provider_iflow():
     """测试获取 iFlow Provider"""
-    from dify_chat_tester.ai_providers import get_provider, iFlowProvider
+    from dify_chat_tester.providers.base import get_provider, iFlowProvider
 
     provider = get_provider("iflow", api_key="key")
     assert isinstance(provider, iFlowProvider)
@@ -820,7 +820,7 @@ def test_get_provider_iflow():
 
 def test_get_provider_invalid():
     """测试无效的 Provider 名称"""
-    from dify_chat_tester.ai_providers import get_provider
+    from dify_chat_tester.providers.base import get_provider
 
     with pytest.raises(ValueError, match="不支持的 AI 供应商"):
         get_provider("invalid_provider")
@@ -877,7 +877,7 @@ class TestDifyProviderStreamingEdgeCases:
 
         provider = DifyProvider("http://url", "key", "app")
 
-        with patch("dify_chat_tester.terminal_ui.StreamDisplay"):
+        with patch("dify_chat_tester.cli.terminal.StreamDisplay"):
             response, success, error, _ = provider.send_message(
                 "msg", "model", stream=True, show_indicator=False, show_thinking=True
             )
@@ -896,7 +896,7 @@ class TestDifyProviderStreamingEdgeCases:
 
         provider = DifyProvider("http://url", "key", "app")
 
-        with patch("dify_chat_tester.terminal_ui.StreamDisplay"):
+        with patch("dify_chat_tester.cli.terminal.StreamDisplay"):
             response, success, error, _ = provider.send_message(
                 "msg", "model", stream=True, show_indicator=False
             )
@@ -948,7 +948,7 @@ class TestOpenAIProviderStreamingEdgeCases:
 
         provider = OpenAIProvider("http://url", "key")
 
-        with patch("dify_chat_tester.terminal_ui.StreamDisplay"):
+        with patch("dify_chat_tester.cli.terminal.StreamDisplay"):
             response, success, error, _ = provider.send_message(
                 "msg", "model", stream=True, show_indicator=False
             )
@@ -973,7 +973,7 @@ class TestOpenAIProviderStreamingEdgeCases:
 
         provider = OpenAIProvider("http://url", "key")
 
-        with patch("dify_chat_tester.terminal_ui.StreamDisplay"):
+        with patch("dify_chat_tester.cli.terminal.StreamDisplay"):
             response, success, error, _ = provider.send_message(
                 "msg", "model", stream=True, show_indicator=False
             )
@@ -994,7 +994,7 @@ class TestOpenAIProviderStreamingEdgeCases:
 
         provider = OpenAIProvider("http://url", "key")
 
-        with patch("dify_chat_tester.terminal_ui.StreamDisplay"):
+        with patch("dify_chat_tester.cli.terminal.StreamDisplay"):
             response, success, error, _ = provider.send_message(
                 "msg", "model", stream=True, show_indicator=False
             )
@@ -1020,7 +1020,7 @@ class TestOpenAIProviderStreamingEdgeCases:
 
         provider = OpenAIProvider("http://url", "key")
 
-        with patch("dify_chat_tester.terminal_ui.StreamDisplay"):
+        with patch("dify_chat_tester.cli.terminal.StreamDisplay"):
             response, success, error, _ = provider.send_message(
                 "msg", "model", stream=True, show_indicator=False
             )
@@ -1047,7 +1047,7 @@ class TestOpenAIProviderStreamingEdgeCases:
             {"role": "assistant", "content": "Hello"},
         ]
 
-        with patch("dify_chat_tester.terminal_ui.StreamDisplay"):
+        with patch("dify_chat_tester.cli.terminal.StreamDisplay"):
             response, success, error, _ = provider.send_message(
                 "msg", "model", history=history, stream=True, show_indicator=False
             )
@@ -1131,7 +1131,7 @@ class TestiFlowProviderStreamingEdgeCases:
 
         provider = iFlowProvider("key")
 
-        with patch("dify_chat_tester.terminal_ui.StreamDisplay"):
+        with patch("dify_chat_tester.cli.terminal.StreamDisplay"):
             response, success, error, _ = provider.send_message(
                 "msg", "model", stream=True, show_indicator=False
             )

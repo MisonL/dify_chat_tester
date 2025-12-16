@@ -5,9 +5,9 @@
 
 from datetime import datetime
 
-from dify_chat_tester.config_loader import get_config
-from dify_chat_tester.excel_utils import init_excel_log, log_to_excel
-from dify_chat_tester.terminal_ui import (
+from dify_chat_tester.config.loader import get_config
+from dify_chat_tester.utils.excel import init_excel_log, log_to_excel
+from dify_chat_tester.cli.terminal import (
     Icons,
     console,
     print_error,

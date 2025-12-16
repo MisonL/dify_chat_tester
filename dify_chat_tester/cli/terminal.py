@@ -13,7 +13,7 @@ from rich.prompt import Confirm, Prompt
 from rich.table import Table
 from rich.text import Text
 
-from dify_chat_tester.config_loader import get_config
+from dify_chat_tester.config.loader import get_config
 
 # 读取配置，控制是否使用富文本 UI
 _config = get_config()

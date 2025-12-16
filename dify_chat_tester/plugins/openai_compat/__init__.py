@@ -1,6 +1,6 @@
 """OpenAI 兼容接口插件"""
 
-from dify_chat_tester.config_loader import get_config
+from dify_chat_tester.config.loader import get_config
 import sys
 
 

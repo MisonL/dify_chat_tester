@@ -3,7 +3,7 @@
 
 def test_set_console_background_noop():
     """console_background.set_console_background 应该是一个安全的空操作。"""
-    from dify_chat_tester.console_background import set_console_background
+    from dify_chat_tester.cli.console_background import set_console_background
 
     # 只要调用不抛异常即可
     set_console_background()
@@ -18,10 +18,10 @@ def test_windows_console_import_on_non_windows(monkeypatch):
     monkeypatch.setattr(sys, "platform", "darwin")
 
     # 只验证导入行为，不要求执行 enable_console_paste
-    import dify_chat_tester.windows_console  # noqa: F401
+    import dify_chat_tester.cli.windows_console  # noqa: F401
 
     # 再次导入以确保模块可重入
-    importlib.reload(dify_chat_tester.windows_console)
+    importlib.reload(dify_chat_tester.cli.windows_console)
 
 
 def test_windows_console_win32_path_success(monkeypatch):
@@ -57,7 +57,7 @@ def test_windows_console_win32_path_success(monkeypatch):
 
     monkeypatch.setitem(sys.modules, "ctypes", fake_ctypes)
 
-    import dify_chat_tester.windows_console as win_mod
+    import dify_chat_tester.cli.windows_console as win_mod
 
     importlib.reload(win_mod)
 
@@ -104,6 +104,6 @@ def test_windows_console_win32_path_failure(monkeypatch):
         subprocess, "run", lambda *a, **k: real_subprocess.CompletedProcess(a, 0)
     )
 
-    import dify_chat_tester.windows_console as win_mod
+    import dify_chat_tester.cli.windows_console as win_mod
 
     importlib.reload(win_mod)

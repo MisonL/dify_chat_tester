@@ -5,7 +5,7 @@ import tempfile
 
 import openpyxl
 
-from dify_chat_tester.excel_utils import (
+from dify_chat_tester.utils.excel import (
     clean_excel_text,
     init_excel_log,
     log_to_excel,

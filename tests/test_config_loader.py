@@ -3,7 +3,7 @@
 import os
 import tempfile
 
-from dify_chat_tester.config_loader import ConfigLoader, parse_ai_providers
+from dify_chat_tester.config.loader import ConfigLoader, parse_ai_providers
 
 
 def test_parse_ai_providers_empty_returns_default():

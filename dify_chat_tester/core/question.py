@@ -9,7 +9,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Tuple
 
-from dify_chat_tester.terminal_ui import (
+from dify_chat_tester.cli.terminal import (
     console,
     print_error,
     print_info,
@@ -98,7 +98,7 @@ def generate_questions_for_document(
 
     for idx, chunk in enumerate(chunks, start=1):
         # 从配置中获取提示词模板
-        from dify_chat_tester.config_loader import get_config
+        from dify_chat_tester.config.loader import get_config
 
         prompt_template = get_config().get_single_knowledge_prompt()
 
@@ -441,7 +441,7 @@ def run_cross_knowledge_generation(
     print_info(f"共加载 {len(file_names)} 个文档，切分为 {total_chunks} 个内容块")
 
     # 从配置中读取跨知识点生成迭代次数设置
-    from dify_chat_tester.config_loader import get_config
+    from dify_chat_tester.config.loader import get_config
 
     cfg = get_config()
     min_iterations = cfg.get_int("CROSS_KNOWLEDGE_MIN_ITERATIONS", 5)
@@ -529,7 +529,7 @@ def generate_cross_doc_questions(
         context_text += f"\n--- 知识点来源 {idx} (文档: {doc_name}) ---\n{content}\n"
 
     # 从配置中获取提示词模板
-    from dify_chat_tester.config_loader import get_config
+    from dify_chat_tester.config.loader import get_config
 
     prompt_template = get_config().get_cross_knowledge_prompt()
 

@@ -18,7 +18,7 @@ import sys
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
-from dify_chat_tester.config_loader import get_config
+from dify_chat_tester.config.loader import get_config
 
 _config = get_config()
 

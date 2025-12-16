@@ -32,7 +32,7 @@ class TestQuestionService:
         assert service.provider_name == "TestProvider"
         assert service.model == "test-model"
 
-    @patch("dify_chat_tester.question_generator.run_question_generation")
+    @patch("dify_chat_tester.core.question.run_question_generation")
     @patch("dify_chat_tester.services.question_service.select_folder_path")
     def test_run_single_knowledge_generation_with_path(
         self, mock_select_folder, mock_run_gen, service
@@ -49,7 +49,7 @@ class TestQuestionService:
             folder_path="/test/path",
         )
 
-    @patch("dify_chat_tester.question_generator.run_question_generation")
+    @patch("dify_chat_tester.core.question.run_question_generation")
     @patch("dify_chat_tester.services.question_service.select_folder_path")
     def test_run_single_knowledge_generation_interactive(
         self, mock_select_folder, mock_run_gen, service
@@ -62,7 +62,7 @@ class TestQuestionService:
         mock_select_folder.assert_called_once_with(default_path="./kb-docs")
         mock_run_gen.assert_called_once()
 
-    @patch("dify_chat_tester.question_generator.run_cross_knowledge_generation")
+    @patch("dify_chat_tester.core.question.run_cross_knowledge_generation")
     @patch("dify_chat_tester.services.question_service.select_folder_path")
     def test_run_cross_knowledge_generation_with_path(
         self, mock_select_folder, mock_run_cross, service

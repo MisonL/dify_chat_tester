@@ -5,26 +5,26 @@
 
 import sys
 
-from dify_chat_tester import __author__, __email__, __version__
+from dify_chat_tester._version import __author__, __email__, __version__
 
 # 导入功能模块
-from dify_chat_tester.batch_manager import run_batch_query
-from dify_chat_tester.chat_manager import run_interactive_chat
-from dify_chat_tester.config_loader import get_config, parse_ai_providers
-from dify_chat_tester.provider_setup import (
+from dify_chat_tester.core.batch import run_batch_query
+from dify_chat_tester.core.chat import run_interactive_chat
+from dify_chat_tester.config.loader import get_config, parse_ai_providers
+from dify_chat_tester.providers.setup import (
     setup_dify_provider,
     setup_iflow_provider,
     setup_openai_provider,
 )
-from dify_chat_tester.question_generator import run_question_generation
-from dify_chat_tester.selectors import (
+from dify_chat_tester.core.question import run_question_generation
+from dify_chat_tester.cli.selectors import (
     select_folder_path,
     select_main_function,
     select_mode,
     select_model,
     select_role,
 )
-from dify_chat_tester.terminal_ui import (
+from dify_chat_tester.cli.terminal import (
     Panel,
     Text,
     box,
@@ -66,7 +66,7 @@ class AppController:
         
         # 合并插件供应商（仅添加不重复的）
         try:
-            from dify_chat_tester.provider_setup import get_plugin_providers_config
+            from dify_chat_tester.providers.setup import get_plugin_providers_config
             plugin_configs = get_plugin_providers_config()
             
             # 获取已有的供应商 ID
@@ -181,7 +181,7 @@ class AppController:
                 all_models = available_models
         else:
             # 尝试加载插件供应商
-            from dify_chat_tester.provider_setup import setup_plugin_provider
+            from dify_chat_tester.providers.setup import setup_plugin_provider
             
             provider = setup_plugin_provider(provider_id)
             if provider:
@@ -374,3 +374,9 @@ class AppController:
                 if result == "continue":
                     console.print()
                     print_welcome()
+
+
+def run_app():
+    """便捷函数：创建 AppController 实例并运行"""
+    controller = AppController()
+    controller.run()

@@ -13,7 +13,7 @@ class TestPluginManager:
 
     def test_plugin_manager_init(self):
         """测试插件管理器初始化"""
-        from dify_chat_tester.plugin_manager import PluginManager
+        from dify_chat_tester.providers.plugin_manager import PluginManager
         
         pm = PluginManager()
         
@@ -23,8 +23,8 @@ class TestPluginManager:
 
     def test_register_instance(self):
         """测试注册供应商实例"""
-        from dify_chat_tester.plugin_manager import PluginManager
-        from dify_chat_tester.ai_providers import AIProvider
+        from dify_chat_tester.providers.plugin_manager import PluginManager
+        from dify_chat_tester.providers.base import AIProvider
         
         pm = PluginManager()
         
@@ -40,8 +40,8 @@ class TestPluginManager:
 
     def test_register_provider_class(self):
         """测试注册供应商类"""
-        from dify_chat_tester.plugin_manager import PluginManager
-        from dify_chat_tester.ai_providers import AIProvider, DifyProvider
+        from dify_chat_tester.providers.plugin_manager import PluginManager
+        from dify_chat_tester.providers.base import AIProvider, DifyProvider
         
         pm = PluginManager()
         
@@ -54,7 +54,7 @@ class TestPluginManager:
 
     def test_register_invalid_provider_class(self):
         """测试注册非 AIProvider 子类时失败"""
-        from dify_chat_tester.plugin_manager import PluginManager
+        from dify_chat_tester.providers.plugin_manager import PluginManager
         
         pm = PluginManager()
         
@@ -69,8 +69,8 @@ class TestPluginManager:
 
     def test_get_provider_class(self):
         """测试获取供应商类"""
-        from dify_chat_tester.plugin_manager import PluginManager
-        from dify_chat_tester.ai_providers import DifyProvider
+        from dify_chat_tester.providers.plugin_manager import PluginManager
+        from dify_chat_tester.providers.base import DifyProvider
         
         pm = PluginManager()
         pm.register_provider("dify_test", DifyProvider, "Dify Test")
@@ -84,7 +84,7 @@ class TestPluginManager:
 
     def test_load_plugins(self):
         """测试加载插件"""
-        from dify_chat_tester.plugin_manager import PluginManager
+        from dify_chat_tester.providers.plugin_manager import PluginManager
         
         pm = PluginManager()
         pm.load_plugins()
@@ -98,7 +98,7 @@ class TestPluginIntegration:
 
     def test_builtin_plugins_loaded(self):
         """测试内置插件被正确加载"""
-        from dify_chat_tester.plugin_manager import PluginManager
+        from dify_chat_tester.providers.plugin_manager import PluginManager
         
         pm = PluginManager()
         pm.load_plugins()

@@ -19,7 +19,7 @@ def _create_sample_excel(path: Path):
 
 def test_run_batch_query_basic_flow(tmp_path, monkeypatch):
     """在高度受控环境下跑通一次 run_batch_query 主流程。"""
-    from dify_chat_tester.batch_manager import run_batch_query
+    from dify_chat_tester.core.batch import run_batch_query
 
     # 在临时目录下构造输入 Excel 文件
     input_path = tmp_path / "input.xlsx"
@@ -29,7 +29,7 @@ def test_run_batch_query_basic_flow(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
 
     # Mock get_config.get_enable_thinking 返回 False
-    import dify_chat_tester.batch_manager as bm
+    import dify_chat_tester.core.batch as bm
 
     mock_config = MagicMock()
     mock_config.get_enable_thinking.return_value = False
@@ -45,7 +45,7 @@ def test_run_batch_query_basic_flow(tmp_path, monkeypatch):
     monkeypatch.setattr(bm, "print_input_prompt", fake_input_prompt)
 
     # select_column_by_index：始终选择第 2 列（问题列）
-    import dify_chat_tester.terminal_ui as tui_mod
+    import dify_chat_tester.cli.terminal as tui_mod
 
     monkeypatch.setattr(tui_mod, "select_column_by_index", lambda columns, _msg: 1)
 
@@ -87,8 +87,8 @@ def test_run_batch_query_with_resume_state(tmp_path, monkeypatch):
     """构造带进度 state 文件的场景，覆盖恢复逻辑与“全部处理完”分支。"""
     import json
 
-    import dify_chat_tester.batch_manager as bm
-    from dify_chat_tester.batch_manager import run_batch_query
+    import dify_chat_tester.core.batch as bm
+    from dify_chat_tester.core.batch import run_batch_query
 
     input_path = tmp_path / "input.xlsx"
     _create_sample_excel(input_path)
@@ -128,7 +128,7 @@ def test_run_batch_query_with_resume_state(tmp_path, monkeypatch):
     monkeypatch.setattr(bm, "print_input_prompt", fake_prompt)
 
     # select_column_by_index 在恢复场景下不会被调用（使用 state），但这里仍 patch 掉以防万一
-    import dify_chat_tester.terminal_ui as tui_mod
+    import dify_chat_tester.cli.terminal as tui_mod
 
     monkeypatch.setattr(tui_mod, "select_column_by_index", lambda cols, msg: 1)
 

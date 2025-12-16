@@ -11,7 +11,7 @@ AI 聊天客户端测试工具 - 主程序入口
 import argparse
 import sys
 
-from dify_chat_tester.app_controller import AppController
+from dify_chat_tester.cli.app import AppController
 
 
 def parse_args(argv: list[str]) -> argparse.Namespace:

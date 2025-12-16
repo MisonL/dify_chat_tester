@@ -4,9 +4,9 @@ from pathlib import Path
 
 import openpyxl
 
-import dify_chat_tester.batch_manager as batch_manager
-import dify_chat_tester.chat_manager as chat_manager
-import dify_chat_tester.terminal_ui as terminal_ui
+import dify_chat_tester.core.batch as batch_manager
+import dify_chat_tester.core.chat as chat_manager
+import dify_chat_tester.cli.terminal as terminal_ui
 
 
 class _FakeBatchProvider:

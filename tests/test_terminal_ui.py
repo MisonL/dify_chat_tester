@@ -3,7 +3,7 @@
 测试终端 UI 辅助函数，如 hide_api_key 等。
 """
 
-from dify_chat_tester.terminal_ui import hide_api_key
+from dify_chat_tester.cli.terminal import hide_api_key
 
 
 class TestHideApiKey:
@@ -53,7 +53,7 @@ def test_print_functions(monkeypatch):
     """测试各种打印函数"""
     from unittest.mock import MagicMock, patch
 
-    from dify_chat_tester.terminal_ui import (
+    from dify_chat_tester.cli.terminal import (
         print_error,
         print_info,
         print_success,
@@ -62,10 +62,10 @@ def test_print_functions(monkeypatch):
     )
 
     mock_console = MagicMock()
-    monkeypatch.setattr("dify_chat_tester.terminal_ui.console", mock_console)
+    monkeypatch.setattr("dify_chat_tester.cli.terminal.console", mock_console)
 
     # Mock Panel to verify content
-    with patch("dify_chat_tester.terminal_ui.Panel") as MockPanel:
+    with patch("dify_chat_tester.cli.terminal.Panel") as MockPanel:
         print_info("Info message")
         mock_console.print.assert_called()
         # Verify Panel was created
@@ -88,10 +88,10 @@ def test_print_input_prompt(monkeypatch):
     """测试输入提示函数"""
     from unittest.mock import MagicMock
 
-    from dify_chat_tester.terminal_ui import print_input_prompt
+    from dify_chat_tester.cli.terminal import print_input_prompt
 
     mock_console = MagicMock()
-    monkeypatch.setattr("dify_chat_tester.terminal_ui.console", mock_console)
+    monkeypatch.setattr("dify_chat_tester.cli.terminal.console", mock_console)
 
     # Mock builtins.input to accept optional argument
     monkeypatch.setattr("builtins.input", lambda prompt="": "user input")
@@ -106,8 +106,8 @@ def test_stream_display(monkeypatch):
     from unittest.mock import patch
 
     # 强制使用富文本 UI，以便覆盖 Live 分支
-    import dify_chat_tester.terminal_ui as tui_mod
-    from dify_chat_tester.terminal_ui import StreamDisplay
+    import dify_chat_tester.cli.terminal as tui_mod
+    from dify_chat_tester.cli.terminal import StreamDisplay
 
     monkeypatch.setattr(tui_mod, "USE_RICH_UI", True)
 
@@ -143,14 +143,14 @@ def test_input_api_key_simple_mode(monkeypatch):
     import getpass
     from unittest.mock import MagicMock
 
-    import dify_chat_tester.terminal_ui as tui_mod
+    import dify_chat_tester.cli.terminal as tui_mod
 
     mock_console = MagicMock()
     monkeypatch.setattr(tui_mod, "console", mock_console)
     monkeypatch.setattr(tui_mod, "USE_RICH_UI", False)
     monkeypatch.setattr(getpass, "getpass", lambda prompt="": "secret-key")
 
-    from dify_chat_tester.terminal_ui import input_api_key
+    from dify_chat_tester.cli.terminal import input_api_key
 
     result = input_api_key("请输入 API 密钥: ")
     assert result == "secret-key"
@@ -161,13 +161,13 @@ def test_create_provider_menu(monkeypatch):
     """测试创建供应商选择菜单"""
     from unittest.mock import MagicMock
 
-    import dify_chat_tester.terminal_ui as tui_mod
+    import dify_chat_tester.cli.terminal as tui_mod
 
     mock_console = MagicMock()
     monkeypatch.setattr(tui_mod, "console", mock_console)
 
     # Mock Prompt.ask 直接返回第一个 key
-    from dify_chat_tester.terminal_ui import Prompt, create_provider_menu
+    from dify_chat_tester.cli.terminal import Prompt, create_provider_menu
 
     monkeypatch.setattr(
         Prompt,
@@ -184,13 +184,13 @@ def test_print_statistics_simple_mode(monkeypatch):
     """测试纯文本模式下的统计输出"""
     from unittest.mock import MagicMock
 
-    import dify_chat_tester.terminal_ui as tui_mod
+    import dify_chat_tester.cli.terminal as tui_mod
 
     mock_console = MagicMock()
     monkeypatch.setattr(tui_mod, "console", mock_console)
     monkeypatch.setattr(tui_mod, "USE_RICH_UI", False)
 
-    from dify_chat_tester.terminal_ui import print_statistics
+    from dify_chat_tester.cli.terminal import print_statistics
 
     print_statistics(total=10, success=8, failed=2, duration=5.0)
 
@@ -202,13 +202,13 @@ def test_print_file_and_column_list(monkeypatch):
     """测试文件列表和列名列表的打印（简单模式）"""
     from unittest.mock import MagicMock
 
-    import dify_chat_tester.terminal_ui as tui_mod
+    import dify_chat_tester.cli.terminal as tui_mod
 
     mock_console = MagicMock()
     monkeypatch.setattr(tui_mod, "console", mock_console)
     monkeypatch.setattr(tui_mod, "USE_RICH_UI", False)
 
-    from dify_chat_tester.terminal_ui import print_column_list, print_file_list
+    from dify_chat_tester.cli.terminal import print_column_list, print_file_list
 
     files = ["a.xlsx", "b.xlsx"]
     print_file_list(files)
@@ -225,7 +225,7 @@ def test_select_column_by_index(monkeypatch):
     """测试通过序号选择列的流程"""
     from unittest.mock import MagicMock
 
-    import dify_chat_tester.terminal_ui as tui_mod
+    import dify_chat_tester.cli.terminal as tui_mod
 
     mock_console = MagicMock()
     monkeypatch.setattr(tui_mod, "console", mock_console)
@@ -239,7 +239,7 @@ def test_select_column_by_index(monkeypatch):
 
     monkeypatch.setattr(tui_mod, "print_input_prompt", fake_prompt)
 
-    from dify_chat_tester.terminal_ui import select_column_by_index
+    from dify_chat_tester.cli.terminal import select_column_by_index
 
     cols = ["c1", "c2", "c3"]
     idx = select_column_by_index(cols, "请选择列")

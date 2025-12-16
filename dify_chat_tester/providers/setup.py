@@ -5,9 +5,9 @@
 
 import sys
 
-from dify_chat_tester.ai_providers import get_provider
-from dify_chat_tester.config_loader import get_config
-from dify_chat_tester.terminal_ui import (
+from dify_chat_tester.providers.base import get_provider
+from dify_chat_tester.config.loader import get_config
+from dify_chat_tester.cli.terminal import (
     console,
     input_api_key,
     print_api_key_confirmation,
@@ -250,7 +250,7 @@ def setup_iflow_provider():
 
 
 # --- 插件系统集成 ---
-from dify_chat_tester.plugin_manager import PluginManager
+from dify_chat_tester.providers.plugin_manager import PluginManager
 
 _plugin_manager = PluginManager()
 try:

@@ -21,11 +21,11 @@ from typing import List, Optional
 
 import requests
 
-from dify_chat_tester.logging_utils import get_logger
+from dify_chat_tester.config.logging import get_logger
 
 # 导入配置加载器
 try:
-    from dify_chat_tester.config_loader import get_config
+    from dify_chat_tester.config.loader import get_config
 
     config = get_config()
 except ImportError:
@@ -326,7 +326,7 @@ class DifyProvider(AIProvider):
             # 初始化流式显示
             stream_display = None
             if show_indicator:
-                from dify_chat_tester.terminal_ui import StreamDisplay
+                from dify_chat_tester.cli.terminal import StreamDisplay
 
                 stream_display = StreamDisplay(title="Dify")
                 stream_display.start()
@@ -571,7 +571,7 @@ class OpenAIProvider(AIProvider):
                 # 初始化流式显示
                 stream_display = None
                 if show_indicator:
-                    from dify_chat_tester.terminal_ui import StreamDisplay
+                    from dify_chat_tester.cli.terminal import StreamDisplay
 
                     stream_display = StreamDisplay(title=f"OpenAI ({model})")
                     stream_display.start()
@@ -1012,7 +1012,7 @@ class iFlowProvider(AIProvider):
             # 初始化流式显示
             stream_display = None
             if show_indicator:
-                from dify_chat_tester.terminal_ui import StreamDisplay
+                from dify_chat_tester.cli.terminal import StreamDisplay
 
                 stream_display = StreamDisplay(title=f"iFlow ({model})")
                 stream_display.start()

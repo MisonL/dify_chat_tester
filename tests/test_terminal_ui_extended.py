@@ -4,7 +4,7 @@ from unittest.mock import patch
 
 import pytest
 
-from dify_chat_tester.terminal_ui import (
+from dify_chat_tester.cli.terminal import (
     create_provider_menu,
     print_api_key_confirmation,
     print_column_list,
@@ -17,7 +17,7 @@ from dify_chat_tester.terminal_ui import (
 
 @pytest.fixture
 def mock_console():
-    with patch("dify_chat_tester.terminal_ui.console") as mock:
+    with patch("dify_chat_tester.cli.terminal.console") as mock:
         yield mock
 
 
@@ -41,7 +41,7 @@ def test_print_column_list(mock_console):
     mock_console.print.assert_called()
 
 
-@patch("dify_chat_tester.terminal_ui.print_input_prompt")
+@patch("dify_chat_tester.cli.terminal.print_input_prompt")
 def test_select_column_by_index(mock_input, mock_console):
     """测试选择列"""
     columns = ["A", "B", "C"]
@@ -57,7 +57,7 @@ def test_select_column_by_index(mock_input, mock_console):
     assert idx == 1
 
 
-@patch("dify_chat_tester.terminal_ui.Prompt.ask")
+@patch("dify_chat_tester.cli.terminal.Prompt.ask")
 def test_create_provider_menu(mock_prompt_ask):
     """测试创建 Provider 菜单"""
     providers = {
@@ -70,7 +70,7 @@ def test_create_provider_menu(mock_prompt_ask):
     mock_prompt_ask.assert_called_once()
 
 
-@patch("dify_chat_tester.terminal_ui.Confirm.ask")
+@patch("dify_chat_tester.cli.terminal.Confirm.ask")
 def test_print_api_key_confirmation(mock_confirm_ask, mock_console):
     """测试 API Key 确认"""
     # 确认

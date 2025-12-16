@@ -1,6 +1,6 @@
 """question_generator 模块的基础单元测试。"""
 
-from dify_chat_tester.question_generator import (
+from dify_chat_tester.core.question import (
     MAX_DOC_CHARS_PER_CALL,
     generate_questions_for_document,
     parse_questions_from_response,
@@ -85,7 +85,7 @@ def test_generate_questions_for_document_handles_empty_content():
 
 def test_read_markdown_files(tmp_path):
     """测试读取 Markdown 文件"""
-    from dify_chat_tester.question_generator import read_markdown_files
+    from dify_chat_tester.core.question import read_markdown_files
 
     # 创建测试文件
     d = tmp_path / "docs"
@@ -107,7 +107,7 @@ def test_run_question_generation(tmp_path, monkeypatch):
     """测试问题生成主流程"""
     from unittest.mock import MagicMock, patch
 
-    from dify_chat_tester.question_generator import run_question_generation
+    from dify_chat_tester.core.question import run_question_generation
 
     # 准备测试文件
     doc_dir = tmp_path / "docs"
@@ -121,25 +121,25 @@ def test_run_question_generation(tmp_path, monkeypatch):
 
     # Mock UI functions
     monkeypatch.setattr(
-        "dify_chat_tester.question_generator.print_info", lambda x: None
+        "dify_chat_tester.core.question.print_info", lambda x: None
     )
     monkeypatch.setattr(
-        "dify_chat_tester.question_generator.print_success", lambda x: None
+        "dify_chat_tester.core.question.print_success", lambda x: None
     )
     monkeypatch.setattr(
-        "dify_chat_tester.question_generator.print_error", lambda x: None
+        "dify_chat_tester.core.question.print_error", lambda x: None
     )
     monkeypatch.setattr(
-        "dify_chat_tester.question_generator.print_warning", lambda x: None
+        "dify_chat_tester.core.question.print_warning", lambda x: None
     )
     monkeypatch.setattr(
-        "dify_chat_tester.question_generator.console.print",
+        "dify_chat_tester.core.question.console.print",
         lambda *args, **kwargs: None,
     )
 
     # Mock export_questions_to_excel to verify calls and avoid actual file I/O
     with patch(
-        "dify_chat_tester.question_generator.export_questions_to_excel"
+        "dify_chat_tester.core.question.export_questions_to_excel"
     ) as mock_export:
         mock_export.return_value = True
 

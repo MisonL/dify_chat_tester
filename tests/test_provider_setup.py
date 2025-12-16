@@ -2,15 +2,15 @@
 
 from unittest.mock import patch
 
-from dify_chat_tester.provider_setup import (
+from dify_chat_tester.providers.setup import (
     setup_dify_provider,
     setup_iflow_provider,
     setup_openai_provider,
 )
 
 
-@patch("dify_chat_tester.provider_setup.get_provider")
-@patch("dify_chat_tester.provider_setup._config")
+@patch("dify_chat_tester.providers.setup.get_provider")
+@patch("dify_chat_tester.providers.setup._config")
 def test_setup_dify_provider_from_config(mock_config, mock_get_provider):
     """测试从配置设置 Dify Provider"""
     # Mock config
@@ -27,11 +27,11 @@ def test_setup_dify_provider_from_config(mock_config, mock_get_provider):
     )
 
 
-@patch("dify_chat_tester.provider_setup.get_provider")
-@patch("dify_chat_tester.provider_setup._config")
-@patch("dify_chat_tester.provider_setup.print_input_prompt")
-@patch("dify_chat_tester.provider_setup.input_api_key")
-@patch("dify_chat_tester.provider_setup.print_api_key_confirmation")
+@patch("dify_chat_tester.providers.setup.get_provider")
+@patch("dify_chat_tester.providers.setup._config")
+@patch("dify_chat_tester.providers.setup.print_input_prompt")
+@patch("dify_chat_tester.providers.setup.input_api_key")
+@patch("dify_chat_tester.providers.setup.print_api_key_confirmation")
 def test_setup_dify_provider_interactive(
     mock_confirm, mock_input_key, mock_input_prompt, mock_config, mock_get_provider
 ):
@@ -51,8 +51,8 @@ def test_setup_dify_provider_interactive(
     )
 
 
-@patch("dify_chat_tester.provider_setup.get_provider")
-@patch("dify_chat_tester.provider_setup._config")
+@patch("dify_chat_tester.providers.setup.get_provider")
+@patch("dify_chat_tester.providers.setup._config")
 def test_setup_openai_provider_from_config(mock_config, mock_get_provider):
     """测试从配置设置 OpenAI Provider"""
     mock_config.get_str.side_effect = lambda k, d: {
@@ -67,8 +67,8 @@ def test_setup_openai_provider_from_config(mock_config, mock_get_provider):
     )
 
 
-@patch("dify_chat_tester.provider_setup.get_provider")
-@patch("dify_chat_tester.provider_setup._config")
+@patch("dify_chat_tester.providers.setup.get_provider")
+@patch("dify_chat_tester.providers.setup._config")
 def test_setup_iflow_provider_from_config(mock_config, mock_get_provider):
     """测试从配置设置 iFlow Provider"""
     mock_config.get_str.side_effect = lambda k, d: {"IFLOW_API_KEY": "iflow-key"}.get(
@@ -82,7 +82,7 @@ def test_setup_iflow_provider_from_config(mock_config, mock_get_provider):
 
 def test_normalize_base_url():
     """测试 URL 规范化"""
-    from dify_chat_tester.provider_setup import _normalize_base_url
+    from dify_chat_tester.providers.setup import _normalize_base_url
 
     # 正常 URL
     assert _normalize_base_url("https://api.example.com") == "https://api.example.com"
@@ -100,11 +100,11 @@ def test_normalize_base_url():
     assert _normalize_base_url(None) == ""
 
 
-@patch("dify_chat_tester.provider_setup.get_provider")
-@patch("dify_chat_tester.provider_setup._config")
-@patch("dify_chat_tester.provider_setup.print_api_key_confirmation")
-@patch("dify_chat_tester.provider_setup.input_api_key")
-@patch("dify_chat_tester.provider_setup.print_input_prompt")
+@patch("dify_chat_tester.providers.setup.get_provider")
+@patch("dify_chat_tester.providers.setup._config")
+@patch("dify_chat_tester.providers.setup.print_api_key_confirmation")
+@patch("dify_chat_tester.providers.setup.input_api_key")
+@patch("dify_chat_tester.providers.setup.print_input_prompt")
 def test_setup_openai_provider_interactive(
     mock_input, mock_input_key, mock_confirm, mock_config, mock_get_provider
 ):
@@ -124,10 +124,10 @@ def test_setup_openai_provider_interactive(
     )
 
 
-@patch("dify_chat_tester.provider_setup.get_provider")
-@patch("dify_chat_tester.provider_setup._config")
-@patch("dify_chat_tester.provider_setup.print_api_key_confirmation")
-@patch("dify_chat_tester.provider_setup.input_api_key")
+@patch("dify_chat_tester.providers.setup.get_provider")
+@patch("dify_chat_tester.providers.setup._config")
+@patch("dify_chat_tester.providers.setup.print_api_key_confirmation")
+@patch("dify_chat_tester.providers.setup.input_api_key")
 def test_setup_iflow_provider_interactive(
     mock_input_key, mock_confirm, mock_config, mock_get_provider
 ):

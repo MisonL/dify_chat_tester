@@ -1,7 +1,7 @@
 """Dify AI 供应商插件"""
 
-from dify_chat_tester.config_loader import get_config
-from dify_chat_tester.terminal_ui import print_info, print_input_prompt, input_api_key, print_api_key_confirmation, print_error
+from dify_chat_tester.config.loader import get_config
+from dify_chat_tester.cli.terminal import print_info, print_input_prompt, input_api_key, print_api_key_confirmation, print_error
 import sys
 
 

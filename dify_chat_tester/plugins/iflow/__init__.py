@@ -1,6 +1,6 @@
 """iFlow AI 供应商插件"""
 
-from dify_chat_tester.config_loader import get_config
+from dify_chat_tester.config.loader import get_config
 
 
 def setup(manager):

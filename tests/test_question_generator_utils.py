@@ -4,7 +4,7 @@ import os
 import tempfile
 from unittest.mock import MagicMock, patch
 
-from dify_chat_tester.question_generator import (
+from dify_chat_tester.core.question import (
     export_questions_to_excel,
     generate_questions_for_document,
     parse_questions_from_response,

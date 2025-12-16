@@ -6,8 +6,8 @@
 
 from typing import Optional
 
-from dify_chat_tester.selectors import select_folder_path
-from dify_chat_tester.terminal_ui import console, print_info
+from dify_chat_tester.cli.selectors import select_folder_path
+from dify_chat_tester.cli.terminal import console, print_info
 
 
 class QuestionService:
@@ -69,7 +69,7 @@ class QuestionService:
             folder_path = select_folder_path(default_path="./kb-docs")
 
         if is_cross_knowledge:
-            from dify_chat_tester.question_generator import (
+            from dify_chat_tester.core.question import (
                 run_cross_knowledge_generation,
             )
 
@@ -81,7 +81,7 @@ class QuestionService:
                 folder_path=folder_path,
             )
         else:
-            from dify_chat_tester.question_generator import run_question_generation
+            from dify_chat_tester.core.question import run_question_generation
 
             run_question_generation(
                 provider=self.provider,

@@ -6,15 +6,15 @@ from unittest.mock import MagicMock
 def test_run_interactive_chat_basic_flow(tmp_path, monkeypatch):
     """跑通一次最简单的交互式聊天流程（含 /exit 提前退出）。"""
     # Mock get_config.get_enable_thinking -> False
-    import dify_chat_tester.chat_manager as cm
-    from dify_chat_tester.chat_manager import run_interactive_chat
+    import dify_chat_tester.core.chat as cm
+    from dify_chat_tester.core.chat import run_interactive_chat
 
     mock_config = MagicMock()
     mock_config.get_enable_thinking.return_value = False
     monkeypatch.setattr(cm, "get_config", lambda: mock_config)
 
     # Mock Excel 日志写入，避免真实 I/O
-    from dify_chat_tester import excel_utils
+    import dify_chat_tester.utils.excel as excel_utils
 
     mock_wb = MagicMock()
     mock_ws = MagicMock()
@@ -56,9 +56,9 @@ def test_run_interactive_chat_basic_flow(tmp_path, monkeypatch):
 
 def test_run_interactive_chat_help_and_exit(tmp_path, monkeypatch):
     """覆盖 /help 分支，然后通过 /exit 退出。"""
-    import dify_chat_tester.chat_manager as cm
-    from dify_chat_tester import excel_utils
-    from dify_chat_tester.chat_manager import run_interactive_chat
+    import dify_chat_tester.core.chat as cm
+    import dify_chat_tester.utils.excel as excel_utils
+    from dify_chat_tester.core.chat import run_interactive_chat
 
     # Mock 配置
     mock_config = MagicMock()
@@ -104,9 +104,9 @@ def test_run_interactive_chat_help_and_exit(tmp_path, monkeypatch):
 
 def test_run_interactive_chat_dify_with_new_and_history(tmp_path, monkeypatch):
     """覆盖 Dify 分支、/new 命令以及多轮对话逻辑。"""
-    import dify_chat_tester.chat_manager as cm
-    from dify_chat_tester import excel_utils
-    from dify_chat_tester.chat_manager import run_interactive_chat
+    import dify_chat_tester.core.chat as cm
+    import dify_chat_tester.utils.excel as excel_utils
+    from dify_chat_tester.core.chat import run_interactive_chat
 
     mock_config = MagicMock()
     mock_config.get_enable_thinking.return_value = True
@@ -155,9 +155,9 @@ def test_run_interactive_chat_dify_with_new_and_history(tmp_path, monkeypatch):
 
 def test_run_interactive_chat_save_error(tmp_path, monkeypatch):
     """强制 SAVE_EVERY_N_ROUNDS=1 并让 save 抛出异常，覆盖保存错误分支。"""
-    import dify_chat_tester.chat_manager as cm
-    from dify_chat_tester import excel_utils
-    from dify_chat_tester.chat_manager import run_interactive_chat
+    import dify_chat_tester.core.chat as cm
+    import dify_chat_tester.utils.excel as excel_utils
+    from dify_chat_tester.core.chat import run_interactive_chat
 
     mock_config = MagicMock()
     mock_config.get_enable_thinking.return_value = False
