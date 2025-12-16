@@ -31,9 +31,6 @@ MANIFEST
 #  before PyInstaller builds the exe, so as to inject date/other infos into it.
 *.manifest
 *.spec
-build/dify_chat_tester/
-build/dify_chat_tester.build/
-build/dify_chat_tester.dist/
 
 # Installer logs
 pip-log.txt
@@ -154,6 +151,9 @@ dmypy.json
 
 # Cython debug symbols
 cython_debug/
+
+# Ruff linter
+.ruff_cache/
 
 # PyCharm
 #  JetBrains specific template is maintained in a separate JetBrains.gitignore that can
