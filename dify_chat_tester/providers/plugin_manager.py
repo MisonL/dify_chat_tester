@@ -172,9 +172,13 @@ class PluginManager:
                     # 动态导入插件模块
                     module = importlib.import_module(module_name)
                     
+                    # 获取版本号（如果存在）
+                    plugin_version = getattr(module, "__version__", None)
+                    version_str = f" v{plugin_version}" if plugin_version else ""
+                    
                     # 检查是否有 setup 函数
                     if hasattr(module, "setup") and callable(module.setup):
-                        logger.info(f"正在加载外部插件: {plugin_name}")
+                        logger.info(f"正在加载外部插件: {plugin_name}{version_str}")
                         module.setup(self)
                     else:
                         logger.debug(f"跳过外部插件 {plugin_name}: 未找到 setup(manager) 函数")

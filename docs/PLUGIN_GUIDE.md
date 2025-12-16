@@ -93,7 +93,22 @@ external_plugins/
 EXTERNAL_PLUGINS_PATH=/path/to/external_plugins
 ```
 
-## 4. 第三方依赖管理
+## 4. 版本管理
+
+在 `__init__.py` 中定义版本号，程序加载时会显示：
+
+```python
+"""我的插件"""
+
+__version__ = "1.0.0"
+
+def setup(manager):
+    ...
+```
+
+运行时显示：`正在加载外部插件: my_plugin v1.0.0`
+
+## 5. 第三方依赖管理
 
 如果插件依赖第三方库，请在插件目录下创建 `requirements.txt`：
 
@@ -107,18 +122,28 @@ another-package
 - **源码模式**：询问是否使用 `uv` 自动安装
 - **打包模式**：提示用户手动安装
 
-## 5. 插件打包
+## 6. 插件打包
 
 使用打包脚本生成可分发的插件包：
 
 ```bash
-./build/build_plugin.sh <plugin_name>
-# 示例
-./build/build_plugin.sh qianxiaoyin
+./build/build_plugin.sh <plugin_name>  # 打包单个
+./build/build_plugin.sh all            # 打包所有
 ```
 
-输出：`qianxiaoyin_v1.0.0.zip`
+## 7. 发布插件
 
-## 6. 示例
+使用发布脚本创建 Release 并推送通知：
+
+```bash
+./build/publish_plugin.sh <plugin_name>  # 发布单个
+./build/publish_plugin.sh all            # 发布所有
+
+# 可选参数
+--skip-release    # 跳过 GitLab Release
+--skip-wechat     # 跳过企微通知
+```
+
+## 8. 示例
 
 请参考 `external_plugins/qianxiaoyin/` 目录下的插件实现。
