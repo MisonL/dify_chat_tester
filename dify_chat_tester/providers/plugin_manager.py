@@ -59,10 +59,19 @@ class PluginManager:
         """
         从外部路径加载私有插件
         
+        支持:
+        - 文件夹形式的插件
+        - .zip 压缩包形式的插件
+        - 自动检测和安装第三方依赖
+        
         Args:
             external_path: 外部插件目录的绝对路径
         """
         import sys
+        import shutil
+        import tempfile
+        import zipfile
+        import subprocess
         from pathlib import Path
         
         plugins_dir = Path(external_path)
@@ -87,26 +96,91 @@ class PluginManager:
         else:
             path_added = False
 
+        # 临时目录用于解压 zip 插件
+        temp_dirs = []
+
         try:
-            # 遍历外部插件目录中的子目录
-            for item in plugins_dir.iterdir():
-                if item.is_dir() and (item / "__init__.py").exists():
-                    plugin_name = item.name
-                    module_name = f"{plugins_dir_name}.{plugin_name}"
+            # 收集所有插件目录（包括解压后的 zip）
+            plugin_dirs = []
+            
+            # 递归扫描函数：支持多层目录结构
+            def scan_for_plugins(scan_dir: Path, depth: int = 0, max_depth: int = 3):
+                """递归扫描目录查找插件"""
+                if depth > max_depth:
+                    return
+                
+                for item in scan_dir.iterdir():
+                    # 跳过隐藏目录和特殊目录
+                    if item.name.startswith('.') or item.name == '__pycache__':
+                        continue
                     
-                    try:
-                        # 动态导入插件模块
-                        module = importlib.import_module(module_name)
-                        
-                        # 检查是否有 setup 函数
-                        if hasattr(module, "setup") and callable(module.setup):
-                            logger.info(f"正在加载外部插件: {plugin_name}")
-                            module.setup(self)
+                    # 处理文件夹形式的插件
+                    if item.is_dir():
+                        if (item / "__init__.py").exists():
+                            # 找到插件目录
+                            plugin_dirs.append((item.name, item))
+                            logger.debug(f"发现插件目录: {item.relative_to(plugins_dir)}")
                         else:
-                            logger.debug(f"跳过外部插件 {plugin_name}: 未找到 setup(manager) 函数")
+                            # 不是插件目录，继续递归扫描
+                            scan_for_plugins(item, depth + 1, max_depth)
+                    
+                    # 处理 zip 形式的插件
+                    elif item.is_file() and item.suffix == ".zip":
+                        try:
+                            # 解压到临时目录
+                            temp_dir = Path(tempfile.mkdtemp(prefix="plugin_"))
+                            temp_dirs.append(temp_dir)
                             
-                    except Exception as e:
-                        logger.error(f"加载外部插件 {plugin_name} 失败: {e}", exc_info=True)
+                            with zipfile.ZipFile(item, 'r') as zf:
+                                zf.extractall(temp_dir)
+                            
+                            # 查找解压后的插件目录
+                            for extracted_item in temp_dir.iterdir():
+                                if extracted_item.is_dir() and (extracted_item / "__init__.py").exists():
+                                    plugin_name = extracted_item.name
+                                    # 将临时目录添加到 sys.path
+                                    if str(temp_dir) not in sys.path:
+                                        sys.path.insert(0, str(temp_dir))
+                                    plugin_dirs.append((plugin_name, extracted_item))
+                                    logger.info(f"已解压插件: {item.name} -> {plugin_name}")
+                                    break
+                            else:
+                                logger.warning(f"zip 文件 {item.name} 中未找到有效插件")
+                                
+                        except zipfile.BadZipFile:
+                            logger.error(f"无效的 zip 文件: {item.name}")
+                        except Exception as e:
+                            logger.error(f"解压插件 {item.name} 失败: {e}")
+            
+            # 开始扫描
+            scan_for_plugins(plugins_dir)
+            
+            # 加载所有插件
+            for plugin_name, plugin_path in plugin_dirs:
+                # 检查依赖
+                if not self._check_plugin_dependencies(plugin_name, plugin_path):
+                    continue
+                
+                try:
+                    # 确定模块名
+                    if plugin_path.parent == plugins_dir:
+                        module_name = f"{plugins_dir_name}.{plugin_name}"
+                    else:
+                        # zip 解压的插件
+                        module_name = plugin_name
+                    
+                    # 动态导入插件模块
+                    module = importlib.import_module(module_name)
+                    
+                    # 检查是否有 setup 函数
+                    if hasattr(module, "setup") and callable(module.setup):
+                        logger.info(f"正在加载外部插件: {plugin_name}")
+                        module.setup(self)
+                    else:
+                        logger.debug(f"跳过外部插件 {plugin_name}: 未找到 setup(manager) 函数")
+                        
+                except Exception as e:
+                    logger.error(f"加载外部插件 {plugin_name} 失败: {e}", exc_info=True)
                         
         finally:
             # 清理 sys.path（可选，保持环境干净）
@@ -115,6 +189,85 @@ class PluginManager:
                     sys.path.remove(parent_dir)
                 except ValueError:
                     pass
+            # 注意：不清理临时目录，因为插件可能仍在使用
+            # temp_dirs 会在程序退出时自动清理
+
+    def _check_plugin_dependencies(self, plugin_name: str, plugin_path) -> bool:
+        """
+        检查插件的第三方依赖
+        
+        Args:
+            plugin_name: 插件名称
+            plugin_path: 插件目录路径
+            
+        Returns:
+            bool: 依赖是否满足
+        """
+        import subprocess
+        import shutil
+        from pathlib import Path
+        from dify_chat_tester.cli.terminal import print_warning, print_info, print_error, print_input_prompt
+        
+        requirements_file = Path(plugin_path) / "requirements.txt"
+        if not requirements_file.exists():
+            return True
+        
+        # 读取依赖列表
+        try:
+            with open(requirements_file, 'r', encoding='utf-8') as f:
+                requirements = [line.strip() for line in f if line.strip() and not line.startswith('#')]
+        except Exception as e:
+            logger.warning(f"读取 {plugin_name} 的 requirements.txt 失败: {e}")
+            return True
+        
+        if not requirements:
+            return True
+        
+        # 检查依赖是否已安装
+        missing_deps = []
+        for req in requirements:
+            # 提取包名（去掉版本约束）
+            pkg_name = req.split('>=')[0].split('==')[0].split('<')[0].split('>')[0].strip()
+            try:
+                __import__(pkg_name.replace('-', '_'))
+            except ImportError:
+                missing_deps.append(req)
+        
+        if not missing_deps:
+            return True
+        
+        # 有缺失的依赖
+        deps_str = ', '.join(missing_deps)
+        print_warning(f"插件 {plugin_name} 需要额外依赖: {deps_str}")
+        
+        # 检测是否可以使用 uv（源码模式）
+        uv_available = shutil.which("uv") is not None
+        
+        if uv_available:
+            # 源码模式：询问是否自动安装
+            try:
+                choice = print_input_prompt(f"是否使用 uv 自动安装? (Y/n): ")
+                if choice.lower() != 'n':
+                    print_info(f"正在安装依赖...")
+                    for dep in missing_deps:
+                        subprocess.run(["uv", "add", dep], check=True)
+                    print_info(f"✅ 依赖安装完成")
+                    return True
+                else:
+                    print_warning(f"跳过插件 {plugin_name}")
+                    return False
+            except subprocess.CalledProcessError as e:
+                print_error(f"安装依赖失败: {e}")
+                return False
+            except Exception:
+                # 非交互模式，跳过
+                logger.warning(f"无法交互式安装依赖，跳过插件 {plugin_name}")
+                return False
+        else:
+            # 打包模式：提示手动安装
+            print_warning(f"当前为打包模式，请手动安装后重新运行:")
+            print_info(f"  pip install {' '.join(missing_deps)}")
+            return False
 
     def register_provider(self, provider_id: str, provider_cls: Type[AIProvider], name: str = None):
         """

@@ -10,7 +10,8 @@
 dify_chat_tester/plugins/
 ├── my_plugin/           # 你的插件目录
 │   ├── __init__.py      # 入口文件（主要）
-│   └── provider.py      # 供应商实现代码
+│   ├── provider.py      # 供应商实现代码
+│   └── requirements.txt # 可选，第三方依赖
 └── ...
 ```
 
@@ -39,7 +40,7 @@ def setup(manager):
 
 供应商类必须继承自 `dify_chat_tester.providers.base.AIProvider` 并实现抽象方法。
 
-````python
+```python
 from dify_chat_tester.providers.base import AIProvider
 from typing import List, Optional
 
@@ -60,22 +61,31 @@ class MyCustomProvider(AIProvider):
     ) -> tuple:
         # 实现发送逻辑
         return "回复内容", True, None, None
+```
 
-### 4.2 加载外部插件
+## 3. 加载外部插件
 
-为了避免核心代码与特定业务逻辑耦合，建议将业务插件放在独立目录中，并通过环境变量加载。
+### 3.1 文件夹形式
 
-将自定义插件放在项目目录外部或单独的 `external_plugins/` 目录中：
+将插件放在 `external_plugins/` 目录下：
 
 ```bash
-my_project/
-├── dify_chat_tester/      # 核心代码
-├── external_plugins/      # 外部插件 (可独立管理)
-│   └── my_custom_plugin/
-│       ├── __init__.py
-│       └── provider.py
-└── .env.config
-````
+external_plugins/
+└── my_custom_plugin/
+    ├── __init__.py
+    └── provider.py
+```
+
+### 3.2 ZIP 压缩包形式
+
+程序支持直接加载 `.zip` 格式的插件包：
+
+```bash
+external_plugins/
+└── my_plugin_v1.0.0.zip
+```
+
+程序启动时会自动解压并加载。
 
 在 `.env.config` 中配置路径：
 
@@ -83,17 +93,32 @@ my_project/
 EXTERNAL_PLUGINS_PATH=/path/to/external_plugins
 ```
 
-**优势**：
+## 4. 第三方依赖管理
 
-- ✅ 完全隔离：私有代码与开源代码无历史交叉
-- ✅ 部署灵活：不同环境可配置不同的插件路径
+如果插件依赖第三方库，请在插件目录下创建 `requirements.txt`：
 
-### 方案二：内置目录（仅限本地）
+```txt
+some-package>=1.0.0
+another-package
+```
 
-对于简单场景，也可以将插件放在 `dify_chat_tester/plugins/` 目录下。
+程序加载时会自动检测：
 
-`.gitignore` 已配置为忽略除内置插件外的所有目录，因此不会被提交到开源仓库。
+- **源码模式**：询问是否使用 `uv` 自动安装
+- **打包模式**：提示用户手动安装
 
-## 4. 示例
+## 5. 插件打包
 
-请参考 `dify_chat_tester/plugins/dify/` 目录下的内置插件实现。
+使用打包脚本生成可分发的插件包：
+
+```bash
+./build/build_plugin.sh <plugin_name>
+# 示例
+./build/build_plugin.sh qianxiaoyin
+```
+
+输出：`qianxiaoyin_v1.0.0.zip`
+
+## 6. 示例
+
+请参考 `external_plugins/qianxiaoyin/` 目录下的插件实现。
