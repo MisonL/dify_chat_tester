@@ -76,9 +76,9 @@ def test_run_batch_query_processes_non_empty_rows(monkeypatch, tmp_path):
     # 只有一行非空问题，应至少被调用一次
     assert provider.calls >= 1
 
-    # 应生成批量日志文件
-    logs = list(tmp_path.glob("batch_query_log_*.xlsx"))
-    assert logs, "未找到批量日志文件"
+    # 应生成批量日志文件 (基于输入文件名: questions.xlsx -> questions_log.xlsx)
+    expected_log = tmp_path / "questions_log.xlsx"
+    assert expected_log.exists(), "未找到批量日志文件 questions_log.xlsx"
 
 
 class _FakeChatProvider:
