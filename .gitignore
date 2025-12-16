@@ -223,6 +223,7 @@ release_windows/
 
 # Local release helper scripts (do not sync to GitHub)
 build/publish_release.sh
+build/publish_plugin.sh
 
 # uv lock files (keep only in root)
 dify_chat_tester/uv.lock
