@@ -260,6 +260,21 @@ try:
     # 2. 加载外部私有插件（如果配置了路径）
     external_plugins_path = _config.get_str("EXTERNAL_PLUGINS_PATH", "").strip()
     if external_plugins_path:
+        import os
+        from pathlib import Path
+        
+        # 处理相对路径
+        if not os.path.isabs(external_plugins_path):
+            # 判断运行模式：打包后的可执行文件 vs 源码运行
+            if getattr(sys, 'frozen', False):
+                # PyInstaller 打包后，基于可执行文件所在目录
+                base_dir = Path(sys.executable).parent
+            else:
+                # 源码运行，基于当前工作目录
+                base_dir = Path.cwd()
+            
+            external_plugins_path = str(base_dir / external_plugins_path)
+        
         _plugin_manager.load_external_plugins(external_plugins_path)
 except Exception as e:
     # 插件加载不应影响主程序启动
