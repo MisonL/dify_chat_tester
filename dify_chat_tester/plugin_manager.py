@@ -19,7 +19,7 @@ class PluginManager:
 
     def load_plugins(self, plugins_package: str = "dify_chat_tester.plugins"):
         """
-        动态加载插件
+        动态加载内置插件
         
         Args:
             plugins_package: 插件包的导入路径
@@ -42,7 +42,7 @@ class PluginManager:
                         
                         # 检查是否有 setup 函数
                         if hasattr(module, "setup") and callable(module.setup):
-                            logger.info(f"正在加载插件: {name}")
+                            logger.debug(f"正在加载内置插件: {name}")
                             module.setup(self)
                         else:
                             logger.debug(f"跳过插件 {name}: 未找到 setup(manager) 函数")
@@ -54,6 +54,67 @@ class PluginManager:
             logger.warning(f"无法导入插件包: {plugins_package}，可能目录不存在")
         except Exception as e:
             logger.error(f"插件加载过程发生错误: {e}", exc_info=True)
+
+    def load_external_plugins(self, external_path: str):
+        """
+        从外部路径加载私有插件
+        
+        Args:
+            external_path: 外部插件目录的绝对路径
+        """
+        import sys
+        from pathlib import Path
+        
+        plugins_dir = Path(external_path)
+        
+        if not plugins_dir.exists():
+            logger.debug(f"外部插件目录不存在: {external_path}")
+            return
+            
+        if not plugins_dir.is_dir():
+            logger.warning(f"外部插件路径不是目录: {external_path}")
+            return
+
+        logger.debug(f"正在从外部路径加载插件: {external_path}")
+        
+        # 将父目录添加到 sys.path 以便导入
+        parent_dir = str(plugins_dir.parent)
+        plugins_dir_name = plugins_dir.name
+        
+        if parent_dir not in sys.path:
+            sys.path.insert(0, parent_dir)
+            path_added = True
+        else:
+            path_added = False
+
+        try:
+            # 遍历外部插件目录中的子目录
+            for item in plugins_dir.iterdir():
+                if item.is_dir() and (item / "__init__.py").exists():
+                    plugin_name = item.name
+                    module_name = f"{plugins_dir_name}.{plugin_name}"
+                    
+                    try:
+                        # 动态导入插件模块
+                        module = importlib.import_module(module_name)
+                        
+                        # 检查是否有 setup 函数
+                        if hasattr(module, "setup") and callable(module.setup):
+                            logger.info(f"正在加载外部插件: {plugin_name}")
+                            module.setup(self)
+                        else:
+                            logger.debug(f"跳过外部插件 {plugin_name}: 未找到 setup(manager) 函数")
+                            
+                    except Exception as e:
+                        logger.error(f"加载外部插件 {plugin_name} 失败: {e}", exc_info=True)
+                        
+        finally:
+            # 清理 sys.path（可选，保持环境干净）
+            if path_added:
+                try:
+                    sys.path.remove(parent_dir)
+                except ValueError:
+                    pass
 
     def register_provider(self, provider_id: str, provider_cls: Type[AIProvider], name: str = None):
         """

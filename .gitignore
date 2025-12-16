@@ -182,13 +182,16 @@ cython_debug/
 ! .env.config.example
 .env.new
 
-# Plugins (keep built-in plugins, ignore private ones)
+# Plugins (keep built-in plugins, ignore private ones in old location)
 dify_chat_tester/plugins/*
 !dify_chat_tester/plugins/__init__.py
 !dify_chat_tester/plugins/README.md
 !dify_chat_tester/plugins/dify/
 !dify_chat_tester/plugins/openai_compat/
 !dify_chat_tester/plugins/iflow/
+
+# Private plugins directory (external, not committed to GitHub)
+private_plugins/
 
 # Logs
 *.log

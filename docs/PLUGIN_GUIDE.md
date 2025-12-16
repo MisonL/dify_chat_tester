@@ -64,10 +64,37 @@ class MyCustomProvider(AIProvider):
 
 ## 3. 私有插件管理
 
-对于公司内部的私有插件，`.gitignore` 已配置为忽略 `dify_chat_tester/plugins/` 下除 `__init__.py` 外的所有内容。
+### 方案一：外部插件目录（推荐）
 
-你可以在本地创建插件目录，它不会被提交到开源仓库。建议在内部 GitLab 仓库中维护这些插件代码，或者使用 git submodule。
+将私有插件放在项目目录外部或单独的 `private_plugins/` 目录中：
+
+```bash
+# 项目结构
+dify_chat_tester/          # 开源代码 (GitHub)
+private_plugins/           # 私有插件 (可独立管理)
+  └── qianxiaoyin/
+      ├── __init__.py
+      └── provider.py
+```
+
+在 `.env.config` 中配置外部插件路径：
+
+```ini
+PRIVATE_PLUGINS_PATH=/path/to/private_plugins
+```
+
+**优势**：
+
+- ✅ 完全隔离：私有代码与开源代码无历史交叉
+- ✅ 独立版本控制：私有插件可用独立的 Git 仓库管理
+- ✅ 部署灵活：不同环境可配置不同的插件路径
+
+### 方案二：内置目录（仅限本地）
+
+对于简单场景，也可以将插件放在 `dify_chat_tester/plugins/` 目录下。
+
+`.gitignore` 已配置为忽略除内置插件外的所有目录，因此不会被提交到开源仓库。
 
 ## 4. 示例
 
-请参考 `dify_chat_tester/plugins` 目录下的示例（如果有）。
+请参考 `dify_chat_tester/plugins/dify/` 目录下的内置插件实现。

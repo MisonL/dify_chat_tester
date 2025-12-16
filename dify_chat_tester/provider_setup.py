@@ -254,7 +254,13 @@ from dify_chat_tester.plugin_manager import PluginManager
 
 _plugin_manager = PluginManager()
 try:
+    # 1. 加载内置插件
     _plugin_manager.load_plugins()
+    
+    # 2. 加载外部私有插件（如果配置了路径）
+    external_plugins_path = _config.get_str("PRIVATE_PLUGINS_PATH", "").strip()
+    if external_plugins_path:
+        _plugin_manager.load_external_plugins(external_plugins_path)
 except Exception as e:
     # 插件加载不应影响主程序启动
     print_error(f"警告: 插件加载失败: {e}")
