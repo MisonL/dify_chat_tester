@@ -323,13 +323,43 @@ def _generate_worker_table(
     total: int,
     failed: int,
     paused: bool = False,
+    start_time: float = None,
 ) -> Table:
     """生成工作线程状态表格"""
-    status_text = "[bold yellow]⏸ 已暂停[/bold yellow]" if paused else f"[{completed}/{total}]"
-    title = f"📊 并发处理 {status_text} ✅{completed-failed} ❌{failed}  [dim](P=暂停 Q=停止 Ctrl+C=退出)[/dim]"
-    table = Table(title=title, box=box.ROUNDED)
+    # 计算进度百分比
+    percent = (completed / total * 100) if total > 0 else 0
+    
+    # 计算预计剩余时间
+    eta_text = ""
+    if start_time and completed > 0:
+        elapsed = time.time() - start_time
+        avg_time = elapsed / completed
+        remaining = (total - completed) * avg_time
+        if remaining > 3600:
+            eta_text = f"{remaining/3600:.1f}h"
+        elif remaining > 60:
+            eta_text = f"{remaining/60:.1f}m"
+        else:
+            eta_text = f"{remaining:.0f}s"
+    
+    # 构建标题（优化间距）
+    if paused:
+        status_text = "[bold yellow]⏸ 已暂停[/bold yellow]"
+    else:
+        status_text = f"[bold cyan]{completed}[/bold cyan]/[dim]{total}[/dim]"
+    
+    title = f"📊 并发处理  {status_text}  ✅ {completed-failed}  ❌ {failed}  [dim](P=暂停 Q=停止 Ctrl+C=退出)[/dim]"
+    
+    # 构建进度条
+    bar_width = 40
+    filled = int(bar_width * percent / 100)
+    bar = "█" * filled + "░" * (bar_width - filled)
+    eta_display = f"  预计剩余: {eta_text}" if eta_text else ""
+    caption = f"[cyan]{bar}[/cyan]  [bold]{percent:.1f}%[/bold]{eta_display}"
+    
+    table = Table(title=title, caption=caption, box=box.ROUNDED)
     table.add_column("线程", style="cyan", width=6)
-    table.add_column("状态", style="green", width=8)
+    table.add_column("状态", style="green", width=10)
     table.add_column("问题预览", style="yellow", max_width=50)
     
     for worker_id, status in sorted(worker_status.items()):
@@ -458,7 +488,7 @@ def _run_concurrent_batch(
                     active_futures.add(future)
                 
                 # 更新显示
-                live.update(_generate_worker_table(worker_status, completed_count, total_tasks, failed_count, kb_control.paused))
+                live.update(_generate_worker_table(worker_status, completed_count, total_tasks, failed_count, kb_control.paused, start_time))
                 
                 # 处理完成的任务并提交新任务
                 while active_futures or pending_tasks:
@@ -474,10 +504,13 @@ def _run_concurrent_batch(
                         if not getattr(kb_control, '_pause_notified', False):
                             console.print("\n[bold yellow]⏸ 已暂停 - 按 P 恢复，按 Q 保存并停止[/bold yellow]")
                             kb_control._pause_notified = True
-                        live.update(_generate_worker_table(worker_status, completed_count, total_tasks, failed_count, True))
+                        live.update(_generate_worker_table(worker_status, completed_count, total_tasks, failed_count, True, start_time))
                         time.sleep(0.3)
                         continue
                     else:
+                        # 从暂停恢复时打印提示
+                        if getattr(kb_control, '_pause_notified', False):
+                            console.print("\n[bold green]▶ 已恢复处理[/bold green]")
                         kb_control._pause_notified = False  # 重置暂停通知状态
                     
                     # 等待任意一个任务完成
@@ -530,7 +563,7 @@ def _run_concurrent_batch(
                                 worker_status[worker_id] = {"state": "完成", "question": old_q}
                     
                     # 更新显示
-                    live.update(_generate_worker_table(worker_status, completed_count, total_tasks, failed_count, kb_control.paused))
+                    live.update(_generate_worker_table(worker_status, completed_count, total_tasks, failed_count, kb_control.paused, start_time))
 
     except KeyboardInterrupt:
         kb_control.stop()
