@@ -43,6 +43,11 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         default=None,
         help="批量处理并发数（2-10 启用并发，1 或不指定为串行模式）",
     )
+    parser.add_argument(
+        "--enable-demo-plugin",
+        action="store_true",
+        help="开启示例插件 (Demo Plugin)，用于功能演示",
+    )
     return parser.parse_args(argv)
 
 
@@ -51,6 +56,10 @@ def main():
     args = parse_args(sys.argv[1:])
 
     try:
+        # 初始化插件系统
+        from dify_chat_tester.providers.setup import init_plugin_manager
+        init_plugin_manager(enable_demo=args.enable_demo_plugin)
+
         app = AppController()
         if args.mode == "question-generation":
             app.run_question_generation_cli(folder_path=args.folder)

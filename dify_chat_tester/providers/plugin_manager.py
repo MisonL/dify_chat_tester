@@ -58,7 +58,7 @@ class PluginManager:
         except Exception as e:
             logger.error(f"插件加载过程发生错误: {e}", exc_info=True)
 
-    def load_external_plugins(self, external_path: str):
+    def load_external_plugins(self, external_path: str, enable_demo: bool = False):
         """
         从外部路径加载私有插件
 
@@ -167,6 +167,11 @@ class PluginManager:
 
             # 加载所有插件
             for plugin_name, plugin_path in plugin_dirs:
+                # 特殊处理 demo_plugin: 默认不加载，除非显式开启
+                if plugin_name == "demo_plugin" and not enable_demo:
+                    logger.debug(f"跳过示例插件: {plugin_name} (需通过参数开启)")
+                    continue
+
                 # 检查依赖
                 if not self._check_plugin_dependencies(plugin_name, plugin_path):
                     continue

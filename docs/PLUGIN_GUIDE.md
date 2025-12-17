@@ -172,4 +172,8 @@ another-package
 请参考以下示例：
 
 - **全功能示例**：`external_plugins/demo_plugin` (展示所有高级特性)
+  - 注意：此插件默认不加载，需使用 `--enable-demo-plugin` 参数开启：
+    ```bash
+    ./dify_chat_tester --enable-demo-plugin
+    ```
 - **实际案例**：`external_plugins/qianxiaoyin` (生产环境使用的插件)

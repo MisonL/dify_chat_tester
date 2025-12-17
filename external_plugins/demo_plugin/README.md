@@ -13,9 +13,15 @@
 
 ## 使用方法
 
-本插件已内置在 `external_plugins/` 目录中。
+本插件已内置在 `external_plugins/` 目录中，但默认不加载。
 
-直接运行主程序，即可在供应商列表中看到 "Dify 示例全功能插件"。
+如需体验，请添加启动参数：
+
+```bash
+./dify_chat_tester --enable-demo-plugin
+```
+
+启动后，即可在供应商列表中看到 "Dify 示例全功能插件"。
 
 ## 模拟场景
 
