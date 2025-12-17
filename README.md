@@ -162,6 +162,19 @@ EXTERNAL_PLUGINS_PATH=../my_plugins
 
 程序启动时会自动扫描该目录下的插件并加载。详细开发指南请见 [PLUGIN_GUIDE.md](docs/PLUGIN_GUIDE.md)。
 
+> **💡 体验插件功能**
+>
+> 我们内置了一个全功能示例插件 `external_plugins/demo_plugin`（展示思维链、工具调用、流式输出等高级特性），默认不加载。
+>
+> 如需体验，请添加启动参数：
+>
+> ```bash
+> # 启动并加载示例插件
+> uv run python main.py -- --enable-demo-plugin
+> # Mac/Linux 可执行文件
+> ./dify_chat_tester --enable-demo-plugin
+> ```
+
 ## 💻 运行模式
 
 #### 模式 1. 会话模式
