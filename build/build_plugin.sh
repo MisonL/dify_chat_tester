@@ -3,7 +3,7 @@
 # 插件打包脚本
 # 用法: ./build/build_plugin.sh <plugin_name|all> [plugin_dir]
 # 示例: 
-#   ./build/build_plugin.sh qianxiaoyin    # 打包单个插件
+#   ./build/build_plugin.sh my_plugin      # 打包单个插件
 #   ./build/build_plugin.sh all            # 打包所有插件
 
 set -e
@@ -83,7 +83,8 @@ EOF
     fi
     
     # 打包为 zip
-    OUTPUT_FILE="$PROJECT_DIR/${PLUGIN_NAME}_v${VERSION}.zip"
+    TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+    OUTPUT_FILE="$PROJECT_DIR/${PLUGIN_NAME}_v${VERSION}_${TIMESTAMP}.zip"
     echo "📦 打包中..."
     
     cd "$TEMP_DIR"
@@ -98,7 +99,7 @@ if [ -z "$1" ]; then
     echo -e "${RED}❌ 错误: 请指定插件名称${NC}"
     echo "用法: $0 <plugin_name|all> [plugin_dir]"
     echo "示例:"
-    echo "  $0 qianxiaoyin    # 打包单个插件"
+    echo "  $0 my_plugin      # 打包单个插件"
     echo "  $0 all            # 打包所有插件"
     exit 1
 fi
