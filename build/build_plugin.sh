@@ -95,17 +95,53 @@ EOF
 }
 
 # 参数检查
-if [ -z "$1" ]; then
-    echo -e "${RED}❌ 错误: 请指定插件名称${NC}"
-    echo "用法: $0 <plugin_name|all> [plugin_dir]"
-    echo "示例:"
-    echo "  $0 my_plugin      # 打包单个插件"
-    echo "  $0 all            # 打包所有插件"
-    exit 1
-fi
-
-PLUGIN_NAME="$1"
 PLUGIN_DIR="${2:-$PROJECT_DIR/external_plugins}"
+PLUGIN_NAME="$1"
+
+if [ -z "$PLUGIN_NAME" ]; then
+    # 交互式选择插件
+    echo -e "${CYAN}请选择要打包的插件：${NC}"
+    echo "0) 全部 (all) - 默认不包含示例插件"
+    
+    # 获取可用插件列表
+    plugins=()
+    i=1
+    for plugin_path in "$PLUGIN_DIR"/*/; do
+        name=$(basename "$plugin_path")
+        # 跳过隐藏目录和特殊目录
+        [[ "$name" == .* ]] && continue
+        [[ "$name" == "__pycache__" ]] && continue
+        # build 脚本中也许不需要排除 demo_plugin? 原逻辑是在 all 循环里排除的，这里交互式应该允许选吗？ 
+        # 原脚本 line 133 排除了 demo_plugin。
+        # 如果用户显式选 demo_plugin，build_single_plugin 会正常打包。
+        # 只要 all 循环里保持排除即可。
+        
+        if [ -f "$plugin_path/__init__.py" ]; then
+            desc=""
+            # 尝试获取描述（可选）
+            if [ -f "$plugin_path/__init__.py" ]; then
+               desc=$(grep -m 1 '^"""' "$plugin_path/__init__.py" | sed 's/"""//g' || echo "")
+            fi
+            
+            echo "$i) $name ${desc:+- $desc}"
+            plugins+=("$name")
+            ((i++))
+        fi
+    done
+    
+    echo ""
+    read -p "请输入序号 (0-$((i-1))): " choice
+    
+    if [[ "$choice" == "0" ]]; then
+        PLUGIN_NAME="all"
+    elif [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le "${#plugins[@]}" ]; then
+        PLUGIN_NAME="${plugins[$((choice-1))]}"
+    else
+        echo -e "${RED}❌ 无效的选择${NC}"
+        exit 1
+    fi
+    echo -e "${GREEN}已选择: $PLUGIN_NAME${NC}"
+fi
 
 echo "=========================================="
 echo "🔌 插件打包脚本"
@@ -120,7 +156,7 @@ fi
 
 # 处理 all 参数
 if [ "$PLUGIN_NAME" = "all" ]; then
-    echo -e "${CYAN}📦 正在打包所有插件...${NC}"
+    echo -e "${CYAN}📦 正在打包所有插件... (已自动跳过 demo_plugin)${NC}"
     
     SUCCESS_COUNT=0
     FAIL_COUNT=0
