@@ -176,4 +176,3 @@ another-package
     ```bash
     ./dify_chat_tester --enable-demo-plugin
     ```
-- **实际案例**：`external_plugins/qianxiaoyin` (生产环境使用的插件)
