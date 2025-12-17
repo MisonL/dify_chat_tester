@@ -193,6 +193,8 @@ dify_chat_tester/plugins/*
 # Private plugins directory (external, not committed to GitHub)
 external_plugins/
 !external_plugins/README.md
+!external_plugins/CHANGELOG.md
+!external_plugins/demo_plugin/
 
 # Logs
 *.log

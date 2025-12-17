@@ -169,9 +169,7 @@ another-package
 
 ## 8. 示例
 
-## 8. 示例
-
 请参考以下示例：
 
-- **全功能示例**：`examples/demo_plugin` (展示所有高级特性)
+- **全功能示例**：`external_plugins/demo_plugin` (展示所有高级特性)
 - **实际案例**：`external_plugins/qianxiaoyin` (生产环境使用的插件)

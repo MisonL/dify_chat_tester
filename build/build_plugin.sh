@@ -130,7 +130,7 @@ if [ "$PLUGIN_NAME" = "all" ]; then
         plugin_name=$(basename "$plugin_path")
         
         # 跳过隐藏目录和特殊目录
-        if [[ "$plugin_name" == .* ]] || [[ "$plugin_name" == "__pycache__" ]]; then
+        if [[ "$plugin_name" == .* ]] || [[ "$plugin_name" == "__pycache__" ]] || [[ "$plugin_name" == "demo_plugin" ]]; then
             continue
         fi
         

@@ -11,11 +11,11 @@
 
 ## 使用方法
 
-1. 将本目录 `demo_plugin` 复制到 `external_plugins/` 目录中。
-   ```bash
-   cp -r examples/demo_plugin external_plugins/
-   ```
-2. 运行主程序，即可在供应商列表中看到 "Dify 示例全功能插件"。
+## 使用方法
+
+本插件已内置在 `external_plugins/` 目录中。
+
+直接运行主程序，即可在供应商列表中看到 "Dify 示例全功能插件"。
 
 ## 模拟场景
 
