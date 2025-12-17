@@ -17,7 +17,7 @@ import sys
 import threading
 import time
 from abc import ABC, abstractmethod
-from typing import List, Optional
+from typing import Callable, List, Optional
 
 import requests
 
@@ -158,6 +158,7 @@ class AIProvider(ABC):
         stream: bool = True,
         show_indicator: bool = True,
         show_thinking: bool = True,  # 新增：是否显示思维链
+        stream_callback: Optional[Callable[[str, str], None]] = None,  # 新增：流式回调
     ) -> tuple:
         """
         发送消息到 AI 供应商
@@ -170,6 +171,9 @@ class AIProvider(ABC):
             stream: 是否使用流式响应
             show_indicator: 是否显示等待指示器
             show_thinking: 是否显示思维链
+            stream_callback: 流式回调函数 (event_type, content)
+                             event_type: "text" | "tool_call" | "tool_result" | "thinking"
+                             可选参数，不传则不回调
 
         Returns:
             tuple: (response_text, success, error_message, new_conversation_id)
@@ -231,6 +235,7 @@ class DifyProvider(AIProvider):
         stream: bool = True,
         show_indicator: bool = True,
         show_thinking: bool = True,
+        stream_callback: Optional[Callable[[str, str], None]] = None,
     ) -> tuple:
         """发送消息到 Dify API"""
         # base_url 已经包含了完整的 API 基础路径（包括 /v1）
@@ -392,6 +397,9 @@ class DifyProvider(AIProvider):
                                         full_response += answer
                                         if stream_display:
                                             stream_display.update(answer)
+                                        # 调用流式回调
+                                        if stream_callback:
+                                            stream_callback("text", full_response)
 
                                 # 处理消息结束事件
                                 elif event == "message_end":
@@ -488,6 +496,7 @@ class OpenAIProvider(AIProvider):
         stream: bool = True,
         show_indicator: bool = True,
         show_thinking: bool = True,
+        stream_callback: Optional[Callable[[str, str], None]] = None,
     ) -> tuple:
         """发送消息到 OpenAI 兼容 API"""
         # 检测 k2sonnet API，它不支持非流式模式
@@ -647,6 +656,9 @@ class OpenAIProvider(AIProvider):
                                             if stream_display:
                                                 # 可以考虑用斜体或灰色显示思维过程
                                                 stream_display.update(reasoning_content)
+                                            # 调用流式回调 - 思维链
+                                            if stream_callback:
+                                                stream_callback("thinking", reasoning_content)
 
                                         content = delta.get("content", "")
 
@@ -655,6 +667,9 @@ class OpenAIProvider(AIProvider):
                                             if stream_display:
                                                 stream_display.update(content)
                                             full_response += content
+                                            # 调用流式回调 - 文本
+                                            if stream_callback:
+                                                stream_callback("text", full_response)
                                 except json.JSONDecodeError:
                                     continue
                 finally:
@@ -952,6 +967,7 @@ class iFlowProvider(AIProvider):
         stream: bool = True,
         show_indicator: bool = True,
         show_thinking: bool = True,
+        stream_callback: Optional[Callable[[str, str], None]] = None,
     ) -> tuple:
         """发送消息到 iFlow API"""
         url = f"{self.base_url}/chat/completions"
@@ -1073,6 +1089,9 @@ class iFlowProvider(AIProvider):
                                     if reasoning_content and show_thinking:
                                         if stream_display:
                                             stream_display.update(reasoning_content)
+                                        # 调用流式回调 - 思维链
+                                        if stream_callback:
+                                            stream_callback("thinking", reasoning_content)
 
                                     content = ""
                                     if "content" in delta:
@@ -1091,6 +1110,9 @@ class iFlowProvider(AIProvider):
                                         if stream_display:
                                             stream_display.update(content)
                                         full_response += content
+                                        # 调用流式回调 - 文本
+                                        if stream_callback:
+                                            stream_callback("text", full_response)
 
                             except json.JSONDecodeError:
                                 continue

@@ -305,8 +305,25 @@ def _process_single_question(
     selected_model: str,
     selected_role: str,
     enable_thinking: bool,
+    worker_status: dict = None,
+    worker_id: int = None,
 ):
     """处理单个问题的任务函数"""
+    # 创建流式回调（如果提供了 worker_status）
+    stream_callback = None
+    if worker_status is not None and worker_id is not None:
+        def stream_callback(event_type, content):
+            """流式回调更新 worker_status"""
+            if event_type == "text":
+                # 显示回复的最后部分
+                preview = content[-35:] if len(content) > 35 else content
+                worker_status[worker_id]["response"] = preview
+            elif event_type == "tool_call":
+                worker_status[worker_id]["response"] = f"[工具:{content}]"
+                worker_status[worker_id]["state"] = "工具"
+            elif event_type == "thinking":
+                worker_status[worker_id]["response"] = "[思考中...]"
+    
     return provider.send_message(
         message=question,
         model=selected_model,
@@ -314,6 +331,7 @@ def _process_single_question(
         stream=True,
         show_indicator=False,  # 后台执行时不显示加载指示器
         show_thinking=enable_thinking,
+        stream_callback=stream_callback,
     )
 
 
@@ -324,6 +342,8 @@ def _process_with_retry(
     selected_role: str,
     enable_thinking: bool,
     max_retries: int = 3,
+    worker_status: dict = None,
+    worker_id: int = None,
 ):
     """带重试的问题处理函数，最多重试 max_retries 次"""
     last_error = None
@@ -332,7 +352,8 @@ def _process_with_retry(
     for attempt in range(max_retries + 1):
         try:
             result = _process_single_question(
-                provider, question, selected_model, selected_role, enable_thinking
+                provider, question, selected_model, selected_role, enable_thinking,
+                worker_status, worker_id
             )
             response, success, error, conversation_id = result
             
@@ -400,13 +421,24 @@ def _generate_worker_table(
     table.add_column("线程", style="cyan", width=6)
     table.add_column("状态", style="green", width=10)
     table.add_column("错误", style="red", width=4, justify="center")
-    table.add_column("问题预览", style="yellow", max_width=45)
+    table.add_column("回复预览", style="yellow", max_width=45)
     
     for worker_id, status in sorted(worker_status.items()):
         state = status.get("state", "空闲")
         question = status.get("question", "")
+        response = status.get("response", "")
         error_count = status.get("errors", 0)
-        q_preview = question[:35] + "..." if len(question) > 35 else question
+        
+        # 根据状态显示不同内容
+        if state == "处理中" and response:
+            preview = response
+        elif state == "工具":
+            preview = response if response else "[调用工具...]"
+        elif state in ["完成", "失败"]:
+            preview = response if response else question[:30] + "..."
+        else:
+            # 等待/初始状态显示问题
+            preview = question[:35] + "..." if len(question) > 35 else question
         
         if state == "处理中":
             state_display = "[bold cyan]🔄 处理中[/bold cyan]"
@@ -416,13 +448,15 @@ def _generate_worker_table(
             state_display = "[bold red]❌ 失败[/bold red]"
         elif state == "重试中":
             state_display = "[bold yellow]🔁 重试中[/bold yellow]"
+        elif state == "工具":
+            state_display = "[bold magenta]🔧 工具[/bold magenta]"
         else:
             state_display = "[dim]⏳ 等待[/dim]"
         
         # 错误数显示
         error_display = f"[red]{error_count}[/red]" if error_count > 0 else "[dim]0[/dim]"
         
-        table.add_row(f"#{worker_id}", state_display, error_display, q_preview)
+        table.add_row(f"#{worker_id}", state_display, error_display, preview)
     
     return table
 
@@ -530,6 +564,8 @@ def _run_concurrent_batch(
                         selected_role,
                         enable_thinking,
                         3,  # max_retries
+                        worker_status,  # 传递 worker_status
+                        worker_id,  # 传递 worker_id
                     )
                     future_to_task[future] = (task, worker_id)
                     active_futures.add(future)
@@ -606,6 +642,8 @@ def _run_concurrent_batch(
                                 selected_role,
                                 enable_thinking,
                                 3,  # max_retries
+                                worker_status,  # 传递 worker_status
+                                worker_id,  # 传递 worker_id
                             )
                             future_to_task[new_future] = (next_task, worker_id)
                             active_futures.add(new_future)
