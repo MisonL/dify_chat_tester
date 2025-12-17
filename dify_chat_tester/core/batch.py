@@ -628,6 +628,53 @@ def _run_concurrent_batch(
     finally:
         kb_control.stop()
     
+    # 收集所有失败的任务进行批量重试
+    failed_tasks = []
+    for task in tasks:
+        idx = task["index"]
+        if idx in results_buffer:
+            result = results_buffer[idx]
+            if not result[1]:  # success == False
+                failed_tasks.append(task)
+    
+    # 如果有失败任务且用户没有主动停止，进行批量重试
+    if failed_tasks and not user_stopped:
+        console.print(f"\n[bold yellow]🔄 发现 {len(failed_tasks)} 个失败任务，开始批量重试...[/bold yellow]")
+        
+        retry_success = 0
+        retry_failed = 0
+        
+        with ThreadPoolExecutor(max_workers=concurrency) as retry_executor:
+            retry_futures = {}
+            for task in failed_tasks:
+                future = retry_executor.submit(
+                    _process_with_retry,
+                    provider,
+                    task["question"],
+                    selected_model,
+                    selected_role,
+                    enable_thinking,
+                    3,  # max_retries
+                )
+                retry_futures[future] = task
+            
+            for future in as_completed(retry_futures):
+                task = retry_futures[future]
+                try:
+                    result, _ = future.result()
+                except Exception as e:
+                    result = ("", False, str(e), None)
+                
+                # 更新结果缓冲区
+                results_buffer[task["index"]] = result
+                
+                if result[1]:  # success
+                    retry_success += 1
+                else:
+                    retry_failed += 1
+        
+        console.print(f"[bold green]✅ 批量重试完成: 成功 {retry_success}, 仍失败 {retry_failed}[/bold green]")
+    
     # 处理结果
     if user_stopped:
         console.print("\n[bold yellow]⚠️ 用户请求停止，部分任务未完成。正在保存已完成的结果...[/bold yellow]")
