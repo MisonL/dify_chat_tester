@@ -37,6 +37,12 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         default=None,
         help="当 mode=question-generation 时，指定文档文件夹路径；不指定则进入交互选择。",
     )
+    parser.add_argument(
+        "--concurrency",
+        type=int,
+        default=None,
+        help="批量处理并发数（2-10 启用并发，1 或不指定为串行模式）",
+    )
     return parser.parse_args(argv)
 
 
@@ -49,7 +55,7 @@ def main():
         if args.mode == "question-generation":
             app.run_question_generation_cli(folder_path=args.folder)
         else:
-            app.run()
+            app.run(concurrency=args.concurrency)
         print("\n\n程序已退出。")
         sys.exit(0)
     except KeyboardInterrupt:

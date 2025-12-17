@@ -202,6 +202,7 @@ class AppController:
         provider_name,
         selected_model,
         provider_id=None,
+        concurrency: int = 1,
     ):
         """运行选择的模式"""
         if mode_choice == "1":
@@ -228,6 +229,7 @@ class AppController:
                 selected_model,
                 self.batch_request_interval,
                 self.batch_default_show_response,
+                concurrency=concurrency,
             )
             return "continue"  # 返回标志，表示继续选择模式
         elif mode_choice == "0":
@@ -306,8 +308,15 @@ class AppController:
             folder_path=folder_path,
         )
 
-    def run(self):
-        """运行主程序循环"""
+    def run(self, concurrency: int | None = None):
+        """运行主程序循环
+        
+        Args:
+            concurrency: 批量处理并发数（None 或 1 为串行，2-10 为并发）
+        """
+        # 从参数或配置中获取并发数
+        if concurrency is None:
+            concurrency = self.config.get_int("BATCH_CONCURRENCY", 1)
         # 打印头部信息
         self._print_header()
 
@@ -387,6 +396,7 @@ class AppController:
                     provider_name,
                     selected_model,
                     provider_id,
+                    concurrency=concurrency,
                 )
 
                 # 如果是退出命令，跳出内层循环
