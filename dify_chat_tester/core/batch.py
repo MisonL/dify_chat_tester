@@ -323,7 +323,12 @@ def _process_single_question(
                     preview = content[-35:] if len(content) > 35 else content
                     worker_status[worker_id]["response"] = preview
                 elif event_type == "tool_call":
-                    worker_status[worker_id]["response"] = f"[工具:{content}]"
+                    # Tool call content format: "ToolName args"
+                    # We truncate it to ensure it fits in the table
+                    display_content = content.replace("\n", " ")
+                    if len(display_content) > 40:
+                        display_content = display_content[:37] + "..."
+                    worker_status[worker_id]["response"] = f"[工具:{display_content}]"
                     worker_status[worker_id]["state"] = "工具"
                 elif event_type == "thinking":
                     worker_status[worker_id]["response"] = "[思考中...]"
@@ -395,6 +400,7 @@ def _generate_worker_table(
     failed: int,
     paused: bool = False,
     start_time: float = None,
+    stopping: bool = False,
 ) -> Table:
     """生成工作线程状态表格"""
     # 计算进度百分比
@@ -402,7 +408,7 @@ def _generate_worker_table(
 
     # 计算预计剩余时间
     eta_text = ""
-    if start_time and completed > 0:
+    if start_time and completed > 0 and not stopping:
         elapsed = time.time() - start_time
         avg_time = elapsed / completed
         remaining = (total - completed) * avg_time
@@ -414,18 +420,24 @@ def _generate_worker_table(
             eta_text = f"{remaining:.0f}s"
 
     # 构建标题（优化间距）
-    if paused:
+    if stopping:
+        status_text = "[bold red]🛑 正在停止... 等待当前任务完成[/bold red]"
+        # 停止模式下不显示预计时间
+        eta_display = ""
+    elif paused:
         status_text = "[bold yellow]⏸ 已暂停[/bold yellow]"
+        eta_display = ""
     else:
         status_text = f"[bold cyan]{completed}[/bold cyan]/[dim]{total}[/dim]"
+        eta_display = f"  预计剩余: {eta_text}" if eta_text else ""
 
-    title = f"📊 并发处理  {status_text}  ✅ {completed - failed}  ❌ {failed}  [dim](P=暂停 Q=停止 Ctrl+C=退出)[/dim]"
+    title = f"📊 并发处理  {status_text}  ✅ {completed - failed}  ❌ {failed}  [dim](P=暂停 Q=停止 Ctrl+C=强制退出)[/dim]"
 
     # 构建进度条
     bar_width = 40
     filled = int(bar_width * percent / 100)
     bar = "█" * filled + "░" * (bar_width - filled)
-    eta_display = f"  预计剩余: {eta_text}" if eta_text else ""
+    
     caption = f"[cyan]{bar}[/cyan]  [bold]{percent:.1f}%[/bold]{eta_display}"
 
     table = Table(title=title, caption=caption, box=box.ROUNDED)
@@ -599,19 +611,30 @@ def _run_concurrent_batch(
                         failed_count,
                         kb_control.paused,
                         start_time,
+                        stopping=False,
                     )
                 )
+
+                stopping = False  # 停止标志
 
                 # 处理完成的任务并提交新任务
                 while active_futures or pending_tasks:
                     # 检查用户是否请求停止
-                    if kb_control.stop_requested:
+                    if kb_control.stop_requested and not stopping:
+                        stopping = True
                         user_stopped = True
-                        print_warning("\n⚠️ 用户请求停止，正在等待当前任务完成...")
+                        # 清空待处理任务，进入"排水"模式
+                        pending_tasks.clear()
+                        # 不再 break，而是继续循环直到 active_futures 清空
+                        console.print("\n[bold red]⚠️  接收到停止指令，正在等待当前运行的任务完成...[/bold red]")
+                    
+                    # 如果所有任务都已完成（包括正在运行的），退出循环
+                    if not active_futures and not pending_tasks:
                         break
 
                     # 如果暂停，只更新显示，不处理新任务
-                    if kb_control.paused:
+                    # 注意：如果正在停止，忽略暂停请求，优先停止
+                    if kb_control.paused and not stopping:
                         # 首次进入暂停状态时提示
                         if not getattr(kb_control, "_pause_notified", False):
                             console.print(
@@ -639,6 +662,21 @@ def _run_concurrent_batch(
                     # 等待任意一个任务完成
                     done, active_futures = wait_for_any(active_futures, timeout=0.5)
 
+                    # 如果没有任务完成且正在停止，更新UI显示状态
+                    if not done and stopping:
+                         live.update(
+                            _generate_worker_table(
+                                worker_status,
+                                completed_count,
+                                total_tasks,
+                                failed_count,
+                                False,
+                                start_time,
+                                stopping=True,
+                            )
+                        )
+                         continue
+
                     for future in done:
                         task, worker_id = future_to_task[future]
                         try:
@@ -653,8 +691,8 @@ def _run_concurrent_batch(
                         completed_count += 1
 
                         # 更新状态和错误计数（只显示当前任务的重试次数）
-                        success = result[1] if len(result) > 1 else False
-                        response_preview = result[0][-35:] if result[0] else ""
+                        response, success, error, conversation_id = result
+                        response_preview = response[-35:] if response else ""
                         if success:
                             worker_status[worker_id] = {
                                 "state": "完成",
@@ -666,13 +704,40 @@ def _run_concurrent_batch(
                             worker_status[worker_id] = {
                                 "state": "失败",
                                 "question": task["question"],
-                                "response": result[2][:30] if result[2] else "",  # 错误信息预览
+                                "response": error[:30] if error else "",  # 错误信息预览
                                 "errors": retry_count,
                             }
                             failed_count += 1
 
-                        # 提交下一个任务（如果有）
+                        # 【实时保存】立即写入 Excel
+                        log_to_excel(
+                            output_worksheet,
+                            [
+                                datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                                selected_role,
+                                task["doc_name"],
+                                task["question"],
+                                response,
+                                success,
+                                error,
+                                conversation_id or "",
+                            ],
+                        )
+                        queries_since_last_save += 1
+
+                        # 每 N 条保存文件
+                        if queries_since_last_save >= SAVE_EVERY_N_QUERIES:
+                            try:
+                                output_workbook.save(output_file_name)
+                                queries_since_last_save = 0
+                            except Exception:
+                                pass  # 忽略保存错误，最后再处理
+
+                        # 提交下一个任务（如果有且未停止）
                         while pending_tasks:
+                            if stopping:
+                                break
+                            
                             next_task = pending_tasks.pop(0)
                             if not next_task["question"].strip():
                                 results_buffer[next_task["index"]] = (
@@ -727,6 +792,7 @@ def _run_concurrent_batch(
                             failed_count,
                             kb_control.paused,
                             start_time,
+                            stopping=stopping,
                         )
                     )
 
@@ -779,87 +845,70 @@ def _run_concurrent_batch(
 
                 # 更新结果缓冲区
                 results_buffer[task["index"]] = result
+                response, success, error, conversation_id = result
 
-                if result[1]:  # success
+                if success:
                     retry_success += 1
                 else:
                     retry_failed += 1
+
+                # 【实时保存】批量重试结果也立即写入
+                log_to_excel(
+                    output_worksheet,
+                    [
+                        datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                        selected_role,
+                        task["doc_name"],
+                        task["question"] + " (重试)",
+                        response,
+                        success,
+                        error,
+                        conversation_id or "",
+                    ],
+                )
+                queries_since_last_save += 1
+                if queries_since_last_save >= SAVE_EVERY_N_QUERIES:
+                    try:
+                        output_workbook.save(output_file_name)
+                        queries_since_last_save = 0
+                    except Exception:
+                        pass
 
         console.print(
             f"[bold green]✅ 批量重试完成: 成功 {retry_success}, 仍失败 {retry_failed}[/bold green]"
         )
 
-    # 处理结果
+    # 统计已写入的结果（结果已在循环中实时保存到 Excel）
     if user_stopped:
         console.print(
-            "\n[bold yellow]⚠️ 用户请求停止，部分任务未完成。正在保存已完成的结果...[/bold yellow]"
+            "\n[bold yellow]⚠️ 用户请求停止，部分任务未完成。已完成的结果已保存。[/bold yellow]"
         )
     else:
-        console.print("\n[bold green]✅ 所有请求处理完成，正在写入结果...[/bold green]")
+        console.print("\n[bold green]✅ 所有请求处理完成！[/bold green]")
 
+    # 统计结果
     for task in tasks:
         idx = task["index"]
-        if idx not in results_buffer:
-            # 空问题等情况已经在循环前处理了，或者异常丢失
-            if not task["question"].strip():
-                result = ("", False, "问题为空", None)
-            else:
-                result = ("", False, "任务未完成或丢失", None)
-        else:
+        if idx in results_buffer:
             result = results_buffer[idx]
+            response, success, error, conversation_id = result
 
-        response, success, error, conversation_id = result
-
-        # 统计
-        if not task["question"].strip():
-            failed_queries += 1
-        else:
-            total_queries += 1
-            if success:
-                successful_queries += 1
-            else:
+            if not task["question"].strip():
                 failed_queries += 1
+            else:
+                total_queries += 1
+                if success:
+                    successful_queries += 1
+                else:
+                    failed_queries += 1
 
-        # 显示（可选，如果用户开启了显示响应）
-        # 并发模式下，我们在最后统一显示可能会刷屏，或者只显示失败的？
-        # 设计方案中提到“顺序流式输出”，这里简化为“顺序显示结果”
-        if success and show_batch_response:
-            console.print(
-                f"\n[bold yellow]Q ({task['row_idx']}): {task['question']}[/bold yellow]"
-            )
-            console.print(
-                Panel(response, title=f"A: {provider_name}", border_style="green")
-            )
-        elif not success and task["question"].strip():
-            console.print(
-                f"\n[bold red]Q ({task['row_idx']}): {task['question']} - 失败: {error}[/bold red]"
-            )
+            # 在最后显示失败的任务（可选）
+            if not success and task["question"].strip() and show_batch_response:
+                console.print(
+                    f"[dim red]✗ ({task['row_idx']}): {task['question'][:40]}... - {error}[/dim red]"
+                )
 
-        # 写入 Excel
-        log_to_excel(
-            output_worksheet,
-            [
-                datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                selected_role,
-                task["doc_name"],
-                task["question"],
-                response,
-                success,
-                error,
-                conversation_id or "",
-            ],
-        )
-
-        # 批量保存
-        queries_since_last_save += 1
-        if queries_since_last_save >= SAVE_EVERY_N_QUERIES:
-            try:
-                output_workbook.save(output_file_name)
-                queries_since_last_save = 0
-            except Exception as e:
-                print_error(f"警告：保存日志时出错：{e}")
-
-    # 最终保存
+    # 最终保存文件（确保所有数据持久化）
     try:
         output_workbook.save(output_file_name)
     except Exception as e:
