@@ -137,6 +137,7 @@ class AIProvider(ABC):
         """
         # 延迟导入以避免可能的循环依赖
         from dify_chat_tester.cli.selectors import select_model
+
         return select_model(available_models, self.__class__.__name__)
 
     def select_role(self, available_roles: List[str]) -> str:
@@ -145,6 +146,7 @@ class AIProvider(ABC):
         插件可以重写此方法以自定义角色选择逻辑
         """
         from dify_chat_tester.cli.selectors import select_role
+
         return select_role(available_roles)
 
     @abstractmethod
@@ -658,7 +660,9 @@ class OpenAIProvider(AIProvider):
                                                 stream_display.update(reasoning_content)
                                             # 调用流式回调 - 思维链
                                             if stream_callback:
-                                                stream_callback("thinking", reasoning_content)
+                                                stream_callback(
+                                                    "thinking", reasoning_content
+                                                )
 
                                         content = delta.get("content", "")
 
@@ -1091,7 +1095,9 @@ class iFlowProvider(AIProvider):
                                             stream_display.update(reasoning_content)
                                         # 调用流式回调 - 思维链
                                         if stream_callback:
-                                            stream_callback("thinking", reasoning_content)
+                                            stream_callback(
+                                                "thinking", reasoning_content
+                                            )
 
                                     content = ""
                                     if "content" in delta:

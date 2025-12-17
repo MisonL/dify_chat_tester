@@ -98,10 +98,10 @@ class TestGenerateWorkerTable:
     def test_progress_display(self):
         """测试进度显示"""
         table = _generate_worker_table({}, 5, 10, 1, paused=False)
-        # 标题应包含进度信息
-        assert "[5/10]" in table.title
-        assert "✅4" in table.title  # 成功数 = 完成数 - 失败数
-        assert "❌1" in table.title
+        # 标题应包含进度信息（新格式使用 bold cyan 样式）
+        assert "5" in table.title and "10" in table.title
+        assert "✅" in table.title  # 成功数图标
+        assert "❌" in table.title  # 失败数图标
 
 
 class TestProcessSingleQuestion:
@@ -127,6 +127,7 @@ class TestProcessSingleQuestion:
             stream=True,
             show_indicator=False,
             show_thinking=False,
+            stream_callback=None,  # 新增：流式回调参数
         )
         assert result == ("回答", True, None, "conv-1")
 

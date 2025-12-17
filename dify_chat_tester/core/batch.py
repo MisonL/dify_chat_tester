@@ -3,7 +3,6 @@
 负责处理批量询问模式的功能
 """
 
-import json
 import os
 import time
 import threading
@@ -32,7 +31,6 @@ from dify_chat_tester.utils.excel import init_excel_log, log_to_excel
 # Rich 组件用于并发显示
 from rich.live import Live
 from rich.table import Table
-from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TaskProgressColumn, MofNCompleteColumn, TimeRemainingColumn
 from concurrent.futures import wait, FIRST_COMPLETED
 
 # 从配置中获取批量保存间隔，默认每 10 条保存一次
@@ -50,37 +48,37 @@ def wait_for_any(futures: set, timeout: float = None):
 
 class KeyboardControl:
     """键盘控制类，用于在并发处理期间检测用户按键"""
-    
+
     def __init__(self):
         self.stop_requested = False
         self.paused = False
         self._listener_thread = None
         self._running = False
-    
+
     def start(self):
         """启动键盘监听"""
         self._running = True
         self._listener_thread = threading.Thread(target=self._listen, daemon=True)
         self._listener_thread.start()
-    
+
     def stop(self):
         """停止键盘监听"""
         self._running = False
-    
+
     def _listen(self):
         """后台监听键盘输入"""
         import tty
         import termios
-        
+
         old_settings = termios.tcgetattr(sys.stdin)
         try:
             tty.setcbreak(sys.stdin.fileno())
             while self._running:
                 if select.select([sys.stdin], [], [], 0.1)[0]:
                     ch = sys.stdin.read(1).lower()
-                    if ch == 'q':
+                    if ch == "q":
                         self.stop_requested = True
-                    elif ch == 'p':
+                    elif ch == "p":
                         self.paused = not self.paused
         except Exception:
             pass  # 忽略终端不支持的情况
@@ -266,7 +264,9 @@ def _run_sequential_batch(
     # 由于是 helper 函数，可以简化或通过参数传入文件名
     # 这里我们简化处理，不再重新打印文件路径，因为外层已经打印过了，或者需要再传入 selected_excel_file
     # 不过为了体验一致，我们还是尽量补全信息
-    summary_text.append(f"  • 日志文件: {output_file_name} (自动关联)\n\n", style="white")
+    summary_text.append(
+        f"  • 日志文件: {output_file_name} (自动关联)\n\n", style="white"
+    )
 
     summary_text.append("🤖 模型配置\n", style="bold yellow")
     summary_text.append(f"  • AI 供应商: {provider_name}\n", style="white")
@@ -312,6 +312,7 @@ def _process_single_question(
     # 创建流式回调（如果提供了 worker_status）
     stream_callback = None
     if worker_status is not None and worker_id is not None:
+
         def stream_callback(event_type, content):
             """流式回调更新 worker_status"""
             if event_type == "text":
@@ -323,7 +324,7 @@ def _process_single_question(
                 worker_status[worker_id]["state"] = "工具"
             elif event_type == "thinking":
                 worker_status[worker_id]["response"] = "[思考中...]"
-    
+
     return provider.send_message(
         message=question,
         model=selected_model,
@@ -348,15 +349,20 @@ def _process_with_retry(
     """带重试的问题处理函数，最多重试 max_retries 次"""
     last_error = None
     retry_count = 0
-    
+
     for attempt in range(max_retries + 1):
         try:
             result = _process_single_question(
-                provider, question, selected_model, selected_role, enable_thinking,
-                worker_status, worker_id
+                provider,
+                question,
+                selected_model,
+                selected_role,
+                enable_thinking,
+                worker_status,
+                worker_id,
             )
             response, success, error, conversation_id = result
-            
+
             if success:
                 return result, retry_count
             else:
@@ -372,7 +378,7 @@ def _process_with_retry(
             if attempt < max_retries:
                 time.sleep(1)
                 continue
-    
+
     # 所有重试都失败
     return ("", False, f"重试{max_retries}次后失败: {last_error}", None), retry_count
 
@@ -388,7 +394,7 @@ def _generate_worker_table(
     """生成工作线程状态表格"""
     # 计算进度百分比
     percent = (completed / total * 100) if total > 0 else 0
-    
+
     # 计算预计剩余时间
     eta_text = ""
     if start_time and completed > 0:
@@ -396,39 +402,39 @@ def _generate_worker_table(
         avg_time = elapsed / completed
         remaining = (total - completed) * avg_time
         if remaining > 3600:
-            eta_text = f"{remaining/3600:.1f}h"
+            eta_text = f"{remaining / 3600:.1f}h"
         elif remaining > 60:
-            eta_text = f"{remaining/60:.1f}m"
+            eta_text = f"{remaining / 60:.1f}m"
         else:
             eta_text = f"{remaining:.0f}s"
-    
+
     # 构建标题（优化间距）
     if paused:
         status_text = "[bold yellow]⏸ 已暂停[/bold yellow]"
     else:
         status_text = f"[bold cyan]{completed}[/bold cyan]/[dim]{total}[/dim]"
-    
-    title = f"📊 并发处理  {status_text}  ✅ {completed-failed}  ❌ {failed}  [dim](P=暂停 Q=停止 Ctrl+C=退出)[/dim]"
-    
+
+    title = f"📊 并发处理  {status_text}  ✅ {completed - failed}  ❌ {failed}  [dim](P=暂停 Q=停止 Ctrl+C=退出)[/dim]"
+
     # 构建进度条
     bar_width = 40
     filled = int(bar_width * percent / 100)
     bar = "█" * filled + "░" * (bar_width - filled)
     eta_display = f"  预计剩余: {eta_text}" if eta_text else ""
     caption = f"[cyan]{bar}[/cyan]  [bold]{percent:.1f}%[/bold]{eta_display}"
-    
+
     table = Table(title=title, caption=caption, box=box.ROUNDED)
     table.add_column("线程", style="cyan", width=6)
     table.add_column("状态", style="green", width=10)
     table.add_column("错误", style="red", width=4, justify="center")
     table.add_column("回复预览", style="yellow", max_width=45)
-    
+
     for worker_id, status in sorted(worker_status.items()):
         state = status.get("state", "空闲")
         question = status.get("question", "")
         response = status.get("response", "")
         error_count = status.get("errors", 0)
-        
+
         # 根据状态显示不同内容
         if state == "处理中" and response:
             preview = response
@@ -439,7 +445,7 @@ def _generate_worker_table(
         else:
             # 等待/初始状态显示问题
             preview = question[:35] + "..." if len(question) > 35 else question
-        
+
         if state == "处理中":
             state_display = "[bold cyan]🔄 处理中[/bold cyan]"
         elif state == "完成":
@@ -452,13 +458,16 @@ def _generate_worker_table(
             state_display = "[bold magenta]🔧 工具[/bold magenta]"
         else:
             state_display = "[dim]⏳ 等待[/dim]"
-        
+
         # 错误数显示
-        error_display = f"[red]{error_count}[/red]" if error_count > 0 else "[dim]0[/dim]"
-        
+        error_display = (
+            f"[red]{error_count}[/red]" if error_count > 0 else "[dim]0[/dim]"
+        )
+
         table.add_row(f"#{worker_id}", state_display, error_display, preview)
-    
+
     return table
+
 
 def _run_concurrent_batch(
     provider,
@@ -491,7 +500,7 @@ def _run_concurrent_batch(
     # 准备任务队列
     tasks = []
     console.print(f"\n[bold cyan]🚀 已启动并发模式 (并发数: {concurrency})[/bold cyan]")
-    
+
     # 预读取所有待处理的问题
     for row_idx in range(resume_from_row, batch_worksheet.max_row + 1):
         doc_name = ""
@@ -504,16 +513,16 @@ def _run_concurrent_batch(
         question_cell_value = batch_worksheet.cell(
             row=row_idx, column=question_col_index + 1
         ).value
-        question = (
-            str(question_cell_value) if question_cell_value is not None else ""
+        question = str(question_cell_value) if question_cell_value is not None else ""
+
+        tasks.append(
+            {
+                "row_idx": row_idx,
+                "doc_name": doc_name,
+                "question": question,
+                "index": len(tasks),  # 相对索引，用于结果排序
+            }
         )
-        
-        tasks.append({
-            "row_idx": row_idx,
-            "doc_name": doc_name,
-            "question": question,
-            "index": len(tasks)  # 相对索引，用于结果排序
-        })
 
     if not tasks:
         print_success("没有需要处理的任务。")
@@ -522,11 +531,13 @@ def _run_concurrent_batch(
     # 结果缓冲区 {index: result_tuple}
     results_buffer = {}
     # 工作线程状态追踪 {worker_id: {"state": "处理中/完成/失败", "question": "..."}}
-    worker_status = {i: {"state": "等待", "question": ""} for i in range(1, concurrency + 1)}
+    worker_status = {
+        i: {"state": "等待", "question": ""} for i in range(1, concurrency + 1)
+    }
     completed_count = 0
     failed_count = 0
     total_tasks = len(tasks)
-    
+
     # 启动键盘控制
     kb_control = KeyboardControl()
     kb_control.start()
@@ -540,7 +551,7 @@ def _run_concurrent_batch(
                 pending_tasks = list(tasks)  # 待提交的任务队列
                 active_futures = set()  # 当前活跃的 future
                 next_worker_id = 1  # 下一个可用的 worker ID
-                
+
                 # 初始提交 concurrency 个任务
                 while pending_tasks and len(active_futures) < concurrency:
                     task = pending_tasks.pop(0)
@@ -550,12 +561,16 @@ def _run_concurrent_batch(
                         completed_count += 1
                         failed_count += 1
                         continue
-                    
+
                     worker_id = next_worker_id
                     next_worker_id = (next_worker_id % concurrency) + 1
-                    
-                    worker_status[worker_id] = {"state": "处理中", "question": task["question"], "errors": 0}
-                    
+
+                    worker_status[worker_id] = {
+                        "state": "处理中",
+                        "question": task["question"],
+                        "errors": 0,
+                    }
+
                     future = executor.submit(
                         _process_with_retry,
                         provider,
@@ -569,10 +584,19 @@ def _run_concurrent_batch(
                     )
                     future_to_task[future] = (task, worker_id)
                     active_futures.add(future)
-                
+
                 # 更新显示
-                live.update(_generate_worker_table(worker_status, completed_count, total_tasks, failed_count, kb_control.paused, start_time))
-                
+                live.update(
+                    _generate_worker_table(
+                        worker_status,
+                        completed_count,
+                        total_tasks,
+                        failed_count,
+                        kb_control.paused,
+                        start_time,
+                    )
+                )
+
                 # 处理完成的任务并提交新任务
                 while active_futures or pending_tasks:
                     # 检查用户是否请求停止
@@ -580,25 +604,36 @@ def _run_concurrent_batch(
                         user_stopped = True
                         print_warning("\n⚠️ 用户请求停止，正在等待当前任务完成...")
                         break
-                    
+
                     # 如果暂停，只更新显示，不处理新任务
                     if kb_control.paused:
                         # 首次进入暂停状态时提示
-                        if not getattr(kb_control, '_pause_notified', False):
-                            console.print("\n[bold yellow]⏸ 已暂停 - 按 P 恢复，按 Q 保存并停止[/bold yellow]")
+                        if not getattr(kb_control, "_pause_notified", False):
+                            console.print(
+                                "\n[bold yellow]⏸ 已暂停 - 按 P 恢复，按 Q 保存并停止[/bold yellow]"
+                            )
                             kb_control._pause_notified = True
-                        live.update(_generate_worker_table(worker_status, completed_count, total_tasks, failed_count, True, start_time))
+                        live.update(
+                            _generate_worker_table(
+                                worker_status,
+                                completed_count,
+                                total_tasks,
+                                failed_count,
+                                True,
+                                start_time,
+                            )
+                        )
                         time.sleep(0.3)
                         continue
                     else:
                         # 从暂停恢复时打印提示
-                        if getattr(kb_control, '_pause_notified', False):
+                        if getattr(kb_control, "_pause_notified", False):
                             console.print("\n[bold green]▶ 已恢复处理[/bold green]")
                         kb_control._pause_notified = False  # 重置暂停通知状态
-                    
+
                     # 等待任意一个任务完成
                     done, active_futures = wait_for_any(active_futures, timeout=0.5)
-                    
+
                     for future in done:
                         task, worker_id = future_to_task[future]
                         try:
@@ -608,32 +643,54 @@ def _run_concurrent_batch(
                         except Exception as e:
                             result = ("", False, str(e), None)
                             retry_count = 0
-                        
+
                         results_buffer[task["index"]] = result
                         completed_count += 1
-                        
+
                         # 更新状态和错误计数
-                        current_errors = worker_status.get(worker_id, {}).get("errors", 0) + retry_count
+                        current_errors = (
+                            worker_status.get(worker_id, {}).get("errors", 0)
+                            + retry_count
+                        )
                         success = result[1] if len(result) > 1 else False
                         if success:
-                            worker_status[worker_id] = {"state": "完成", "question": task["question"], "errors": current_errors}
+                            worker_status[worker_id] = {
+                                "state": "完成",
+                                "question": task["question"],
+                                "errors": current_errors,
+                            }
                         else:
-                            worker_status[worker_id] = {"state": "失败", "question": task["question"], "errors": current_errors}
+                            worker_status[worker_id] = {
+                                "state": "失败",
+                                "question": task["question"],
+                                "errors": current_errors,
+                            }
                             failed_count += 1
-                        
+
                         # 提交下一个任务（如果有）
                         while pending_tasks:
                             next_task = pending_tasks.pop(0)
                             if not next_task["question"].strip():
-                                results_buffer[next_task["index"]] = ("", False, "问题为空", None)
+                                results_buffer[next_task["index"]] = (
+                                    "",
+                                    False,
+                                    "问题为空",
+                                    None,
+                                )
                                 completed_count += 1
                                 failed_count += 1
                                 continue
-                            
+
                             # 保留原有错误计数
-                            prev_errors = worker_status.get(worker_id, {}).get("errors", 0)
-                            worker_status[worker_id] = {"state": "处理中", "question": next_task["question"], "errors": prev_errors}
-                            
+                            prev_errors = worker_status.get(worker_id, {}).get(
+                                "errors", 0
+                            )
+                            worker_status[worker_id] = {
+                                "state": "处理中",
+                                "question": next_task["question"],
+                                "errors": prev_errors,
+                            }
+
                             new_future = executor.submit(
                                 _process_with_retry,
                                 provider,
@@ -653,10 +710,23 @@ def _run_concurrent_batch(
                             if worker_id in worker_status:
                                 old_q = worker_status[worker_id].get("question", "")
                                 old_errors = worker_status[worker_id].get("errors", 0)
-                                worker_status[worker_id] = {"state": "完成", "question": old_q, "errors": old_errors}
-                    
+                                worker_status[worker_id] = {
+                                    "state": "完成",
+                                    "question": old_q,
+                                    "errors": old_errors,
+                                }
+
                     # 更新显示
-                    live.update(_generate_worker_table(worker_status, completed_count, total_tasks, failed_count, kb_control.paused, start_time))
+                    live.update(
+                        _generate_worker_table(
+                            worker_status,
+                            completed_count,
+                            total_tasks,
+                            failed_count,
+                            kb_control.paused,
+                            start_time,
+                        )
+                    )
 
     except KeyboardInterrupt:
         kb_control.stop()
@@ -665,7 +735,7 @@ def _run_concurrent_batch(
         raise
     finally:
         kb_control.stop()
-    
+
     # 收集所有失败的任务进行批量重试
     failed_tasks = []
     for task in tasks:
@@ -674,14 +744,16 @@ def _run_concurrent_batch(
             result = results_buffer[idx]
             if not result[1]:  # success == False
                 failed_tasks.append(task)
-    
+
     # 如果有失败任务且用户没有主动停止，进行批量重试
     if failed_tasks and not user_stopped:
-        console.print(f"\n[bold yellow]🔄 发现 {len(failed_tasks)} 个失败任务，开始批量重试...[/bold yellow]")
-        
+        console.print(
+            f"\n[bold yellow]🔄 发现 {len(failed_tasks)} 个失败任务，开始批量重试...[/bold yellow]"
+        )
+
         retry_success = 0
         retry_failed = 0
-        
+
         with ThreadPoolExecutor(max_workers=concurrency) as retry_executor:
             retry_futures = {}
             for task in failed_tasks:
@@ -695,46 +767,50 @@ def _run_concurrent_batch(
                     3,  # max_retries
                 )
                 retry_futures[future] = task
-            
+
             for future in as_completed(retry_futures):
                 task = retry_futures[future]
                 try:
                     result, _ = future.result()
                 except Exception as e:
                     result = ("", False, str(e), None)
-                
+
                 # 更新结果缓冲区
                 results_buffer[task["index"]] = result
-                
+
                 if result[1]:  # success
                     retry_success += 1
                 else:
                     retry_failed += 1
-        
-        console.print(f"[bold green]✅ 批量重试完成: 成功 {retry_success}, 仍失败 {retry_failed}[/bold green]")
-    
+
+        console.print(
+            f"[bold green]✅ 批量重试完成: 成功 {retry_success}, 仍失败 {retry_failed}[/bold green]"
+        )
+
     # 处理结果
     if user_stopped:
-        console.print("\n[bold yellow]⚠️ 用户请求停止，部分任务未完成。正在保存已完成的结果...[/bold yellow]")
+        console.print(
+            "\n[bold yellow]⚠️ 用户请求停止，部分任务未完成。正在保存已完成的结果...[/bold yellow]"
+        )
     else:
         console.print("\n[bold green]✅ 所有请求处理完成，正在写入结果...[/bold green]")
-    
+
     for task in tasks:
         idx = task["index"]
         if idx not in results_buffer:
-             # 空问题等情况已经在循环前处理了，或者异常丢失
-             if not task["question"].strip():
-                 result = ("", False, "问题为空", None)
-             else:
-                 result = ("", False, "任务未完成或丢失", None)
+            # 空问题等情况已经在循环前处理了，或者异常丢失
+            if not task["question"].strip():
+                result = ("", False, "问题为空", None)
+            else:
+                result = ("", False, "任务未完成或丢失", None)
         else:
             result = results_buffer[idx]
-            
+
         response, success, error, conversation_id = result
-        
+
         # 统计
         if not task["question"].strip():
-             failed_queries += 1
+            failed_queries += 1
         else:
             total_queries += 1
             if success:
@@ -746,10 +822,16 @@ def _run_concurrent_batch(
         # 并发模式下，我们在最后统一显示可能会刷屏，或者只显示失败的？
         # 设计方案中提到“顺序流式输出”，这里简化为“顺序显示结果”
         if success and show_batch_response:
-             console.print(f"\n[bold yellow]Q ({task['row_idx']}): {task['question']}[/bold yellow]")
-             console.print(Panel(response, title=f"A: {provider_name}", border_style="green"))
+            console.print(
+                f"\n[bold yellow]Q ({task['row_idx']}): {task['question']}[/bold yellow]"
+            )
+            console.print(
+                Panel(response, title=f"A: {provider_name}", border_style="green")
+            )
         elif not success and task["question"].strip():
-             console.print(f"\n[bold red]Q ({task['row_idx']}): {task['question']} - 失败: {error}[/bold red]")
+            console.print(
+                f"\n[bold red]Q ({task['row_idx']}): {task['question']} - 失败: {error}[/bold red]"
+            )
 
         # 写入 Excel
         log_to_excel(
@@ -786,7 +868,7 @@ def _run_concurrent_batch(
 
     # 打印统计
     print_statistics(total_queries, successful_queries, failed_queries, total_duration)
-    
+
     # 汇总信息（复用部分逻辑，从简）
     print_success(f"并发批量处理完成。日志已保存至: {output_file_name}")
 
@@ -801,7 +883,7 @@ def run_batch_query(
     concurrency: int = 1,
 ):
     """运行批量询问模式
-    
+
     Args:
         provider: AI 提供商实例
         selected_role: 角色名称
@@ -895,12 +977,12 @@ def run_batch_query(
     # 如果是，尝试找到对应的原始输入文件并提供恢复选项
     input_dir = os.path.dirname(selected_excel_file) or "."
     input_basename = os.path.splitext(os.path.basename(selected_excel_file))[0]
-    
+
     if input_basename.endswith("_log"):
         # 用户选择的是日志文件，尝试找到原始输入文件
         original_basename = input_basename[:-4]  # 移除 "_log" 后缀
         original_file_path = os.path.join(input_dir, f"{original_basename}.xlsx")
-        
+
         if os.path.exists(original_file_path):
             console.print(
                 Panel(
@@ -912,7 +994,7 @@ def run_batch_query(
                     box=box.ROUNDED,
                 )
             )
-            
+
             use_original = (
                 print_input_prompt(
                     f"是否使用原始文件 '{original_file_path}' 继续处理？(Y/n)"
@@ -920,7 +1002,7 @@ def run_batch_query(
                 .strip()
                 .lower()
             )
-            
+
             if not use_original or use_original in ("y", "yes"):
                 # 重新加载原始文件
                 try:
@@ -972,7 +1054,7 @@ def run_batch_query(
                         Panel(
                             f"检测到历史日志文件: [bold cyan]{output_file_name}[/bold cyan]\n"
                             f"已处理记录数: [bold green]{processed_count}[/bold green]\n"
-                            f"上次结束位置: 第 {last_row} 行 (对应输入文件第 {potential_resume_row-1} 行)",
+                            f"上次结束位置: 第 {last_row} 行 (对应输入文件第 {potential_resume_row - 1} 行)",
                             title="[bold yellow]📋 恢复进度提示[/bold yellow]",
                             border_style="yellow",
                             box=box.ROUNDED,
@@ -1039,7 +1121,7 @@ def run_batch_query(
                     print_warning("并发数已限制为最大 10")
             except ValueError:
                 concurrency = 1
-    
+
     if concurrency > 1:
         print_success(f"已启用并发模式，并发数: {concurrency}")
     else:
@@ -1094,7 +1176,7 @@ def run_batch_query(
     print(
         f"\n开始批量询问... (共 {total_rows} 行数据，当前从第 {resume_from_row} 行开始)"
     )
-    
+
     # 根据并发数选择处理模式
     if concurrency > 1:
         # 并发模式
