@@ -42,25 +42,48 @@ def setup(manager):
 
 ```python
 from dify_chat_tester.providers.base import AIProvider
-from typing import List, Optional
+from typing import List, Optional, Callable
 
 class MyCustomProvider(AIProvider):
     def get_models(self) -> List[str]:
         return ["default-model"]
+
+    # 可选：重写模型选择逻辑（例如跳过交互直接返回）
+    def select_model(self, available_models: List[str]) -> str:
+        return "default-model"
+
+    # 可选：重写角色选择逻辑
+    def select_role(self, available_roles: List[str]) -> str:
+        return "user"
 
     def send_message(
         self,
         message: str,
         model: str,
         role: str = "员工",
-        history: Optional[List[dict]] = None,
-        conversation_id: Optional[str] = None,
-        stream: bool = True,
-        show_indicator: bool = True,
-        show_thinking: bool = True,
+        history: Optional[List[dict]] = None,      # 对话历史
+        conversation_id: Optional[str] = None,     # 会话 ID
+        stream: bool = True,                       # 是否流式
+        show_indicator: bool = True,               # 显示等待指示器
+        show_thinking: bool = True,                # 显示思考过程
+        stream_callback: Optional[Callable[[str, str], None]] = None, # 流式回调
     ) -> tuple:
-        # 实现发送逻辑
-        return "回复内容", True, None, None
+        """
+        实现发送逻辑
+
+        stream_callback 使用说明:
+        callback("text", "文本片段")      - 普通文本回复
+        callback("thinking", "思考内容")  - 思维链/推理过程
+        callback("tool_call", "工具名 参数") - 工具调用通知
+        callback("tool_result", "结果")    - 工具执行结果
+        """
+
+        # 示例：简单的流式实现
+        if stream_callback:
+            stream_callback("thinking", "正在思考...\n")
+            stream_callback("text", "这是回复内容")
+
+        return "完整回复内容", True, None, "new-conversation-id"
 ```
 
 ## 3. 加载外部插件
@@ -148,4 +171,7 @@ another-package
 
 ## 8. 示例
 
-请参考 `external_plugins` 目录下的示例插件。
+请参考以下示例：
+
+- **全功能示例**：`examples/demo_plugin` (展示所有高级特性)
+- **实际案例**：`external_plugins/qianxiaoyin` (生产环境使用的插件)
