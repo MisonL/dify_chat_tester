@@ -317,6 +317,45 @@ def _process_single_question(
     )
 
 
+def _process_with_retry(
+    provider,
+    question: str,
+    selected_model: str,
+    selected_role: str,
+    enable_thinking: bool,
+    max_retries: int = 3,
+):
+    """带重试的问题处理函数，最多重试 max_retries 次"""
+    last_error = None
+    retry_count = 0
+    
+    for attempt in range(max_retries + 1):
+        try:
+            result = _process_single_question(
+                provider, question, selected_model, selected_role, enable_thinking
+            )
+            response, success, error, conversation_id = result
+            
+            if success:
+                return result, retry_count
+            else:
+                # API 返回失败但没有异常
+                last_error = error
+                retry_count += 1
+                if attempt < max_retries:
+                    time.sleep(1)  # 重试前等待 1 秒
+                    continue
+        except Exception as e:
+            last_error = str(e)
+            retry_count += 1
+            if attempt < max_retries:
+                time.sleep(1)
+                continue
+    
+    # 所有重试都失败
+    return ("", False, f"重试{max_retries}次后失败: {last_error}", None), retry_count
+
+
 def _generate_worker_table(
     worker_status: dict,
     completed: int,
@@ -360,12 +399,14 @@ def _generate_worker_table(
     table = Table(title=title, caption=caption, box=box.ROUNDED)
     table.add_column("线程", style="cyan", width=6)
     table.add_column("状态", style="green", width=10)
-    table.add_column("问题预览", style="yellow", max_width=50)
+    table.add_column("错误", style="red", width=4, justify="center")
+    table.add_column("问题预览", style="yellow", max_width=45)
     
     for worker_id, status in sorted(worker_status.items()):
         state = status.get("state", "空闲")
         question = status.get("question", "")
-        q_preview = question[:40] + "..." if len(question) > 40 else question
+        error_count = status.get("errors", 0)
+        q_preview = question[:35] + "..." if len(question) > 35 else question
         
         if state == "处理中":
             state_display = "[bold cyan]🔄 处理中[/bold cyan]"
@@ -373,10 +414,15 @@ def _generate_worker_table(
             state_display = "[bold green]✅ 完成[/bold green]"
         elif state == "失败":
             state_display = "[bold red]❌ 失败[/bold red]"
+        elif state == "重试中":
+            state_display = "[bold yellow]🔁 重试中[/bold yellow]"
         else:
             state_display = "[dim]⏳ 等待[/dim]"
         
-        table.add_row(f"#{worker_id}", state_display, q_preview)
+        # 错误数显示
+        error_display = f"[red]{error_count}[/red]" if error_count > 0 else "[dim]0[/dim]"
+        
+        table.add_row(f"#{worker_id}", state_display, error_display, q_preview)
     
     return table
 
@@ -474,15 +520,16 @@ def _run_concurrent_batch(
                     worker_id = next_worker_id
                     next_worker_id = (next_worker_id % concurrency) + 1
                     
-                    worker_status[worker_id] = {"state": "处理中", "question": task["question"]}
+                    worker_status[worker_id] = {"state": "处理中", "question": task["question"], "errors": 0}
                     
                     future = executor.submit(
-                        _process_single_question,
+                        _process_with_retry,
                         provider,
                         task["question"],
                         selected_model,
                         selected_role,
                         enable_thinking,
+                        3,  # max_retries
                     )
                     future_to_task[future] = (task, worker_id)
                     active_futures.add(future)
@@ -519,19 +566,23 @@ def _run_concurrent_batch(
                     for future in done:
                         task, worker_id = future_to_task[future]
                         try:
-                            result = future.result()
+                            future_result = future.result()
+                            # _process_with_retry 返回 (result, retry_count)
+                            result, retry_count = future_result
                         except Exception as e:
                             result = ("", False, str(e), None)
+                            retry_count = 0
                         
                         results_buffer[task["index"]] = result
                         completed_count += 1
                         
-                        # 更新状态
+                        # 更新状态和错误计数
+                        current_errors = worker_status.get(worker_id, {}).get("errors", 0) + retry_count
                         success = result[1] if len(result) > 1 else False
                         if success:
-                            worker_status[worker_id] = {"state": "完成", "question": task["question"]}
+                            worker_status[worker_id] = {"state": "完成", "question": task["question"], "errors": current_errors}
                         else:
-                            worker_status[worker_id] = {"state": "失败", "question": task["question"]}
+                            worker_status[worker_id] = {"state": "失败", "question": task["question"], "errors": current_errors}
                             failed_count += 1
                         
                         # 提交下一个任务（如果有）
@@ -543,15 +594,18 @@ def _run_concurrent_batch(
                                 failed_count += 1
                                 continue
                             
-                            worker_status[worker_id] = {"state": "处理中", "question": next_task["question"]}
+                            # 保留原有错误计数
+                            prev_errors = worker_status.get(worker_id, {}).get("errors", 0)
+                            worker_status[worker_id] = {"state": "处理中", "question": next_task["question"], "errors": prev_errors}
                             
                             new_future = executor.submit(
-                                _process_single_question,
+                                _process_with_retry,
                                 provider,
                                 next_task["question"],
                                 selected_model,
                                 selected_role,
                                 enable_thinking,
+                                3,  # max_retries
                             )
                             future_to_task[new_future] = (next_task, worker_id)
                             active_futures.add(new_future)
@@ -560,7 +614,8 @@ def _run_concurrent_batch(
                             # 没有更多任务，将 worker 标记为空闲
                             if worker_id in worker_status:
                                 old_q = worker_status[worker_id].get("question", "")
-                                worker_status[worker_id] = {"state": "完成", "question": old_q}
+                                old_errors = worker_status[worker_id].get("errors", 0)
+                                worker_status[worker_id] = {"state": "完成", "question": old_q, "errors": old_errors}
                     
                     # 更新显示
                     live.update(_generate_worker_table(worker_status, completed_count, total_tasks, failed_count, kb_control.paused, start_time))
