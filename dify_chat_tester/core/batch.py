@@ -315,15 +315,20 @@ def _process_single_question(
 
         def stream_callback(event_type, content):
             """流式回调更新 worker_status"""
-            if event_type == "text":
-                # 显示回复的最后部分
-                preview = content[-35:] if len(content) > 35 else content
-                worker_status[worker_id]["response"] = preview
-            elif event_type == "tool_call":
-                worker_status[worker_id]["response"] = f"[工具:{content}]"
-                worker_status[worker_id]["state"] = "工具"
-            elif event_type == "thinking":
-                worker_status[worker_id]["response"] = "[思考中...]"
+            try:
+                if worker_id not in worker_status:
+                    return
+                if event_type == "text":
+                    # 显示回复的最后部分
+                    preview = content[-35:] if len(content) > 35 else content
+                    worker_status[worker_id]["response"] = preview
+                elif event_type == "tool_call":
+                    worker_status[worker_id]["response"] = f"[工具:{content}]"
+                    worker_status[worker_id]["state"] = "工具"
+                elif event_type == "thinking":
+                    worker_status[worker_id]["response"] = "[思考中...]"
+            except (KeyError, TypeError):
+                pass  # 忽略状态更新错误
 
     return provider.send_message(
         message=question,
@@ -647,23 +652,22 @@ def _run_concurrent_batch(
                         results_buffer[task["index"]] = result
                         completed_count += 1
 
-                        # 更新状态和错误计数
-                        current_errors = (
-                            worker_status.get(worker_id, {}).get("errors", 0)
-                            + retry_count
-                        )
+                        # 更新状态和错误计数（只显示当前任务的重试次数）
                         success = result[1] if len(result) > 1 else False
+                        response_preview = result[0][-35:] if result[0] else ""
                         if success:
                             worker_status[worker_id] = {
                                 "state": "完成",
                                 "question": task["question"],
-                                "errors": current_errors,
+                                "response": response_preview,
+                                "errors": retry_count,  # 当前任务重试次数
                             }
                         else:
                             worker_status[worker_id] = {
                                 "state": "失败",
                                 "question": task["question"],
-                                "errors": current_errors,
+                                "response": result[2][:30] if result[2] else "",  # 错误信息预览
+                                "errors": retry_count,
                             }
                             failed_count += 1
 
@@ -681,14 +685,12 @@ def _run_concurrent_batch(
                                 failed_count += 1
                                 continue
 
-                            # 保留原有错误计数
-                            prev_errors = worker_status.get(worker_id, {}).get(
-                                "errors", 0
-                            )
+                            # 新任务开始，重试次数归零
                             worker_status[worker_id] = {
                                 "state": "处理中",
                                 "question": next_task["question"],
-                                "errors": prev_errors,
+                                "response": "",
+                                "errors": 0,
                             }
 
                             new_future = executor.submit(
