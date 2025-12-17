@@ -1,11 +1,30 @@
-"""Pytest 配置：将项目根目录加入 sys.path。
+# tests/conftest.py
+"""pytest 配置和共享 fixtures"""
 
-这样在未安装包的情况下也可以直接 `import dify_chat_tester`。
-"""
+import pytest
+from unittest.mock import MagicMock, patch
 
-import os
-import sys
 
-ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-if ROOT_DIR not in sys.path:
-    sys.path.insert(0, ROOT_DIR)
+@pytest.fixture
+def mock_provider():
+    """创建模拟的 AI 提供商"""
+    provider = MagicMock()
+    provider.send_message.return_value = ("模拟回答", True, None, "conv-123")
+    return provider
+
+
+@pytest.fixture
+def mock_console():
+    """模拟 console 输出"""
+    with patch("dify_chat_tester.core.batch.console") as mock:
+        yield mock
+
+
+@pytest.fixture
+def mock_config():
+    """模拟配置加载器"""
+    config = MagicMock()
+    config.get_int.return_value = 10
+    config.get_bool.return_value = False
+    config.get_enable_thinking.return_value = False
+    return config
