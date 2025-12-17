@@ -16,6 +16,7 @@ class PluginManager:
         self.providers: Dict[str, Type[AIProvider]] = {}
         self.provider_instances: Dict[str, AIProvider] = {}
         self.plugin_configs: Dict[str, dict] = {}
+        self._current_loading_version = None
 
     def load_plugins(self, plugins_package: str = "dify_chat_tester.plugins"):
         """
@@ -188,7 +189,11 @@ class PluginManager:
                     # 检查是否有 setup 函数
                     if hasattr(module, "setup") and callable(module.setup):
                         logger.info(f"正在加载外部插件: {plugin_name}{version_str}")
-                        module.setup(self)
+                        self._current_loading_version = plugin_version
+                        try:
+                            module.setup(self)
+                        finally:
+                            self._current_loading_version = None
                     else:
                         logger.debug(
                             f"跳过外部插件 {plugin_name}: 未找到 setup(manager) 函数"
@@ -312,8 +317,13 @@ class PluginManager:
             return
 
         self.providers[provider_id] = provider_cls
+        
+        display_name = name or provider_id
+        if self._current_loading_version:
+            display_name = f"{display_name} (v{self._current_loading_version})"
+
         self.plugin_configs[provider_id] = {
-            "name": name or provider_id,
+            "name": display_name,
             "type": "class",
             "class": provider_cls,
         }
@@ -335,8 +345,13 @@ class PluginManager:
             return
 
         self.provider_instances[provider_id] = instance
+
+        display_name = name or provider_id
+        if self._current_loading_version:
+            display_name = f"{display_name} (v{self._current_loading_version})"
+
         self.plugin_configs[provider_id] = {
-            "name": name or provider_id,
+            "name": display_name,
             "type": "instance",
             "instance": instance,
         }
