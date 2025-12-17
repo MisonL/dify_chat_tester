@@ -249,3 +249,69 @@ class TestAppControllerAdditional:
             controller.run()
 
         controller._run_question_generation.assert_called_once()
+
+    @patch("dify_chat_tester.cli.app.print_welcome")
+    def test_run_interactive_provider_hooks(
+        self, mock_welcome, controller, monkeypatch
+    ):
+        """测试主循环中调用 Provider 的选择钩子"""
+        import pytest
+        import dify_chat_tester.cli.app as ac
+        
+        # 1. 选择 AI 问答测试功能
+        choices = iter(["1", "0"]) # 0=Exit
+        monkeypatch.setattr(ac, "select_main_function", lambda: next(choices))
+        
+        # 2. Mock Provider
+        mock_provider = MagicMock()
+        mock_provider.select_model.return_value = "auto_model"
+        mock_provider.select_role.return_value = "auto_role"
+        
+        # 3. Patch selector methods on provider instance (since they are instance methods now)
+        # But wait, we get provider instance from _setup_provider
+        
+        monkeypatch.setattr(
+            controller,
+            "_select_provider",
+            lambda: ("Plugin", "plugin_id"),
+        )
+        monkeypatch.setattr(
+            controller, "_setup_provider", lambda pid: (mock_provider, ["m1", "m2"])
+        )
+        
+        # 4. Mock inner loops
+        # select_mode -> "1" (Session Mode) -> loop -> "0" (Exit mode selection)
+        # We need to control the inner loops carefully or simplify by mocking _run_mode
+        
+        # Mocking run_mode to avoid inner loop logic
+        mock_run_mode = MagicMock(return_value="exit") # Return exit to break inner loop
+        monkeypatch.setattr(controller, "_run_mode", mock_run_mode)
+
+        # Mock select_mode to not block, returns "1" then "0" if looping, 
+        # but here we just need it to return "1" so _run_mode is called
+        monkeypatch.setattr(ac, "select_mode", lambda: "1")
+
+        # 5. Run
+        # sys.exit interception
+        monkeypatch.setattr(
+            ac.sys, "exit", lambda code=0: (_ for _ in ()).throw(SystemExit(code))
+        )
+        
+        with pytest.raises(SystemExit):
+            controller.run()
+            
+        # Verify hooks were called
+        mock_provider.select_model.assert_called_once_with(["m1", "m2"])
+        mock_provider.select_role.assert_called_once_with(controller.roles)
+        
+        # Verify _run_mode was called with selected values
+        mock_run_mode.assert_called_with(
+            "1", mock_provider, "auto_role", "Plugin", "auto_model", "plugin_id"
+        )
+
+    def test_run_mode_exit_code_zero(self, controller):
+        """测试 _run_mode 接收到 0 时返回 exit"""
+        result = controller._run_mode(
+            "0", MagicMock(), "role", "P", "model", "pid"
+        )
+        assert result == "exit"

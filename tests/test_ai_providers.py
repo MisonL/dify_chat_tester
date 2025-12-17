@@ -1295,3 +1295,58 @@ class TestProviderInitialization:
         """测试 iFlow 默认 base_url"""
         provider = iFlowProvider("key")
         assert "iflow.cn" in provider.base_url
+
+class TestBaseProviderHooks:
+    """测试 Base Provider 的选择钩子方法"""
+    
+    def test_default_select_model(self):
+        """测试默认 select_model 调用选择器"""
+        from dify_chat_tester.providers.base import AIProvider
+        
+        # 创建一个最小化的具体实现
+        class MockProvider(AIProvider):
+            def get_models(self): return []
+            def send_message(self, *args, **kwargs): pass
+            
+        provider = MockProvider()
+        
+        with patch("dify_chat_tester.cli.selectors.select_model") as mock_select:
+            mock_select.return_value = "gpt-4"
+            
+            result = provider.select_model(["gpt-4", "gpt-3.5"])
+            
+            assert result == "gpt-4"
+            mock_select.assert_called_once_with(["gpt-4", "gpt-3.5"], "MockProvider")
+
+    def test_default_select_role(self):
+        """测试默认 select_role 调用选择器"""
+        from dify_chat_tester.providers.base import AIProvider
+        
+        class MockProvider(AIProvider):
+            def get_models(self): return []
+            def send_message(self, *args, **kwargs): pass
+            
+        provider = MockProvider()
+        
+        with patch("dify_chat_tester.cli.selectors.select_role") as mock_select:
+            mock_select.return_value = "dev"
+            
+            result = provider.select_role(["dev", "tester"])
+            
+            assert result == "dev"
+            mock_select.assert_called_once_with(["dev", "tester"])
+
+    def test_override_hooks(self):
+        """测试重写钩子方法"""
+        from dify_chat_tester.providers.base import AIProvider
+        
+        class CustomProvider(AIProvider):
+            def get_models(self): return ["auto"]
+            def send_message(self, *args, **kwargs): pass
+            def select_model(self, available_models): return "auto"
+            def select_role(self, available_roles): return "user"
+            
+        provider = CustomProvider()
+        
+        assert provider.select_model(["a", "b"]) == "auto"
+        assert provider.select_role(["r1", "r2"]) == "user"

@@ -172,6 +172,7 @@ EXTERNAL_PLUGINS_PATH=../my_plugins
 ✅ 上下文自动维护
 ✅ 命令控制：
    - /help        查看可用命令说明
+   - /export      导出对话记录（支持剪切板/Markdown文件）
    - /exit,/quit  返回模式选择
    - /new         重置对话上下文
 ✅ 退出时静默返回，无额外提示

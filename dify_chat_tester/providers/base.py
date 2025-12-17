@@ -130,6 +130,23 @@ class AIProvider(ABC):
         """获取可用的模型列表"""
         pass
 
+    def select_model(self, available_models: List[str]) -> str:
+        """
+        交互式选择模型
+        插件可以重写此方法以自定义模型选择逻辑（例如跳过选择直接返回默认值）
+        """
+        # 延迟导入以避免可能的循环依赖
+        from dify_chat_tester.cli.selectors import select_model
+        return select_model(available_models, self.__class__.__name__)
+
+    def select_role(self, available_roles: List[str]) -> str:
+        """
+        交互式选择角色
+        插件可以重写此方法以自定义角色选择逻辑
+        """
+        from dify_chat_tester.cli.selectors import select_role
+        return select_role(available_roles)
+
     @abstractmethod
     def send_message(
         self,

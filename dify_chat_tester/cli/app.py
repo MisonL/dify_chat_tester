@@ -230,10 +230,12 @@ class AppController:
                 self.batch_default_show_response,
             )
             return "continue"  # 返回标志，表示继续选择模式
-        elif mode_choice == "3":
+        elif mode_choice == "0":
             # 退出程序
-            print_info("感谢使用 dify_chat_tester，再见！")
-            sys.exit(0)
+            # 其实在 _run_mode 外部循环里会处理退出，这里返回一个特殊值即可
+            # 但既然这里写了退出逻辑，也可以直接调用 exit
+            # 为了更好的控制流，我们返回 'exit' 状态
+            return "exit"
 
     def _run_question_generation(
         self,
@@ -328,7 +330,8 @@ class AppController:
                 continue
 
             # 选择模型
-            selected_model = select_model(available_models, provider_name)
+            # 委托给 provider 处理选择逻辑
+            selected_model = provider.select_model(available_models)
 
             # 根据主功能选择执行不同的流程
             if function_choice in ["2", "3"]:
@@ -368,7 +371,8 @@ class AppController:
                     continue
 
             # AI问答测试功能 - 需要选择角色
-            selected_role = select_role(self.roles)
+            # 委托给 provider 处理选择逻辑
+            selected_role = provider.select_role(self.roles)
 
             # 内层循环：选择运行模式（AI问答测试）
             while True:
@@ -386,7 +390,7 @@ class AppController:
                 )
 
                 # 如果是退出命令，跳出内层循环
-                if mode_choice == "3":
+                if mode_choice == "0" or result == "exit":
                     break
 
                 # 如果是从会话或批量模式返回，继续选择模式

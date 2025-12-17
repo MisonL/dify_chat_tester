@@ -1,6 +1,6 @@
 [project]
 name = "dify-chat-tester"
-version = "1.4.1"
+version = "1.4.2"
 description = "AI 聊天客户端测试工具（支持多AI供应商）"
 authors = [
     {name = "Mison", email = "1360962086@qq.com"}
@@ -14,6 +14,7 @@ dependencies = [
     "colorama",
     "rich",
     "loguru>=0.7.3",
+    "pyperclip>=1.11.0",
 ]
 
 [project.scripts]

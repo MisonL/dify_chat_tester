@@ -118,9 +118,9 @@ class TestSelectMode:
 
     @patch("dify_chat_tester.cli.selectors.print_input_prompt")
     def test_select_exit(self, mock_input):
-        mock_input.return_value = "3"
+        mock_input.return_value = "0"
         result = select_mode()
-        assert result == "3"
+        assert result == "0"
 
     @patch("dify_chat_tester.cli.selectors.print_input_prompt")
     def test_invalid_retry(self, mock_input):
