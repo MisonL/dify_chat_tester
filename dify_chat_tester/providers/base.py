@@ -389,10 +389,15 @@ class DifyProvider(AIProvider):
                                 # 处理错误事件
                                 if event == "error":
                                     error_msg = data.get("message", "未知错误")
+                                    # 将错误信息转换为友好的提示
+                                    from dify_chat_tester.providers.base import _friendly_error_message
+                                    friendly_error = _friendly_error_message(error_msg)
                                     if stream_display:
                                         stream_display.stop()
-                                    print(f"\n错误: {error_msg}", file=sys.stderr)
-                                    return "", False, error_msg, None
+                                    # 只在交互模式下打印错误（并发模式 show_indicator=False）
+                                    if show_indicator:
+                                        print(f"\n错误: {friendly_error}", file=sys.stderr)
+                                    return "", False, friendly_error, None
 
                                 # 处理消息事件
                                 elif event == "message":
