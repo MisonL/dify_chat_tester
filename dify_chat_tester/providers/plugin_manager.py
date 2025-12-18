@@ -1,5 +1,4 @@
 import importlib
-import os
 import pkgutil
 from typing import Dict, List, Type
 
@@ -70,8 +69,6 @@ class PluginManager:
         Args:
             external_path: 外部插件目录的绝对路径
         """
-        import shutil
-        import subprocess
         import sys
         import tempfile
         import zipfile
@@ -283,12 +280,12 @@ class PluginManager:
         if uv_available:
             # 源码模式：询问是否自动安装
             try:
-                choice = print_input_prompt(f"是否使用 uv 自动安装? (Y/n): ")
+                choice = print_input_prompt("是否使用 uv 自动安装? (Y/n): ")
                 if choice.lower() != "n":
-                    print_info(f"正在安装依赖...")
+                    print_info("正在安装依赖...")
                     for dep in missing_deps:
                         subprocess.run(["uv", "add", dep], check=True)
-                    print_info(f"✅ 依赖安装完成")
+                    print_info("✅ 依赖安装完成")
                     return True
                 else:
                     print_warning(f"跳过插件 {plugin_name}")
@@ -302,7 +299,7 @@ class PluginManager:
                 return False
         else:
             # 打包模式：提示手动安装
-            print_warning(f"当前为打包模式，请手动安装后重新运行:")
+            print_warning("当前为打包模式，请手动安装后重新运行:")
             print_info(f"  pip install {' '.join(missing_deps)}")
             return False
 

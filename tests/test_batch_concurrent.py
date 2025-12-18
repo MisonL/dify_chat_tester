@@ -1,9 +1,7 @@
 # tests/test_batch_concurrent.py
 """并发批量处理功能的单元测试"""
 
-import pytest
-from unittest.mock import MagicMock, patch, PropertyMock
-import threading
+from unittest.mock import MagicMock, patch
 import time
 
 from dify_chat_tester.core.batch import (

@@ -7,11 +7,9 @@ import sys
 
 from dify_chat_tester._version import __author__, __email__, __version__
 from dify_chat_tester.cli.selectors import (
-    select_folder_path,
     select_main_function,
     select_mode,
     select_model,
-    select_role,
 )
 from dify_chat_tester.cli.terminal import (
     Panel,
@@ -28,7 +26,6 @@ from dify_chat_tester.config.loader import get_config, parse_ai_providers
 # 导入功能模块
 from dify_chat_tester.core.batch import run_batch_query
 from dify_chat_tester.core.chat import run_interactive_chat
-from dify_chat_tester.core.question import run_question_generation
 from dify_chat_tester.providers.setup import (
     setup_dify_provider,
     setup_iflow_provider,
@@ -123,7 +120,11 @@ class AppController:
         """选择AI供应商"""
         print_info("请选择AI供应商:")
         for provider_id, provider_info in self.ai_providers.items():
-            print(f"  {provider_id}. {provider_info['name']}")
+            # 为 Dify 添加并发数说明
+            if provider_info['id'] == 'dify':
+                console.print(f"  {provider_id}. {provider_info['name']} [dim](并发批量处理建议≤3)[/dim]")
+            else:
+                console.print(f"  {provider_id}. {provider_info['name']}")
         print("  0. 退出程序")
         console.print()
 

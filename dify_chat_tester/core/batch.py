@@ -111,9 +111,6 @@ def _run_sequential_batch(
     start_time = time.time()
     total_rows = batch_worksheet.max_row - 1
 
-    # 获取列名用于统计显示
-    column_names = [cell.value for cell in batch_worksheet[1]]
-
     try:
         for row_idx in range(
             resume_from_row, batch_worksheet.max_row + 1
@@ -406,8 +403,9 @@ def _generate_worker_table(
     # 计算进度百分比
     percent = (completed / total * 100) if total > 0 else 0
 
-    # 计算预计剩余时间
+    # 计算预计剩余时间和平均耗时
     eta_text = ""
+    avg_task_text = ""
     if start_time and completed > 0 and not stopping:
         elapsed = time.time() - start_time
         avg_time = elapsed / completed
@@ -418,6 +416,11 @@ def _generate_worker_table(
             eta_text = f"{remaining / 60:.1f}m"
         else:
             eta_text = f"{remaining:.0f}s"
+        # 格式化平均任务耗时
+        if avg_time >= 60:
+            avg_task_text = f"{avg_time / 60:.2f}分钟/任务"
+        else:
+            avg_task_text = f"{avg_time:.1f}秒/任务"
 
     # 构建标题（优化间距）
     if stopping:
@@ -433,18 +436,20 @@ def _generate_worker_table(
 
     title = f"📊 并发处理  {status_text}  ✅ {completed - failed}  ❌ {failed}  [dim](P=暂停 Q=停止 Ctrl+C=强制退出)[/dim]"
 
-    # 构建进度条
-    bar_width = 40
+    # 构建进度条（缩短宽度以确保同行显示）
+    bar_width = 25
     filled = int(bar_width * percent / 100)
     bar = "█" * filled + "░" * (bar_width - filled)
     
-    caption = f"[cyan]{bar}[/cyan]  [bold]{percent:.1f}%[/bold]{eta_display}"
+    # 底部显示：进度条 + 百分比 + 预计剩余时间 + 平均耗时（同一行）
+    avg_display = f" ⏱{avg_task_text}" if avg_task_text else ""
+    caption = f"[cyan]{bar}[/cyan] [bold]{percent:.1f}%[/bold]{eta_display}{avg_display}"
 
-    table = Table(title=title, caption=caption, box=box.ROUNDED)
+    table = Table(title=title, caption=caption, box=box.ROUNDED, expand=False)
     table.add_column("线程", style="cyan", width=6)
     table.add_column("状态", style="green", width=10)
     table.add_column("错误", style="red", width=4, justify="center")
-    table.add_column("回复预览", style="yellow", max_width=45)
+    table.add_column("回复预览", style="yellow", width=40, overflow="ellipsis", no_wrap=True)
 
     for worker_id, status in sorted(worker_status.items()):
         state = status.get("state", "空闲")
@@ -509,10 +514,6 @@ def _run_concurrent_batch(
     failed_queries = 0
     queries_since_last_save = 0
     start_time = time.time()
-    total_rows = batch_worksheet.max_row - 1
-
-    # 获取列名用于统计显示
-    column_names = [cell.value for cell in batch_worksheet[1]]
 
     # 准备任务队列
     tasks = []
@@ -561,7 +562,7 @@ def _run_concurrent_batch(
     user_stopped = False  # 用户主动停止标志
 
     try:
-        with Live(console=console, refresh_per_second=4) as live:
+        with Live(console=console, refresh_per_second=4, vertical_overflow="visible") as live:
             with ThreadPoolExecutor(max_workers=concurrency) as executor:
                 # 提交任务字典 {future: (task_info, worker_id)}
                 future_to_task = {}
@@ -625,8 +626,7 @@ def _run_concurrent_batch(
                         user_stopped = True
                         # 清空待处理任务，进入"排水"模式
                         pending_tasks.clear()
-                        # 不再 break，而是继续循环直到 active_futures 清空
-                        console.print("\n[bold red]⚠️  接收到停止指令，正在等待当前运行的任务完成...[/bold red]")
+                        # 注意：不在 Live 内使用 console.print，状态通过表格标题显示
                     
                     # 如果所有任务都已完成（包括正在运行的），退出循环
                     if not active_futures and not pending_tasks:
@@ -635,12 +635,8 @@ def _run_concurrent_batch(
                     # 如果暂停，只更新显示，不处理新任务
                     # 注意：如果正在停止，忽略暂停请求，优先停止
                     if kb_control.paused and not stopping:
-                        # 首次进入暂停状态时提示
-                        if not getattr(kb_control, "_pause_notified", False):
-                            console.print(
-                                "\n[bold yellow]⏸ 已暂停 - 按 P 恢复，按 Q 保存并停止[/bold yellow]"
-                            )
-                            kb_control._pause_notified = True
+                        # 暂停状态通过表格标题显示，不使用 console.print
+                        kb_control._pause_notified = True
                         live.update(
                             _generate_worker_table(
                                 worker_status,
@@ -654,10 +650,8 @@ def _run_concurrent_batch(
                         time.sleep(0.3)
                         continue
                     else:
-                        # 从暂停恢复时打印提示
-                        if getattr(kb_control, "_pause_notified", False):
-                            console.print("\n[bold green]▶ 已恢复处理[/bold green]")
-                        kb_control._pause_notified = False  # 重置暂停通知状态
+                        # 从暂停恢复时重置标志
+                        kb_control._pause_notified = False
 
                     # 等待任意一个任务完成
                     done, active_futures = wait_for_any(active_futures, timeout=0.5)
@@ -799,8 +793,15 @@ def _run_concurrent_batch(
     except KeyboardInterrupt:
         kb_control.stop()
         print_warning("\n⚠️  用户中断批量处理 (Ctrl+C)。正在保存当前进度...")
-        # 此时 executor 会尝试 join，可能需要一段时间
-        raise
+        # 尝试保存已完成的结果
+        try:
+            output_workbook.save(output_file_name)
+            print_success(f"进度已保存到: {output_file_name}")
+        except Exception as e:
+            print_error(f"保存进度失败: {e}")
+        # 快速退出，不等待线程
+        import os
+        os._exit(0)
     finally:
         kb_control.stop()
 
@@ -1210,12 +1211,7 @@ def run_batch_query(
         output_file_name, batch_log_headers
     )
 
-    total_queries = 0
-    successful_queries = 0
-    failed_queries = 0
-    # 自上次保存以来已处理的问题数量
-    queries_since_last_save = 0
-    start_time = time.time()
+    # 由子函数处理统计，这里只计算总行数
 
     total_rows = batch_worksheet.max_row - 1
 

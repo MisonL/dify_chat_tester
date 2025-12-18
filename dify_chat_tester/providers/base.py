@@ -259,7 +259,7 @@ class DifyProvider(AIProvider):
             "inputs": {"role": role, "app_id": self.app_id},
             "query": message,
             "response_mode": "streaming" if stream else "blocking",
-            "user": "chat_tester",
+            "user": "dify_chat_tester",
         }
 
         if conversation_id:
