@@ -15,13 +15,16 @@ from datetime import datetime
 # 禁用 multiprocessing 资源警告（在导入前设置）
 warnings.filterwarnings("ignore", category=UserWarning, module="multiprocessing")
 
-# 禁用 resource_tracker 警告
+# 禁用 resource_tracker 警告，直接在顶层拦截
 try:
     from multiprocessing import resource_tracker
+    # 彻底替换掉 register 和 unregister，并清空内部状态
+    resource_tracker._resource_tracker = None
     def _noop(*args, **kwargs):
         pass
     resource_tracker.register = _noop
     resource_tracker.unregister = _noop
+    resource_tracker.ensure_running = _noop
 except Exception:
     pass
 
@@ -805,15 +808,24 @@ def _run_concurrent_batch(
                     )
 
     except KeyboardInterrupt:
+        # 立即停止键盘交互检测
         kb_control.stop()
-        print_warning("\n⚠️  用户中断批量处理 (Ctrl+C)。正在保存当前进度...")
+        
+        # 立即告知用户，不再包含多余的图标和换行
+        # print_warning 内部会自动添加 Icons.WARNING
+        print_warning("用户中断批量处理 (Ctrl+C)。正在保存当前进度...")
+        
+        # 刷新标准输出以确保消息立即显示
+        sys.stdout.flush()
+        
         # 尝试保存已完成的结果
         try:
             output_workbook.save(output_file_name)
             print_success(f"进度已保存到: {output_file_name}")
         except Exception as e:
             print_error(f"保存进度失败: {e}")
-        # 快速退出，不等待线程（警告已在模块级别禁用）
+            
+        # 快速强制退出
         os._exit(0)
     finally:
         kb_control.stop()
