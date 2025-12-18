@@ -186,3 +186,182 @@ class TestConfigLoader:
         
         assert concurrency == 5
         mock_config.get_int.assert_called_with("BATCH_CONCURRENCY", 1)
+
+
+class TestFriendlyErrorMessage:
+    """测试友好错误信息转换"""
+
+    def test_queuepool_error(self):
+        """测试 QueuePool 连接池错误的友好提示"""
+        from dify_chat_tester.providers.base import _friendly_error_message
+        
+        error_msg = "Run failed: QueuePool limit of size 30 overflow 10 reached, connection timed out"
+        friendly = _friendly_error_message(error_msg)
+        
+        assert "连接池" in friendly
+        assert "BATCH_CONCURRENCY" in friendly
+
+    def test_timeout_error(self):
+        """测试超时错误的友好提示"""
+        from dify_chat_tester.providers.base import _friendly_error_message
+        
+        error_msg = "Connection timed out after 30 seconds"
+        friendly = _friendly_error_message(error_msg)
+        
+        assert "连接" in friendly or "网络" in friendly
+
+    def test_ssl_error(self):
+        """测试 SSL 错误的友好提示"""
+        from dify_chat_tester.providers.base import _friendly_error_message
+        
+        error_msg = "SSL: CERTIFICATE_VERIFY_FAILED"
+        friendly = _friendly_error_message(error_msg)
+        
+        assert "SSL" in friendly or "证书" in friendly
+
+    def test_http_401_error(self):
+        """测试 HTTP 401 认证错误"""
+        from dify_chat_tester.providers.base import _friendly_error_message
+        
+        friendly = _friendly_error_message("Unauthorized", status_code=401)
+        
+        assert "认证" in friendly or "密钥" in friendly
+
+    def test_http_429_error(self):
+        """测试 HTTP 429 频率限制错误"""
+        from dify_chat_tester.providers.base import _friendly_error_message
+        
+        friendly = _friendly_error_message("Too Many Requests", status_code=429)
+        
+        assert "频繁" in friendly or "限制" in friendly
+
+    def test_passthrough_chinese_message(self):
+        """测试中文消息直接返回"""
+        from dify_chat_tester.providers.base import _friendly_error_message
+        
+        error_msg = "这是一个中文错误消息"
+        friendly = _friendly_error_message(error_msg)
+        
+        assert friendly == error_msg
+
+
+class TestProcessWithRetry:
+    """测试带重试的问题处理函数"""
+
+    def test_success_on_first_try(self):
+        """测试第一次成功的情况"""
+        from dify_chat_tester.core.batch import _process_with_retry
+        
+        mock_provider = MagicMock()
+        mock_provider.send_message.return_value = ("回答", True, None, "conv-1")
+
+        result, retry_count = _process_with_retry(
+            provider=mock_provider,
+            question="测试问题",
+            selected_model="model",
+            selected_role="user",
+            enable_thinking=False,
+            max_retries=3,
+        )
+
+        assert result == ("回答", True, None, "conv-1")
+        assert retry_count == 0
+        assert mock_provider.send_message.call_count == 1
+
+    def test_success_after_retry(self):
+        """测试重试后成功的情况"""
+        from dify_chat_tester.core.batch import _process_with_retry
+        
+        mock_provider = MagicMock()
+        mock_provider.send_message.side_effect = [
+            ("", False, "临时错误", None),
+            ("回答", True, None, "conv-1"),
+        ]
+
+        result, retry_count = _process_with_retry(
+            provider=mock_provider,
+            question="测试问题",
+            selected_model="model",
+            selected_role="user",
+            enable_thinking=False,
+            max_retries=3,
+        )
+
+        assert result == ("回答", True, None, "conv-1")
+        assert retry_count == 1
+        assert mock_provider.send_message.call_count == 2
+
+    def test_all_retries_failed(self):
+        """测试所有重试都失败的情况"""
+        from dify_chat_tester.core.batch import _process_with_retry
+        
+        mock_provider = MagicMock()
+        mock_provider.send_message.return_value = ("", False, "持续错误", None)
+
+        result, retry_count = _process_with_retry(
+            provider=mock_provider,
+            question="测试问题",
+            selected_model="model",
+            selected_role="user",
+            enable_thinking=False,
+            max_retries=2,
+        )
+
+        response, success, error, conv_id = result
+        assert success is False
+        assert "重试" in error and "2" in error
+        assert retry_count == 3  # 初次失败后重试2次，共计3次
+        assert mock_provider.send_message.call_count == 3  # 初次 + 2次重试
+
+
+class TestWorkerTableAdvanced:
+    """测试工作线程表格的高级功能"""
+
+    def test_stopping_state(self):
+        """测试停止状态显示"""
+        table = _generate_worker_table({}, 5, 10, 0, paused=False, stopping=True)
+        assert "停止" in table.title
+
+    def test_average_time_display(self):
+        """测试平均耗时显示"""
+        start_time = time.time() - 10  # 10秒前开始
+        table = _generate_worker_table(
+            {}, 
+            completed=5, 
+            total=10, 
+            failed=0, 
+            paused=False, 
+            start_time=start_time
+        )
+        # caption 应该包含平均耗时
+        assert table.caption is not None
+        assert "秒" in table.caption or "分钟" in table.caption
+
+    def test_eta_display(self):
+        """测试预计剩余时间显示"""
+        start_time = time.time() - 50  # 50秒前开始
+        table = _generate_worker_table(
+            {}, 
+            completed=5, 
+            total=10, 
+            failed=0, 
+            paused=False, 
+            start_time=start_time
+        )
+        # caption 应该包含剩余时间
+        assert table.caption is not None
+        assert "剩余" in table.caption
+
+    def test_worker_states_display(self):
+        """测试各种工作状态的显示"""
+        worker_status = {
+            1: {"state": "处理中", "question": "问题1", "response": "回复中...", "errors": 0},
+            2: {"state": "工具", "question": "问题2", "response": "[工具:搜索]", "errors": 0},
+            3: {"state": "重试中", "question": "问题3", "errors": 1},
+            4: {"state": "等待", "question": "", "errors": 0},
+        }
+        table = _generate_worker_table(worker_status, 2, 10, 0)
+        assert table is not None
+        # 表格应该有4行数据
+        assert len(table.rows) == 4
+
