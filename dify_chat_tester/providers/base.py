@@ -118,6 +118,11 @@ def _friendly_error_message(error_msg: str, status_code: Optional[int] = None) -
     if any(k in lowered for k in ssl_keywords):
         return "SSL 证书错误，请检查 API 地址是否正确或联系管理员。"
 
+    # 数据库连接池错误（Dify 服务端）
+    pool_keywords = ["queuepool", "pool limit", "connection timed out", "overflow"]
+    if any(k in lowered for k in pool_keywords):
+        return "服务端数据库连接池已满，建议：1) 降低并发数(设置BATCH_CONCURRENCY=1) 2) 增大请求间隔(设置BATCH_REQUEST_INTERVAL=2-3秒)"
+
     # 默认返回原始信息（已是中文时可直接展现）
     return error_msg
 
