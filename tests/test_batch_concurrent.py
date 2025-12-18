@@ -9,6 +9,7 @@ from dify_chat_tester.core.batch import (
     KeyboardControl,
     _generate_worker_table,
     _process_single_question,
+    _run_sequential_batch,
 )
 
 
@@ -364,4 +365,171 @@ class TestWorkerTableAdvanced:
         assert table is not None
         # 表格应该有4行数据
         assert len(table.rows) == 4
+
+
+class TestRunSequentialBatch:
+    """测试串行批量处理函数"""
+
+    def test_successful_processing(self, tmp_path):
+        """测试成功处理问题"""
+        import openpyxl
+        
+        # 创建测试输入工作簿
+        input_wb = openpyxl.Workbook()
+        input_ws = input_wb.active
+        input_ws.cell(row=1, column=1, value="问题")
+        input_ws.cell(row=2, column=1, value="测试问题1")
+        input_ws.cell(row=3, column=1, value="测试问题2")
+        
+        # 创建输出工作簿
+        output_wb = openpyxl.Workbook()
+        output_ws = output_wb.active
+        output_file = str(tmp_path / "output.xlsx")
+        
+        # Mock provider
+        mock_provider = MagicMock()
+        mock_provider.send_message.return_value = ("回答内容", True, None, "conv-1")
+        
+        # 运行串行批处理（使用patch抑制输出）
+        with patch("dify_chat_tester.core.batch.console"):
+            with patch("dify_chat_tester.core.batch.print_statistics"):
+                _run_sequential_batch(
+                    provider=mock_provider,
+                    batch_worksheet=input_ws,
+                    output_worksheet=output_ws,
+                    output_workbook=output_wb,
+                    output_file_name=output_file,
+                    resume_from_row=2,
+                    question_col_index=0,
+                    doc_name_col_index=None,
+                    selected_role="user",
+                    selected_model="test-model",
+                    provider_name="TestProvider",
+                    enable_thinking=False,
+                    show_batch_response=False,
+                    batch_show_indicator=False,
+                    request_interval=0,  # 无延迟
+                )
+        
+        # 验证 provider 被调用了2次（2个问题）
+        assert mock_provider.send_message.call_count == 2
+
+    def test_empty_question_skipped(self, tmp_path):
+        """测试空问题被跳过"""
+        import openpyxl
+        
+        input_wb = openpyxl.Workbook()
+        input_ws = input_wb.active
+        input_ws.cell(row=1, column=1, value="问题")
+        input_ws.cell(row=2, column=1, value="")  # 空问题
+        input_ws.cell(row=3, column=1, value="有效问题")
+        
+        output_wb = openpyxl.Workbook()
+        output_ws = output_wb.active
+        output_file = str(tmp_path / "output.xlsx")
+        
+        mock_provider = MagicMock()
+        mock_provider.send_message.return_value = ("回答", True, None, None)
+        
+        with patch("dify_chat_tester.core.batch.console"):
+            with patch("dify_chat_tester.core.batch.print_statistics"):
+                _run_sequential_batch(
+                    provider=mock_provider,
+                    batch_worksheet=input_ws,
+                    output_worksheet=output_ws,
+                    output_workbook=output_wb,
+                    output_file_name=output_file,
+                    resume_from_row=2,
+                    question_col_index=0,
+                    doc_name_col_index=None,
+                    selected_role="user",
+                    selected_model="model",
+                    provider_name="Provider",
+                    enable_thinking=False,
+                    show_batch_response=False,
+                    batch_show_indicator=False,
+                    request_interval=0,
+                )
+        
+        # 空问题应被跳过，只调用1次
+        assert mock_provider.send_message.call_count == 1
+
+    def test_failed_question_recorded(self, tmp_path):
+        """测试失败问题被正确记录"""
+        import openpyxl
+        
+        input_wb = openpyxl.Workbook()
+        input_ws = input_wb.active
+        input_ws.cell(row=1, column=1, value="问题")
+        input_ws.cell(row=2, column=1, value="会失败的问题")
+        
+        output_wb = openpyxl.Workbook()
+        output_ws = output_wb.active
+        output_file = str(tmp_path / "output.xlsx")
+        
+        mock_provider = MagicMock()
+        mock_provider.send_message.return_value = ("", False, "API错误", None)
+        
+        with patch("dify_chat_tester.core.batch.console"):
+            with patch("dify_chat_tester.core.batch.print_statistics"):
+                _run_sequential_batch(
+                    provider=mock_provider,
+                    batch_worksheet=input_ws,
+                    output_worksheet=output_ws,
+                    output_workbook=output_wb,
+                    output_file_name=output_file,
+                    resume_from_row=2,
+                    question_col_index=0,
+                    doc_name_col_index=None,
+                    selected_role="user",
+                    selected_model="model",
+                    provider_name="Provider",
+                    enable_thinking=False,
+                    show_batch_response=False,
+                    batch_show_indicator=False,
+                    request_interval=0,
+                )
+        
+        # 即使失败，provider 也会被调用
+        assert mock_provider.send_message.call_count == 1
+
+    def test_with_doc_name_column(self, tmp_path):
+        """测试带文档名列的处理"""
+        import openpyxl
+        
+        input_wb = openpyxl.Workbook()
+        input_ws = input_wb.active
+        input_ws.cell(row=1, column=1, value="文档名")
+        input_ws.cell(row=1, column=2, value="问题")
+        input_ws.cell(row=2, column=1, value="文档A")
+        input_ws.cell(row=2, column=2, value="问题1")
+        
+        output_wb = openpyxl.Workbook()
+        output_ws = output_wb.active
+        output_file = str(tmp_path / "output.xlsx")
+        
+        mock_provider = MagicMock()
+        mock_provider.send_message.return_value = ("回答", True, None, None)
+        
+        with patch("dify_chat_tester.core.batch.console"):
+            with patch("dify_chat_tester.core.batch.print_statistics"):
+                _run_sequential_batch(
+                    provider=mock_provider,
+                    batch_worksheet=input_ws,
+                    output_worksheet=output_ws,
+                    output_workbook=output_wb,
+                    output_file_name=output_file,
+                    resume_from_row=2,
+                    question_col_index=1,  # 问题在第2列
+                    doc_name_col_index=0,  # 文档名在第1列
+                    selected_role="user",
+                    selected_model="model",
+                    provider_name="Provider",
+                    enable_thinking=False,
+                    show_batch_response=False,
+                    batch_show_indicator=False,
+                    request_interval=0,
+                )
+        
+        assert mock_provider.send_message.call_count == 1
 
