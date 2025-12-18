@@ -8,8 +8,22 @@ import time
 import threading
 import sys
 import select
+import warnings
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
+
+# 禁用 multiprocessing 资源警告（在导入前设置）
+warnings.filterwarnings("ignore", category=UserWarning, module="multiprocessing")
+
+# 禁用 resource_tracker 警告
+try:
+    from multiprocessing import resource_tracker
+    def _noop(*args, **kwargs):
+        pass
+    resource_tracker.register = _noop
+    resource_tracker.unregister = _noop
+except Exception:
+    pass
 
 import openpyxl
 
@@ -799,16 +813,7 @@ def _run_concurrent_batch(
             print_success(f"进度已保存到: {output_file_name}")
         except Exception as e:
             print_error(f"保存进度失败: {e}")
-        # 抑制 multiprocessing 资源警告并快速退出
-        import warnings
-        import os
-        warnings.filterwarnings("ignore", category=UserWarning)
-        # 禁用 resource_tracker 的警告
-        try:
-            from multiprocessing import resource_tracker
-            resource_tracker._resource_tracker = None
-        except Exception:
-            pass
+        # 快速退出，不等待线程（警告已在模块级别禁用）
         os._exit(0)
     finally:
         kb_control.stop()
