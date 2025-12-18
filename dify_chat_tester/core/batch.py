@@ -72,6 +72,7 @@ class KeyboardControl:
     def __init__(self):
         self.stop_requested = False
         self.paused = False
+        self.state_changed = False  # 状态变更标志，用于触发即时 UI 刷新
         self._listener_thread = None
         self._running = False
 
@@ -98,8 +99,10 @@ class KeyboardControl:
                     ch = sys.stdin.read(1).lower()
                     if ch == "q":
                         self.stop_requested = True
+                        self.state_changed = True
                     elif ch == "p":
                         self.paused = not self.paused
+                        self.state_changed = True
         except Exception:
             pass  # 忽略终端不支持的情况
         finally:
@@ -652,7 +655,19 @@ def _run_concurrent_batch(
                         user_stopped = True
                         # 清空待处理任务，进入"排水"模式
                         pending_tasks.clear()
-                        # 注意：不在 Live 内使用 console.print，状态通过表格标题显示
+                        # 立即刷新 UI 显示停止状态
+                        kb_control.state_changed = False
+                        live.update(
+                            _generate_worker_table(
+                                worker_status,
+                                completed_count,
+                                total_tasks,
+                                failed_count,
+                                False,
+                                start_time,
+                                stopping=True,
+                            )
+                        )
 
                     # 如果所有任务都已完成（包括正在运行的），退出循环
                     if not active_futures and not pending_tasks:
