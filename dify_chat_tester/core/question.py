@@ -484,7 +484,7 @@ def run_cross_knowledge_generation(
         source_names = sorted(list(set([c[0] for c in selected_chunks])))
         doc_name_display = " + ".join(source_names)
 
-        print_info(f"[轮次 {i+1}/{iterations}] 组合来源: {doc_name_display}")
+        print_info(f"[轮次 {i + 1}/{iterations}] 组合来源: {doc_name_display}")
 
         # 生成问题
         questions = generate_cross_doc_questions(

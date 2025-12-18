@@ -204,10 +204,10 @@ class TestFriendlyErrorMessage:
     def test_timeout_error(self):
         """测试超时错误的友好提示"""
         from dify_chat_tester.providers.base import _friendly_error_message
-        
-        error_msg = "Connection timed out after 30 seconds"
+
+        error_msg = "Failed to establish a new connection: timeout"
         friendly = _friendly_error_message(error_msg)
-        
+
         assert "连接" in friendly or "网络" in friendly
 
     def test_ssl_error(self):

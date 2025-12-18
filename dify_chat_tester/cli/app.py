@@ -120,9 +120,12 @@ class AppController:
         """选择AI供应商"""
         print_info("请选择AI供应商:")
         for provider_id, provider_info in self.ai_providers.items():
-            # 为 Dify 添加并发数说明
-            if provider_info['id'] == 'dify':
-                console.print(f"  {provider_id}. {provider_info['name']} [dim](并发批量处理建议≤3)[/dim]")
+            if provider_info["id"] == "dify":
+                # 为 Dify 添加并发数说明
+                console.print(
+                    f"  {provider_id}. {provider_info['name']} "
+                    "[dim](并发批量处理建议≤3)[/dim]"
+                )
             else:
                 console.print(f"  {provider_id}. {provider_info['name']}")
         print("  0. 退出程序")
@@ -311,7 +314,7 @@ class AppController:
 
     def run(self, concurrency: int | None = None):
         """运行主程序循环
-        
+
         Args:
             concurrency: 批量处理并发数（None 或 1 为串行，2-10 为并发）
         """

@@ -118,9 +118,8 @@ def _friendly_error_message(error_msg: str, status_code: Optional[int] = None) -
     if any(k in lowered for k in ssl_keywords):
         return "SSL 证书错误，请检查 API 地址是否正确或联系管理员。"
 
-    # 数据库连接池错误（Dify 服务端）
-    pool_keywords = ["queuepool", "pool limit", "connection timed out", "overflow"]
-    if any(k in lowered for k in pool_keywords):
+    # 数据库连接池错误（Dify 服务端）- 需要同时检测 queuepool 或 pool limit
+    if "queuepool" in lowered or "pool limit" in lowered:
         return "服务端数据库连接池已满，建议：1) 降低并发数(设置BATCH_CONCURRENCY=1) 2) 增大请求间隔(设置BATCH_REQUEST_INTERVAL=2-3秒)"
 
     # 默认返回原始信息（已是中文时可直接展现）
@@ -390,13 +389,14 @@ class DifyProvider(AIProvider):
                                 if event == "error":
                                     error_msg = data.get("message", "未知错误")
                                     # 将错误信息转换为友好的提示
-                                    from dify_chat_tester.providers.base import _friendly_error_message
                                     friendly_error = _friendly_error_message(error_msg)
                                     if stream_display:
                                         stream_display.stop()
                                     # 只在交互模式下打印错误（并发模式 show_indicator=False）
                                     if show_indicator:
-                                        print(f"\n错误: {friendly_error}", file=sys.stderr)
+                                        print(
+                                            f"\n错误: {friendly_error}", file=sys.stderr
+                                        )
                                     return "", False, friendly_error, None
 
                                 # 处理消息事件
@@ -459,9 +459,10 @@ class DifyProvider(AIProvider):
                 return data["answer"], True, None, new_conversation_id
             elif "error" in data:
                 error_msg = data.get("error", "未知错误")
+                friendly_error = _friendly_error_message(error_msg)
                 if show_indicator:
-                    print(f"错误: {error_msg}", file=sys.stderr)
-                return "", False, error_msg, None
+                    print(f"错误: {friendly_error}", file=sys.stderr)
+                return "", False, friendly_error, None
             else:
                 return "", False, "未知响应格式", None
 

@@ -254,9 +254,10 @@ from dify_chat_tester.providers.plugin_manager import PluginManager
 
 _plugin_manager = PluginManager()
 
+
 def init_plugin_manager(enable_demo: bool = False):
     """初始化插件管理器并加载插件
-    
+
     Args:
         enable_demo: 是否开启示例插件 (demo_plugin)
     """
@@ -282,7 +283,9 @@ def init_plugin_manager(enable_demo: bool = False):
 
                 external_plugins_path = str(base_dir / external_plugins_path)
 
-            _plugin_manager.load_external_plugins(external_plugins_path, enable_demo=enable_demo)
+            _plugin_manager.load_external_plugins(
+                external_plugins_path, enable_demo=enable_demo
+            )
     except Exception as e:
         # 插件加载不应影响主程序启动
         print_error(f"警告: 插件加载失败: {e}")

@@ -18,10 +18,13 @@ warnings.filterwarnings("ignore", category=UserWarning, module="multiprocessing"
 # 禁用 resource_tracker 警告，直接在顶层拦截
 try:
     from multiprocessing import resource_tracker
+
     # 彻底替换掉 register 和 unregister，并清空内部状态
     resource_tracker._resource_tracker = None
+
     def _noop(*args, **kwargs):
         pass
+
     resource_tracker.register = _noop
     resource_tracker.unregister = _noop
     resource_tracker.ensure_running = _noop
@@ -241,7 +244,7 @@ def _run_sequential_batch(
             time.sleep(request_interval)  # 间隔时间
 
     except KeyboardInterrupt:
-        print_warning("\n⚠️  用户中断批量处理。正在保存当前进度...")
+        print_warning("用户中断批量处理。正在保存当前进度...")
         try:
             output_workbook.save(output_file_name)
             print_success(f"进度已保存到: {output_file_name}")
@@ -457,16 +460,20 @@ def _generate_worker_table(
     bar_width = 20
     filled = int(bar_width * percent / 100)
     bar = "█" * filled + "░" * (bar_width - filled)
-    
+
     # 底部显示：进度条 + 百分比 + 预计剩余时间 + 平均耗时（同一行）
     avg_display = f" ⏱{avg_task_text}" if avg_task_text else ""
-    caption = f"[cyan]{bar}[/cyan] [bold]{percent:.1f}%[/bold]{eta_display}{avg_display}"
+    caption = (
+        f"[cyan]{bar}[/cyan] [bold]{percent:.1f}%[/bold]{eta_display}{avg_display}"
+    )
 
     table = Table(title=title, caption=caption, box=box.ROUNDED, expand=False)
     table.add_column("线程", style="cyan", width=6)
     table.add_column("状态", style="green", width=10)
     table.add_column("错误", style="red", width=4, justify="center")
-    table.add_column("回复预览", style="yellow", width=40, overflow="ellipsis", no_wrap=True)
+    table.add_column(
+        "回复预览", style="yellow", width=40, overflow="ellipsis", no_wrap=True
+    )
 
     for worker_id, status in sorted(worker_status.items()):
         state = status.get("state", "空闲")
@@ -579,7 +586,9 @@ def _run_concurrent_batch(
     user_stopped = False  # 用户主动停止标志
 
     try:
-        with Live(console=console, refresh_per_second=4, vertical_overflow="visible") as live:
+        with Live(
+            console=console, refresh_per_second=4, vertical_overflow="visible"
+        ) as live:
             with ThreadPoolExecutor(max_workers=concurrency) as executor:
                 # 提交任务字典 {future: (task_info, worker_id)}
                 future_to_task = {}
@@ -644,7 +653,7 @@ def _run_concurrent_batch(
                         # 清空待处理任务，进入"排水"模式
                         pending_tasks.clear()
                         # 注意：不在 Live 内使用 console.print，状态通过表格标题显示
-                    
+
                     # 如果所有任务都已完成（包括正在运行的），退出循环
                     if not active_futures and not pending_tasks:
                         break
@@ -675,7 +684,7 @@ def _run_concurrent_batch(
 
                     # 如果没有任务完成且正在停止，更新UI显示状态
                     if not done and stopping:
-                         live.update(
+                        live.update(
                             _generate_worker_table(
                                 worker_status,
                                 completed_count,
@@ -686,7 +695,7 @@ def _run_concurrent_batch(
                                 stopping=True,
                             )
                         )
-                         continue
+                        continue
 
                     for future in done:
                         task, worker_id = future_to_task[future]
@@ -748,7 +757,7 @@ def _run_concurrent_batch(
                         while pending_tasks:
                             if stopping:
                                 break
-                            
+
                             next_task = pending_tasks.pop(0)
                             if not next_task["question"].strip():
                                 results_buffer[next_task["index"]] = (
@@ -810,21 +819,21 @@ def _run_concurrent_batch(
     except KeyboardInterrupt:
         # 立即停止键盘交互检测
         kb_control.stop()
-        
+
         # 立即告知用户，不再包含多余的图标和换行
         # print_warning 内部会自动添加 Icons.WARNING
         print_warning("用户中断批量处理 (Ctrl+C)。正在保存当前进度...")
-        
+
         # 刷新标准输出以确保消息立即显示
         sys.stdout.flush()
-        
+
         # 尝试保存已完成的结果
         try:
             output_workbook.save(output_file_name)
             print_success(f"进度已保存到: {output_file_name}")
         except Exception as e:
             print_error(f"保存进度失败: {e}")
-            
+
         # 快速强制退出
         os._exit(0)
     finally:

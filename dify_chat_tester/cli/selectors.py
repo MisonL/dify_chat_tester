@@ -53,9 +53,8 @@ def select_model(available_models, provider_name):
                     else:
                         print_error("模型名称不能为空，请重新输入。")
                 else:
-                    print_error(
-                        f"无效的模型序号！请输入 1-{len(available_models) + 1} 之间的数字。"
-                    )
+                    max_choice = len(available_models) + 1
+                    print_error(f"无效的模型序号！请输入 1-{max_choice} 之间的数字。")
             else:
                 # 直接输入模型名称（不是数字）
                 if model_choice:
@@ -108,9 +107,8 @@ def select_role(available_roles):
                     break
 
                 else:
-                    print_error(
-                        f"无效的角色序号！请输入 1-{len(available_roles) + 2} 之间的数字。"
-                    )
+                    max_choice = len(available_roles) + 2
+                    print_error(f"无效的角色序号！请输入 1-{max_choice} 之间的数字。")
             else:
                 # 直接输入角色名称
                 if role_choice:

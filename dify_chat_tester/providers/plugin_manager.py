@@ -319,7 +319,7 @@ class PluginManager:
             return
 
         self.providers[provider_id] = provider_cls
-        
+
         display_name = name or provider_id
         if self._current_loading_version:
             display_name = f"{display_name} (v{self._current_loading_version})"

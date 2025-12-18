@@ -28,7 +28,7 @@ class ConfigLoader:
                 f"警告: 配置文件 '{self.env_file}' 不存在，正在尝试创建默认配置...",
                 file=sys.stderr,
             )
-            self._create_default_config_file()  # This function now handles printing success/failure
+            self._create_default_config_file()  # Creates default config
 
             # After attempting to create, check if it now exists
             if os.path.exists(config_file_path):
