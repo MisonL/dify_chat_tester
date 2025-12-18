@@ -432,12 +432,12 @@ def _generate_worker_table(
         eta_display = ""
     else:
         status_text = f"[bold cyan]{completed}[/bold cyan]/[dim]{total}[/dim]"
-        eta_display = f"  预计剩余: {eta_text}" if eta_text else ""
+        eta_display = f" 剩余:{eta_text}" if eta_text else ""
 
     title = f"📊 并发处理  {status_text}  ✅ {completed - failed}  ❌ {failed}  [dim](P=暂停 Q=停止 Ctrl+C=强制退出)[/dim]"
 
     # 构建进度条（缩短宽度以确保同行显示）
-    bar_width = 25
+    bar_width = 20
     filled = int(bar_width * percent / 100)
     bar = "█" * filled + "░" * (bar_width - filled)
     
@@ -799,8 +799,16 @@ def _run_concurrent_batch(
             print_success(f"进度已保存到: {output_file_name}")
         except Exception as e:
             print_error(f"保存进度失败: {e}")
-        # 快速退出，不等待线程
+        # 抑制 multiprocessing 资源警告并快速退出
+        import warnings
         import os
+        warnings.filterwarnings("ignore", category=UserWarning)
+        # 禁用 resource_tracker 的警告
+        try:
+            from multiprocessing import resource_tracker
+            resource_tracker._resource_tracker = None
+        except Exception:
+            pass
         os._exit(0)
     finally:
         kb_control.stop()
