@@ -196,6 +196,21 @@ def create_provider_menu(providers: dict) -> str:
     prompt_text.append("]", style="bold yellow")
     return Prompt.ask(prompt_text, choices=list(providers.keys()))
 
+def _format_duration(seconds: float) -> str:
+    """将秒数格式化为人类可读的时间字符串"""
+    if seconds < 60:
+        return f"{seconds:.2f} 秒"
+
+    minutes = int(seconds // 60)
+    seconds_rem = seconds % 60
+
+    if minutes < 60:
+        return f"{minutes} 分 {seconds_rem:.0f} 秒"
+
+    hours = int(minutes // 60)
+    minutes_rem = minutes % 60
+    return f"{hours} 小时 {minutes_rem} 分 {seconds_rem:.0f} 秒"
+
 
 def print_statistics(total: int, success: int, failed: int, duration: float):
     """打印统计信息"""
@@ -203,13 +218,16 @@ def print_statistics(total: int, success: int, failed: int, duration: float):
     success_rate = (success / total * 100) if total > 0 else 0
     failed_rate = (failed / total * 100) if total > 0 else 0
     avg_time = duration / total if total > 0 else 0
+    
+    # 格式化之后的时长字符串
+    formatted_duration = _format_duration(duration)
 
     # 简单文本模式
     if not USE_RICH_UI:
         console.print(f"总处理数量: {total}")
         console.print(f"成功数量: {success} ({success_rate:.1f}%)")
         console.print(f"失败数量: {failed} ({failed_rate:.1f}%)")
-        console.print(f"总用时长: {duration:.2f} 秒")
+        console.print(f"总用时长: {formatted_duration}")
         console.print(f"平均用时: {avg_time:.2f} 秒/问题")
         speed = total / duration if duration > 0 else 0
         console.print(f"处理速度: {speed:.1f} 问题/秒")
@@ -228,7 +246,7 @@ def print_statistics(total: int, success: int, failed: int, duration: float):
     )
 
     stats_text.append("⏱️  时间统计\n", style="bold yellow")
-    stats_text.append(f"  • 总用时长: {duration:.2f} 秒\n", style="white")
+    stats_text.append(f"  • 总用时长: {formatted_duration}\n", style="white")
     stats_text.append(f"  • 平均用时: {avg_time:.2f} 秒/问题\n", style="white")
     stats_text.append(
         (

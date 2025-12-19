@@ -118,6 +118,18 @@ def _friendly_error_message(error_msg: str, status_code: Optional[int] = None) -
     if any(k in lowered for k in ssl_keywords):
         return "SSL 证书错误，请检查 API 地址是否正确或联系管理员。"
 
+    # 内容安全/敏感词错误
+    # 阿里云等模型通常返回 400 + "inappropriate content"
+    safety_keywords = [
+        "inappropriate content",
+        "sensitive",
+        "nsfw",
+        "content policy",
+        "safety",
+    ]
+    if any(k in lowered for k in safety_keywords):
+        return "请求内容可能包含敏感信息，被模型拒绝处理。"
+
     # 数据库连接池错误（Dify 服务端）- 需要同时检测 queuepool 或 pool limit
     if "queuepool" in lowered or "pool limit" in lowered:
         return "服务端数据库连接池已满，建议：1) 降低并发数(设置BATCH_CONCURRENCY=1) 2) 增大请求间隔(设置BATCH_REQUEST_INTERVAL=2-3秒)"
