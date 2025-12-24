@@ -1,8 +1,7 @@
-
-from unittest.mock import MagicMock, patch
-from dify_chat_tester.providers.base import _friendly_error_message
-# 注意：_format_duration 是内部函数，我们通过测试 print_statistics 或直接导入测试
+# Note: _format_duration is an internal function; we test it through print_statistics or direct import
 from dify_chat_tester.cli.terminal import _format_duration
+from dify_chat_tester.providers.base import _friendly_error_message
+
 
 class TestFriendlyErrorMessageSafety:
     """测试友好错误信息转换 - 内容安全相关"""
@@ -43,7 +42,7 @@ class TestDurationForamtting:
         """测试小时级"""
         # 1小时1分1秒 = 3661秒
         assert _format_duration(3661.0) == "1 小时 1 分 1 秒"
-        
+
     def test_long_hours(self):
         """测试长小时"""
         # 10.758 小时 = 38729.52 秒

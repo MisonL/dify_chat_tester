@@ -145,14 +145,15 @@ def select_mode():
     menu_items = manager.get_menu_items("run_mode", default_items)
 
     # 打印菜单
-    print("请选择运行模式:")
+    console.print("请选择运行模式:")
     for item in menu_items:
-        print(f"{item['id']}. {item['label']}")
-    print("0. 退出程序")  # 统一退出选项
+        console.print(f"{item['id']}. {item['label']}")
+    console.print("3. 返回主菜单")
+    console.print("0. 退出程序")
     console.print()
 
     # 获取合法选项列表
-    valid_choices = [item["id"] for item in menu_items] + ["0"]
+    valid_choices = [item["id"] for item in menu_items] + ["3", "0"]
 
     while True:
         mode_choice = print_input_prompt("请输入模式序号")
@@ -182,10 +183,10 @@ def select_main_function():
     menu_items = manager.get_menu_items("main_function", default_items)
 
     # 打印菜单
-    print("请选择功能:")
+    console.print("请选择功能:")
     for item in menu_items:
-        print(f"{item['id']}. {item['label']}")
-    print("0. 退出程序")
+        console.print(f"{item['id']}. {item['label']}")
+    console.print("0. 退出程序")
     console.print()
 
     # 获取合法选项列表
@@ -195,7 +196,12 @@ def select_main_function():
         function_choice = print_input_prompt("请输入功能序号")
 
         if function_choice in valid_choices:
-            return function_choice
+            # 返回完整的菜单项字典，以便主循环判断是否有 callback
+            for item in menu_items:
+                if item["id"] == function_choice:
+                    return item
+            # 兜底返回 (对于退出 0)
+            return {"id": function_choice, "label": "退出"}
         else:
             print_error("无效的功能选择，请重新输入。")
             console.print()

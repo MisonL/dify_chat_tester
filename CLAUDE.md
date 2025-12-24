@@ -5,6 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## 常用开发命令
 
 ### 依赖管理
+
 ```bash
 # 安装依赖（推荐使用 uv）
 uv sync
@@ -14,6 +15,7 @@ pip install requests openpyxl colorama rich
 ```
 
 ### 运行程序
+
 ```bash
 # 交互式模式（默认）
 uv run python main.py
@@ -26,6 +28,7 @@ uv run python main.py -- --mode question-generation --folder ./kb-docs
 ```
 
 ### 代码质量检查
+
 ```bash
 # 代码格式检查
 uv run ruff check .
@@ -39,12 +42,14 @@ uv run isort .
 ```
 
 ### 测试
+
 ```bash
 # 运行测试
 uv run pytest
 ```
 
 ### 构建和打包
+
 ```bash
 # macOS 打包
 ./build/build_macos.sh
@@ -55,35 +60,45 @@ uv run pyinstaller dify_chat_tester.spec
 
 ## 项目架构
 
-### 核心模块结构
-- `main.py`: 主程序入口，简洁委托给 AppController
-- `dify_chat_tester/`: 核心功能模块
-  - `app_controller.py`: 应用控制器，管理主程序流程
-  - `chat_manager.py`: 聊天管理器，处理实时对话模式
-  - `batch_manager.py`: 批量管理器，处理 Excel 批量询问
-  - `question_generator.py`: 问题生成器，AI 分析文档生成测试问题
-  - `ai_providers.py`: AI 供应商实现（Dify、OpenAI、iFlow）
-  - `config_loader.py`: 配置管理，从 .env.config 加载设置
-  - `terminal_ui.py`: 终端界面，基于 Rich 的现代化 UI
-  - `excel_utils.py`: Excel 工具，处理数据读写和格式化
-  - `logging_utils.py`: 日志工具，支持轮转和权限自适应
-  - `selectors.py`: 选择器，处理用户交互选择
-  - `provider_setup.py`: 供应商设置，配置 API 连接
+### 核心模块结构 (dify_chat_tester/)
+
+- `cli/`: 命令行界面与控制器
+  - `app.py`: 应用控制器 (AppController)，管理主程序流程
+  - `terminal.py`: 终端界面组件 (Rich UI)
+  - `selectors.py`: 用户交互与菜单逻辑
+- `core/`: 核心业务逻辑
+  - `batch.py`: 批量处理逻辑 (原 batch_manager)
+  - `chat.py`: 实时对话逻辑 (原 chat_manager)
+  - `question.py`: 测试问题生成逻辑
+- `providers/`: 供应商管理
+  - `base.py`: AI 供应商抽象基类
+  - `plugin_manager.py`: 插件管理器 (支持动态 ID 与回调)
+  - `setup.py`: 供应商工厂与初始化
+- `config/`: 配置管理
+  - `loader.py`: 配置加载与解析
+  - `logging.py`: 日志系统配置
+- `services/`: 业务服务层
+  - `question_service.py`: 问题生成服务封装
+- `plugins/`: 内置供应商插件
+  - `dify/`, `openai_compat/`, `iflow/`
+- `utils/`: 通用工具
+  - `excel.py`: Excel 读写工具
 
 ### 设计模式
-- **控制器模式**: AppController 统一管理应用流程
-- **策略模式**: ai_providers 中不同供应商使用统一接口
-- **工厂模式**: config_loader 根据配置创建相应的供应商实例
-- **单例模式**: config_loader 中的配置全局共享
+
+- **控制器模式**: `cli.app.AppController` 统一管理应用流程
+- **策略模式**: `providers` 模块管理不同 AI 实现
+- **插件模式**: `plugin_manager` 支持动态加载外部与内置插件
 
 ### 数据流
-1. **配置加载**: `.env.config` → config_loader → 各模块
-2. **用户交互**: terminal_ui → selectors → app_controller
-3. **AI 请求**: app_controller → ai_providers → 外部 API
-4. **数据处理**: excel_utils ↔ Excel 文件
-5. **日志记录**: logging_utils → 文件/控制台
+
+1. **配置加载**: `.env.config` → `config.loader` → 全局配置
+2. **用户交互**: `cli.terminal` → `cli.selectors` → `cli.app`
+3. **AI 请求**: `cli.app` → `providers` → `plugins` → 外部 API
+4. **数据处理**: `core` 模块调用 `utils.excel` 读写文件
 
 ### 关键特性
+
 - **多 AI 供应商支持**: 通过 ai_providers 模块统一接口
 - **实时对话**: chat_manager 维护对话上下文
 - **批量处理**: batch_manager 支持 Excel 批量询问
@@ -94,10 +109,12 @@ uv run pyinstaller dify_chat_tester.spec
 ## 配置管理
 
 ### 主配置文件
+
 - `.env.config.example`: 配置模板
 - `.env.config`: 实际配置文件（需要自行创建）
 
 ### 关键配置项
+
 - `AI_PROVIDERS`: 支持的 AI 供应商配置
 - `ROLES`: 可用角色列表
 - `BATCH_REQUEST_INTERVAL`: 批量请求间隔
@@ -108,10 +125,12 @@ uv run pyinstaller dify_chat_tester.spec
 ## 运行模式
 
 ### 1. AI 问答测试
+
 - **会话模式**: 实时多轮对话，支持命令控制
 - **批量询问模式**: 从 Excel 读取问题，批量处理并保存结果
 
 ### 2. AI 生成测试提问点
+
 - 分析指定目录下的 Markdown 文档
 - 自动生成高质量测试问题
 - 导出为 Excel 文件
@@ -119,6 +138,7 @@ uv run pyinstaller dify_chat_tester.spec
 ## 与 Semantic Tester 协同
 
 本项目可与 semantic_tester 配合使用形成完整测试闭环：
+
 1. 使用 dify_chat_tester 生成测试问题
 2. 批量询问 AI 获取回答
 3. 使用 semantic_tester 进行语义比对评估

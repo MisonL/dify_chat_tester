@@ -128,7 +128,7 @@ class AppController:
                 )
             else:
                 console.print(f"  {provider_id}. {provider_info['name']}")
-        print("  0. 退出程序")
+        console.print("  0. 退出程序")
         console.print()
 
         while True:
@@ -327,12 +327,22 @@ class AppController:
         # 主循环
         while True:
             # 选择主功能
-            function_choice = select_main_function()
+            function_item = select_main_function()
+            function_choice = function_item["id"]
 
             # 如果选择退出
             if function_choice == "0":
                 print_info("感谢使用 dify_chat_tester，再见！")
                 sys.exit(0)
+
+            # 扩展：检查是否有插件注册的回调函数
+            if "callback" in function_item and callable(function_item["callback"]):
+                # 如果有回调，执行回调并传入当前 AppController 实例
+                try:
+                    function_item["callback"](self)
+                except Exception as e:
+                    print_error(f"插件执行错误: {e}")
+                continue
 
             # 选择AI供应商
             provider_name, provider_id = self._select_provider()
@@ -365,24 +375,6 @@ class AppController:
                 print_welcome()
                 continue
 
-            # 检查是否有插件注册的回调函数
-            from dify_chat_tester.providers.setup import get_plugin_manager
-
-            manager = get_plugin_manager()
-            menu_items = manager.get_menu_items("main_function")
-            for item in menu_items:
-                if item["id"] == function_choice and "callback" in item:
-                    try:
-                        print_info(f"正在执行插件功能: {item['label']}")
-                        # 执行回调，传入 self (AppController) 允许插件操作控制器
-                        item["callback"](self)
-                    except Exception as e:
-                        print_error(f"插件功能执行失败: {e}")
-
-                    console.print()
-                    print_welcome()
-                    continue
-
             # AI问答测试功能 - 需要选择角色
             # 委托给 provider 处理选择逻辑
             selected_role = provider.select_role(self.roles)
@@ -391,6 +383,17 @@ class AppController:
             while True:
                 # 选择运行模式
                 mode_choice = select_mode()
+
+                # 退出程序
+                if mode_choice == "0":
+                    print_info("感谢使用 dify_chat_tester，再见！")
+                    sys.exit(0)
+
+                # 返回主菜单
+                if mode_choice == "3":
+                    console.print()
+                    print_welcome()
+                    break
 
                 # 运行选择的模式
                 result = self._run_mode(
@@ -404,7 +407,7 @@ class AppController:
                 )
 
                 # 如果是退出命令，跳出内层循环
-                if mode_choice == "0" or result == "exit":
+                if result == "exit":
                     break
 
                 # 如果是从会话或批量模式返回，继续选择模式

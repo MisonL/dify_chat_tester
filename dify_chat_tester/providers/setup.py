@@ -15,6 +15,7 @@ from dify_chat_tester.cli.terminal import (
 )
 from dify_chat_tester.config.loader import get_config
 from dify_chat_tester.providers.base import get_provider
+from dify_chat_tester.providers.plugin_manager import PluginManager
 
 _config = get_config()
 
@@ -248,9 +249,6 @@ def setup_iflow_provider():
 
     return get_provider("iflow", api_key=api_key)
 
-
-# --- 插件系统集成 ---
-from dify_chat_tester.providers.plugin_manager import PluginManager
 
 _plugin_manager = PluginManager()
 

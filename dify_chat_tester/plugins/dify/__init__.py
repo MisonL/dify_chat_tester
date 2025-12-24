@@ -1,22 +1,6 @@
 """Dify AI 供应商插件"""
 
-import sys
-
-from dify_chat_tester.cli.terminal import (
-    input_api_key,
-    print_api_key_confirmation,
-    print_error,
-    print_info,
-    print_input_prompt,
-)
 from dify_chat_tester.config.loader import get_config
-
-
-def _is_interactive() -> bool:
-    try:
-        return sys.stdin is not None and sys.stdin.isatty()
-    except Exception:
-        return False
 
 
 def _normalize_base_url(base_url: str) -> str:

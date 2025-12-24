@@ -50,6 +50,8 @@ from dify_chat_tester.utils.exceptions import (
 
 __all__ = [
     "__version__",
+    "__author__",
+    "__email__",
     # 配置
     "get_config",
     "parse_ai_providers",

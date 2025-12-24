@@ -1,8 +1,9 @@
 # tests/conftest.py
 """pytest 配置和共享 fixtures"""
 
-import pytest
 from unittest.mock import MagicMock, patch
+
+import pytest
 
 
 @pytest.fixture

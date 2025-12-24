@@ -621,6 +621,7 @@ class OpenAIProvider(AIProvider):
 
                 # 初始化流式显示
                 stream_display = None
+                full_reasoning = ""
                 if show_indicator:
                     from dify_chat_tester.cli.terminal import StreamDisplay
 
@@ -673,19 +674,19 @@ class OpenAIProvider(AIProvider):
                                         reasoning_content = delta.get(
                                             "reasoning_content", ""
                                         )
-                                        if reasoning_content and show_thinking:
-                                            # 这里可以特殊处理思维链显示，目前简单地作为内容的一部分或单独显示
-                                            # 为了简单起见，我们暂时将其视为普通内容，但加上特殊标记可能更好
-                                            # 或者如果 StreamDisplay 支持思维链模式，可以调用它
-                                            # 目前 StreamDisplay 只是简单的追加文本
-                                            if stream_display:
-                                                # 可以考虑用斜体或灰色显示思维过程
-                                                stream_display.update(reasoning_content)
-                                            # 调用流式回调 - 思维链
-                                            if stream_callback:
-                                                stream_callback(
-                                                    "thinking", reasoning_content
-                                                )
+                                        if reasoning_content:
+                                            full_reasoning += reasoning_content
+                                            if show_thinking:
+                                                # 目前 StreamDisplay 只是简单的追加文本
+                                                if stream_display:
+                                                    stream_display.update(
+                                                        reasoning_content
+                                                    )
+                                                # 调用流式回调 - 思维链
+                                                if stream_callback:
+                                                    stream_callback(
+                                                        "thinking", reasoning_content
+                                                    )
 
                                         content = delta.get("content", "")
 
@@ -897,8 +898,14 @@ class OpenAIProvider(AIProvider):
                     if show_indicator:
                         print("OpenAI:", content)
 
+                    # 拼接思维链内容到最终响应
+                    if full_reasoning:
+                        full_response = (
+                            f"<thinking>{full_reasoning}</thinking>\n\n{full_response}"
+                        )
+
                     # 对话历史由调用方管理，此处不再更新
-                    return content, True, None, conversation_id
+                    return full_response, True, None, conversation_id
                 else:
                     return "", False, "未知响应格式", None
         except requests.exceptions.HTTPError as e:
@@ -1032,6 +1039,7 @@ class iFlowProvider(AIProvider):
 
         stop_event = threading.Event()
         waiting_thread = None
+        full_reasoning = ""
 
         try:
             if show_indicator:
@@ -1113,14 +1121,16 @@ class iFlowProvider(AIProvider):
                                     reasoning_content = delta.get(
                                         "reasoning_content", ""
                                     )
-                                    if reasoning_content and show_thinking:
-                                        if stream_display:
-                                            stream_display.update(reasoning_content)
-                                        # 调用流式回调 - 思维链
-                                        if stream_callback:
-                                            stream_callback(
-                                                "thinking", reasoning_content
-                                            )
+                                    if reasoning_content:
+                                        full_reasoning += reasoning_content
+                                        if show_thinking:
+                                            if stream_display:
+                                                stream_display.update(reasoning_content)
+                                            # 调用流式回调 - 思维链
+                                            if stream_callback:
+                                                stream_callback(
+                                                    "thinking", reasoning_content
+                                                )
 
                                     content = ""
                                     if "content" in delta:
@@ -1155,6 +1165,12 @@ class iFlowProvider(AIProvider):
             finally:
                 if stream_display:
                     stream_display.stop()
+
+                # 拼接思维链内容到最终响应
+                if full_reasoning:
+                    full_response = (
+                        f"<thinking>{full_reasoning}</thinking>\n\n{full_response}"
+                    )
 
                 # 调试信息
                 if not show_indicator and full_response:

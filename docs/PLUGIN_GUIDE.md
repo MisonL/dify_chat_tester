@@ -34,6 +34,23 @@ def setup(manager):
 
     # 方式二：注册类（适合无参构造的简单场景）
     # manager.register_provider("my_custom", MyCustomProvider, "我的自定义模型")
+
+    # 方式三：注册主菜单项（v1.4.4 新增）
+    # 允许插件在主程序菜单中注册自定义功能入口
+    manager.register_menu_item(
+        menu_id="main_function",
+        item={
+            "label": "我的插件功能",
+            "order": 99,  # 排序权重，越小越靠前
+            "callback": run_my_feature  # 点击后执行的函数，接收 controller 实例
+        }
+    )
+
+def run_my_feature(controller):
+    """插件自定义功能的入口函数"""
+    from dify_chat_tester.cli.terminal import console
+    console.print("[green]正在运行插件自定义功能...[/green]")
+    # 你的业务逻辑...
 ```
 
 ### 2.2 实现 AIProvider
@@ -130,6 +147,34 @@ def setup(manager):
 ```
 
 运行时显示：`正在加载外部插件: my_plugin v1.0.0`
+同时也支持在主菜单中自动展示版本号，例如：`我的插件功能 (v1.0.0)`。
+
+## 9. 高级特性 (v1.4.4+)
+
+### 9.1 动态菜单 ID
+
+主程序会自动为插件注册的菜单项分配唯一的数字 ID，开发者无需担心 ID 冲突问题。
+
+### 9.2 带回调的菜单项
+
+如上文所述，通过 `register_menu_item` 并提供 `callback` 函数，插件可以完全接管控制权，实现复杂的自定义交互流程（而不仅仅是作为 AI Provider）。
+
+## 10. 依赖管理
+
+插件通过 `requirements.txt` 声明依赖。
+
+### 自动同步 (Zero-Config)
+
+项目已内置自动依赖管理功能（仅源码模式生效）。
+当程序启动时，会自动扫描所有 `external_plugins` 下的 `requirements.txt`，并调用 `uv add` 自动补全缺失的依赖。
+
+**您只需：**
+
+1. 将插件放入 `external_plugins` 目录。
+2. 直接运行主程序 (`uv run main.py`)。
+3. 程序会自动检测并安装依赖，无需手动操作。
+
+_(注：打包后的程序不支持动态安装依赖，请确保打包前环境已同步)_
 
 ## 5. 第三方依赖管理
 

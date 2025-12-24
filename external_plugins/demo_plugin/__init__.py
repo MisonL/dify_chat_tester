@@ -11,6 +11,7 @@ __version__ = "1.0.0"
 
 from .provider import DemoProvider
 
+
 def setup(manager):
     # 注册插件实例
     # 参数: (provider_id, provider_instance, display_name)

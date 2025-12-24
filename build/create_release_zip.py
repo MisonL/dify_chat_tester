@@ -40,10 +40,10 @@ def create_zip():
 
     # Copy files to release directory
     # Note: PyInstaller output is already in source_dir (release_windows), so we verify it exists
-    
+
     exe_name = "dify_chat_tester.exe"
     exe_path = os.path.join(source_dir, exe_name)
-    
+
     # Verify executable exists
     if os.path.exists(exe_path):
         print(f"Found executable: {exe_path}")
@@ -80,11 +80,20 @@ def create_zip():
     ext_plugins_src = os.path.join(project_dir, "external_plugins")
     ext_plugins_dst = os.path.join(source_dir, "external_plugins")
     os.makedirs(ext_plugins_dst, exist_ok=True)
-    
+
     ext_readme_src = os.path.join(ext_plugins_src, "README.md")
     if os.path.exists(ext_readme_src):
         shutil.copy2(ext_readme_src, os.path.join(ext_plugins_dst, "README.md"))
         print("Copied external_plugins README")
+
+    # Copy demo_plugin directory
+    demo_plugin_src = os.path.join(ext_plugins_src, "demo_plugin")
+    demo_plugin_dst = os.path.join(ext_plugins_dst, "demo_plugin")
+    if os.path.exists(demo_plugin_src):
+        if os.path.exists(demo_plugin_dst):
+            shutil.rmtree(demo_plugin_dst)
+        shutil.copytree(demo_plugin_src, demo_plugin_dst)
+        print("Copied demo_plugin")
 
     # Create ZIP
     print(f"Creating ZIP archive: {zip_filename}")

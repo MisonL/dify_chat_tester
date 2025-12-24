@@ -43,7 +43,7 @@ datas = [
 datas = [d for d in datas if d is not None]
 
 # 收集隐藏导入
-hiddenimports = []
+hiddenimports = collect_submodules('dify_chat_tester.plugins')
 
 # 收集二进制文件
 binaries = []

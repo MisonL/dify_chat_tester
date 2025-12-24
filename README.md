@@ -1,6 +1,6 @@
 <div align="center">
   <h1>🤖 AI 聊天客户端测试工具</h1>
-  <p>支持多AI供应商的聊天测试工具（Dify、OpenAI、iFlow） v1.4.3</p>
+  <p>支持多AI供应商的聊天测试工具（Dify、OpenAI、iFlow） v1.4.4</p>
   
   <img src="https://img.shields.io/badge/Python-3.9+-blue?logo=python" alt="Python版本">
   <img src="https://img.shields.io/badge/License-MIT-green" alt="许可证">
@@ -21,11 +21,9 @@
 - 🔄 **灵活配置** - 支持配置文件和交互式输入双模式
 - 🔌 **插件化架构** - 统一的 AI 供应商插件机制，支持私有扩展
 
-## 📸 效果展示
-
 <div align="center">
   <img src="docs/images/batch_analysis_demo.png" alt="批量分析输出效果" width="600">
-  <p><em>批量分析完成后的终端输出，展示 TOP 10 高频问题统计</em></p>
+  <p><em>批量测试完成后的结果统计展示</em></p>
 </div>
 
 ## 🚀 快速开始

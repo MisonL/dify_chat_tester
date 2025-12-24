@@ -1,16 +1,23 @@
 # tests/test_batch_concurrent.py
 """并发批量处理功能的单元测试"""
 
-from unittest.mock import MagicMock, patch
+import argparse
 import time
+from concurrent.futures import ThreadPoolExecutor
+from contextlib import ExitStack
+from unittest.mock import MagicMock, patch
+
+import openpyxl
 
 from dify_chat_tester.core.batch import (
-    wait_for_any,
     KeyboardControl,
     _generate_worker_table,
     _process_single_question,
+    _process_with_retry,
     _run_sequential_batch,
+    wait_for_any,
 )
+from dify_chat_tester.providers.base import _friendly_error_message
 
 
 class TestWaitForAny:
@@ -23,9 +30,7 @@ class TestWaitForAny:
         assert not_done == set()
 
     def test_with_completed_future(self):
-        """有已完成的 future 时应正确返回"""
-        from concurrent.futures import ThreadPoolExecutor
-
+        """Completed future should return correctly"""
         with ThreadPoolExecutor(max_workers=1) as executor:
             future = executor.submit(lambda: "result")
             time.sleep(0.1)  # 等待完成
@@ -51,7 +56,7 @@ class TestKeyboardControl:
         kb.start()
         assert kb._running is True
         assert kb._listener_thread is not None
-        
+
         kb.stop()
         assert kb._running is False
 
@@ -97,9 +102,9 @@ class TestGenerateWorkerTable:
     def test_progress_display(self):
         """测试进度显示"""
         table = _generate_worker_table({}, 5, 10, 1, paused=False)
-        # 标题应包含进度信息（新格式使用 bold cyan 样式）
+        # Title should contain progress info (new format uses bold cyan style)
         assert "5" in table.title and "10" in table.title
-        assert "✅" in table.title  # 成功数图标
+        assert "✅" in table.title  # success icon
         assert "❌" in table.title  # 失败数图标
 
 
@@ -126,7 +131,7 @@ class TestProcessSingleQuestion:
             stream=True,
             show_indicator=False,
             show_thinking=False,
-            stream_callback=None,  # 新增：流式回调参数
+            stream_callback=None,  # New: stream callback parameter
         )
         assert result == ("回答", True, None, "conv-1")
 
@@ -152,22 +157,18 @@ class TestCLIArguments:
     """测试 CLI 参数解析"""
 
     def test_concurrency_argument_parsed(self):
-        """测试 --concurrency 参数被正确解析"""
-        import argparse
-        
+        """Test that --concurrency argument is correctly parsed"""
         parser = argparse.ArgumentParser()
         parser.add_argument("--concurrency", type=int, default=1)
-        
+
         args = parser.parse_args(["--concurrency", "5"])
         assert args.concurrency == 5
 
     def test_default_concurrency(self):
-        """测试默认并发数为 1"""
-        import argparse
-        
+        """Test default concurrency is 1"""
         parser = argparse.ArgumentParser()
         parser.add_argument("--concurrency", type=int, default=1)
-        
+
         args = parser.parse_args([])
         assert args.concurrency == 1
 
@@ -184,7 +185,7 @@ class TestConfigLoader:
 
         config = mock_get_config()
         concurrency = config.get_int("BATCH_CONCURRENCY", 1)
-        
+
         assert concurrency == 5
         mock_config.get_int.assert_called_with("BATCH_CONCURRENCY", 1)
 
@@ -193,56 +194,44 @@ class TestFriendlyErrorMessage:
     """测试友好错误信息转换"""
 
     def test_queuepool_error(self):
-        """测试 QueuePool 连接池错误的友好提示"""
-        from dify_chat_tester.providers.base import _friendly_error_message
-        
+        """Test friendly message for QueuePool connection error"""
         error_msg = "Run failed: QueuePool limit of size 30 overflow 10 reached, connection timed out"
         friendly = _friendly_error_message(error_msg)
-        
+
         assert "连接池" in friendly
         assert "BATCH_CONCURRENCY" in friendly
 
     def test_timeout_error(self):
-        """测试超时错误的友好提示"""
-        from dify_chat_tester.providers.base import _friendly_error_message
-
+        """Test friendly message for timeout error"""
         error_msg = "Failed to establish a new connection: timeout"
         friendly = _friendly_error_message(error_msg)
 
         assert "连接" in friendly or "网络" in friendly
 
     def test_ssl_error(self):
-        """测试 SSL 错误的友好提示"""
-        from dify_chat_tester.providers.base import _friendly_error_message
-        
+        """Test friendly message for SSL error"""
         error_msg = "SSL: CERTIFICATE_VERIFY_FAILED"
         friendly = _friendly_error_message(error_msg)
-        
+
         assert "SSL" in friendly or "证书" in friendly
 
     def test_http_401_error(self):
-        """测试 HTTP 401 认证错误"""
-        from dify_chat_tester.providers.base import _friendly_error_message
-        
+        """Test HTTP 401 auth error"""
         friendly = _friendly_error_message("Unauthorized", status_code=401)
-        
+
         assert "认证" in friendly or "密钥" in friendly
 
     def test_http_429_error(self):
-        """测试 HTTP 429 频率限制错误"""
-        from dify_chat_tester.providers.base import _friendly_error_message
-        
+        """Test HTTP 429 rate limit error"""
         friendly = _friendly_error_message("Too Many Requests", status_code=429)
-        
+
         assert "频繁" in friendly or "限制" in friendly
 
     def test_passthrough_chinese_message(self):
-        """测试中文消息直接返回"""
-        from dify_chat_tester.providers.base import _friendly_error_message
-        
+        """Test passthrough of Chinese message"""
         error_msg = "这是一个中文错误消息"
         friendly = _friendly_error_message(error_msg)
-        
+
         assert friendly == error_msg
 
 
@@ -250,9 +239,7 @@ class TestProcessWithRetry:
     """测试带重试的问题处理函数"""
 
     def test_success_on_first_try(self):
-        """测试第一次成功的情况"""
-        from dify_chat_tester.core.batch import _process_with_retry
-        
+        """Test success on first try"""
         mock_provider = MagicMock()
         mock_provider.send_message.return_value = ("回答", True, None, "conv-1")
 
@@ -270,9 +257,7 @@ class TestProcessWithRetry:
         assert mock_provider.send_message.call_count == 1
 
     def test_success_after_retry(self):
-        """测试重试后成功的情况"""
-        from dify_chat_tester.core.batch import _process_with_retry
-        
+        """Test success after retry"""
         mock_provider = MagicMock()
         mock_provider.send_message.side_effect = [
             ("", False, "临时错误", None),
@@ -293,9 +278,7 @@ class TestProcessWithRetry:
         assert mock_provider.send_message.call_count == 2
 
     def test_all_retries_failed(self):
-        """测试所有重试都失败的情况"""
-        from dify_chat_tester.core.batch import _process_with_retry
-        
+        """Test all retries failed"""
         mock_provider = MagicMock()
         mock_provider.send_message.return_value = ("", False, "持续错误", None)
 
@@ -311,8 +294,8 @@ class TestProcessWithRetry:
         response, success, error, conv_id = result
         assert success is False
         assert "重试" in error and "2" in error
-        assert retry_count == 3  # 初次失败后重试2次，共计3次
-        assert mock_provider.send_message.call_count == 3  # 初次 + 2次重试
+        assert retry_count == 3  # Initial failure + 2 retries = 3 total
+        assert mock_provider.send_message.call_count == 3  # Initial + 2 retries
 
 
 class TestWorkerTableAdvanced:
@@ -327,12 +310,7 @@ class TestWorkerTableAdvanced:
         """测试平均耗时显示"""
         start_time = time.time() - 10  # 10秒前开始
         table = _generate_worker_table(
-            {}, 
-            completed=5, 
-            total=10, 
-            failed=0, 
-            paused=False, 
-            start_time=start_time
+            {}, completed=5, total=10, failed=0, paused=False, start_time=start_time
         )
         # caption 应该包含平均耗时
         assert table.caption is not None
@@ -342,12 +320,7 @@ class TestWorkerTableAdvanced:
         """测试预计剩余时间显示"""
         start_time = time.time() - 50  # 50秒前开始
         table = _generate_worker_table(
-            {}, 
-            completed=5, 
-            total=10, 
-            failed=0, 
-            paused=False, 
-            start_time=start_time
+            {}, completed=5, total=10, failed=0, paused=False, start_time=start_time
         )
         # caption 应该包含剩余时间
         assert table.caption is not None
@@ -356,8 +329,18 @@ class TestWorkerTableAdvanced:
     def test_worker_states_display(self):
         """测试各种工作状态的显示"""
         worker_status = {
-            1: {"state": "处理中", "question": "问题1", "response": "回复中...", "errors": 0},
-            2: {"state": "工具", "question": "问题2", "response": "[工具:搜索]", "errors": 0},
+            1: {
+                "state": "处理中",
+                "question": "问题1",
+                "response": "回复中...",
+                "errors": 0,
+            },
+            2: {
+                "state": "工具",
+                "question": "问题2",
+                "response": "[工具:搜索]",
+                "errors": 0,
+            },
             3: {"state": "重试中", "question": "问题3", "errors": 1},
             4: {"state": "等待", "question": "", "errors": 0},
         }
@@ -371,165 +354,163 @@ class TestRunSequentialBatch:
     """测试串行批量处理函数"""
 
     def test_successful_processing(self, tmp_path):
-        """测试成功处理问题"""
-        import openpyxl
-        
-        # 创建测试输入工作簿
+        """Test successful processing of questions"""
+        # Create test input workbook
         input_wb = openpyxl.Workbook()
         input_ws = input_wb.active
         input_ws.cell(row=1, column=1, value="问题")
         input_ws.cell(row=2, column=1, value="测试问题1")
         input_ws.cell(row=3, column=1, value="测试问题2")
-        
+
         # 创建输出工作簿
         output_wb = openpyxl.Workbook()
         output_ws = output_wb.active
         output_file = str(tmp_path / "output.xlsx")
-        
+
         # Mock provider
         mock_provider = MagicMock()
         mock_provider.send_message.return_value = ("回答内容", True, None, "conv-1")
-        
-        # 运行串行批处理（使用patch抑制输出）
-        with patch("dify_chat_tester.core.batch.console"):
-            with patch("dify_chat_tester.core.batch.print_statistics"):
-                _run_sequential_batch(
-                    provider=mock_provider,
-                    batch_worksheet=input_ws,
-                    output_worksheet=output_ws,
-                    output_workbook=output_wb,
-                    output_file_name=output_file,
-                    resume_from_row=2,
-                    question_col_index=0,
-                    doc_name_col_index=None,
-                    selected_role="user",
-                    selected_model="test-model",
-                    provider_name="TestProvider",
-                    enable_thinking=False,
-                    show_batch_response=False,
-                    batch_show_indicator=False,
-                    request_interval=0,  # 无延迟
-                )
-        
-        # 验证 provider 被调用了2次（2个问题）
+
+        # Run sequential batch processing (patch to suppress output)
+        with ExitStack() as stack:
+            stack.enter_context(patch("dify_chat_tester.core.batch.console"))
+            stack.enter_context(patch("dify_chat_tester.core.batch.print_statistics"))
+            _run_sequential_batch(
+                provider=mock_provider,
+                batch_worksheet=input_ws,
+                output_worksheet=output_ws,
+                output_workbook=output_wb,
+                output_file_name=output_file,
+                resume_from_row=2,
+                question_col_index=0,
+                doc_name_col_index=None,
+                selected_role="user",
+                selected_model="test-model",
+                provider_name="TestProvider",
+                enable_thinking=False,
+                show_batch_response=False,
+                batch_show_indicator=False,
+                request_interval=0,  # no delay
+            )
+
+        # Verify provider was called 2 times (2 questions)
         assert mock_provider.send_message.call_count == 2
 
     def test_empty_question_skipped(self, tmp_path):
-        """测试空问题被跳过"""
-        import openpyxl
-        
+        """Test that empty questions are skipped"""
+
         input_wb = openpyxl.Workbook()
         input_ws = input_wb.active
         input_ws.cell(row=1, column=1, value="问题")
         input_ws.cell(row=2, column=1, value="")  # 空问题
         input_ws.cell(row=3, column=1, value="有效问题")
-        
+
         output_wb = openpyxl.Workbook()
         output_ws = output_wb.active
         output_file = str(tmp_path / "output.xlsx")
-        
+
         mock_provider = MagicMock()
         mock_provider.send_message.return_value = ("回答", True, None, None)
-        
-        with patch("dify_chat_tester.core.batch.console"):
-            with patch("dify_chat_tester.core.batch.print_statistics"):
-                _run_sequential_batch(
-                    provider=mock_provider,
-                    batch_worksheet=input_ws,
-                    output_worksheet=output_ws,
-                    output_workbook=output_wb,
-                    output_file_name=output_file,
-                    resume_from_row=2,
-                    question_col_index=0,
-                    doc_name_col_index=None,
-                    selected_role="user",
-                    selected_model="model",
-                    provider_name="Provider",
-                    enable_thinking=False,
-                    show_batch_response=False,
-                    batch_show_indicator=False,
-                    request_interval=0,
-                )
-        
-        # 空问题应被跳过，只调用1次
+
+        with ExitStack() as stack:
+            stack.enter_context(patch("dify_chat_tester.core.batch.console"))
+            stack.enter_context(patch("dify_chat_tester.core.batch.print_statistics"))
+            _run_sequential_batch(
+                provider=mock_provider,
+                batch_worksheet=input_ws,
+                output_worksheet=output_ws,
+                output_workbook=output_wb,
+                output_file_name=output_file,
+                resume_from_row=2,
+                question_col_index=0,
+                doc_name_col_index=None,
+                selected_role="user",
+                selected_model="model",
+                provider_name="Provider",
+                enable_thinking=False,
+                show_batch_response=False,
+                batch_show_indicator=False,
+                request_interval=0,
+            )
+
+        # Empty question should be skipped, only called once
         assert mock_provider.send_message.call_count == 1
 
     def test_failed_question_recorded(self, tmp_path):
-        """测试失败问题被正确记录"""
-        import openpyxl
-        
+        """Test that failed questions are correctly recorded"""
+
         input_wb = openpyxl.Workbook()
         input_ws = input_wb.active
         input_ws.cell(row=1, column=1, value="问题")
         input_ws.cell(row=2, column=1, value="会失败的问题")
-        
+
         output_wb = openpyxl.Workbook()
         output_ws = output_wb.active
         output_file = str(tmp_path / "output.xlsx")
-        
+
         mock_provider = MagicMock()
         mock_provider.send_message.return_value = ("", False, "API错误", None)
-        
-        with patch("dify_chat_tester.core.batch.console"):
-            with patch("dify_chat_tester.core.batch.print_statistics"):
-                _run_sequential_batch(
-                    provider=mock_provider,
-                    batch_worksheet=input_ws,
-                    output_worksheet=output_ws,
-                    output_workbook=output_wb,
-                    output_file_name=output_file,
-                    resume_from_row=2,
-                    question_col_index=0,
-                    doc_name_col_index=None,
-                    selected_role="user",
-                    selected_model="model",
-                    provider_name="Provider",
-                    enable_thinking=False,
-                    show_batch_response=False,
-                    batch_show_indicator=False,
-                    request_interval=0,
-                )
-        
-        # 即使失败，provider 也会被调用
+
+        with ExitStack() as stack:
+            stack.enter_context(patch("dify_chat_tester.core.batch.console"))
+            stack.enter_context(patch("dify_chat_tester.core.batch.print_statistics"))
+            _run_sequential_batch(
+                provider=mock_provider,
+                batch_worksheet=input_ws,
+                output_worksheet=output_ws,
+                output_workbook=output_wb,
+                output_file_name=output_file,
+                resume_from_row=2,
+                question_col_index=0,
+                doc_name_col_index=None,
+                selected_role="user",
+                selected_model="model",
+                provider_name="Provider",
+                enable_thinking=False,
+                show_batch_response=False,
+                batch_show_indicator=False,
+                request_interval=0,
+            )
+
+        # Provider should still be called even on failure
         assert mock_provider.send_message.call_count == 1
 
     def test_with_doc_name_column(self, tmp_path):
-        """测试带文档名列的处理"""
-        import openpyxl
-        
+        """Test processing with document name column"""
+
         input_wb = openpyxl.Workbook()
         input_ws = input_wb.active
         input_ws.cell(row=1, column=1, value="文档名")
         input_ws.cell(row=1, column=2, value="问题")
         input_ws.cell(row=2, column=1, value="文档A")
         input_ws.cell(row=2, column=2, value="问题1")
-        
+
         output_wb = openpyxl.Workbook()
         output_ws = output_wb.active
         output_file = str(tmp_path / "output.xlsx")
-        
+
         mock_provider = MagicMock()
         mock_provider.send_message.return_value = ("回答", True, None, None)
-        
-        with patch("dify_chat_tester.core.batch.console"):
-            with patch("dify_chat_tester.core.batch.print_statistics"):
-                _run_sequential_batch(
-                    provider=mock_provider,
-                    batch_worksheet=input_ws,
-                    output_worksheet=output_ws,
-                    output_workbook=output_wb,
-                    output_file_name=output_file,
-                    resume_from_row=2,
-                    question_col_index=1,  # 问题在第2列
-                    doc_name_col_index=0,  # 文档名在第1列
-                    selected_role="user",
-                    selected_model="model",
-                    provider_name="Provider",
-                    enable_thinking=False,
-                    show_batch_response=False,
-                    batch_show_indicator=False,
-                    request_interval=0,
-                )
-        
-        assert mock_provider.send_message.call_count == 1
 
+        with ExitStack() as stack:
+            stack.enter_context(patch("dify_chat_tester.core.batch.console"))
+            stack.enter_context(patch("dify_chat_tester.core.batch.print_statistics"))
+            _run_sequential_batch(
+                provider=mock_provider,
+                batch_worksheet=input_ws,
+                output_worksheet=output_ws,
+                output_workbook=output_wb,
+                output_file_name=output_file,
+                resume_from_row=2,
+                question_col_index=1,  # question in column 2
+                doc_name_col_index=0,  # doc name in column 1
+                selected_role="user",
+                selected_model="model",
+                provider_name="Provider",
+                enable_thinking=False,
+                show_batch_response=False,
+                batch_show_indicator=False,
+                request_interval=0,
+            )
+
+        assert mock_provider.send_message.call_count == 1

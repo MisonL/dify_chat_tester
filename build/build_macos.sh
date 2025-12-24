@@ -82,9 +82,10 @@ if [ -f "$PROJECT_DIR/dist/dify_chat_tester" ]; then
     # 复制知识库文档目录（如果存在）
     [ -d "$PROJECT_DIR/kb-docs" ] && cp -r "$PROJECT_DIR/kb-docs" "$PROJECT_DIR/release_macos/"
 
-    # 创建并复制外部插件目录（包含说明文档）
+    # 创建并复制外部插件目录（包含说明文档和示例插件）
     mkdir -p "$PROJECT_DIR/release_macos/external_plugins"
     [ -f "$PROJECT_DIR/external_plugins/README.md" ] && cp "$PROJECT_DIR/external_plugins/README.md" "$PROJECT_DIR/release_macos/external_plugins/"
+    [ -d "$PROJECT_DIR/external_plugins/demo_plugin" ] && cp -r "$PROJECT_DIR/external_plugins/demo_plugin" "$PROJECT_DIR/release_macos/external_plugins/"
     
     # 获取版本号
     VERSION=$(grep -m 1 'version = ' "$PROJECT_DIR/pyproject.toml" | sed 's/version = "//;s/"//')

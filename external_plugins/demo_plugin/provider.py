@@ -1,7 +1,9 @@
-import time
 import threading
-from typing import List, Optional, Callable
+import time
+from typing import Callable, List, Optional
+
 from dify_chat_tester.providers.base import AIProvider
+
 
 class DemoProvider(AIProvider):
     """示例供应商实现

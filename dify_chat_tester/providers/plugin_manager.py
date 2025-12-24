@@ -201,6 +201,21 @@ class PluginManager:
                             f"跳过外部插件 {plugin_name}: 未找到 setup(manager) 函数"
                         )
 
+                except ModuleNotFoundError as e:
+                    # 获取缺少的包名
+                    missing_pkg = e.name
+                    logger.error(
+                        f"加载外部插件 {plugin_name} 失败: 缺少依赖 '{missing_pkg}'"
+                    )
+
+                    from dify_chat_tester.cli.terminal import print_error, print_info
+
+                    print_error(
+                        f"❌ 插件 {plugin_name} 启动失败: 缺少第三方库 '{missing_pkg}'"
+                    )
+                    print_info(
+                        f"💡 建议: 请在插件目录下创建 requirements.txt 并写入 '{missing_pkg}'，程序下次启动时将尝试自动安装。"
+                    )
                 except Exception as e:
                     logger.error(f"加载外部插件 {plugin_name} 失败: {e}", exc_info=True)
 
@@ -256,15 +271,29 @@ class PluginManager:
             return True
 
         # 检查依赖是否已安装
+        import importlib.util
+
+        # 常见包名映射 (pip_name -> import_name)
+        pkg_mapping = {
+            "scikit-learn": "sklearn",
+            "opencv-python": "cv2",
+            "python-dotenv": "dotenv",
+            "beautifulsoup4": "bs4",
+            "pillow": "PIL",
+            "pyyaml": "yaml",
+        }
+
         missing_deps = []
         for req in requirements:
             # 提取包名（去掉版本约束）
             pkg_name = (
                 req.split(">=")[0].split("==")[0].split("<")[0].split(">")[0].strip()
             )
-            try:
-                __import__(pkg_name.replace("-", "_"))
-            except ImportError:
+
+            # 使用映射或标准转换 (连字符转下划线)
+            import_name = pkg_mapping.get(pkg_name.lower(), pkg_name.replace("-", "_"))
+
+            if importlib.util.find_spec(import_name) is None:
                 missing_deps.append(req)
 
         if not missing_deps:
@@ -280,27 +309,29 @@ class PluginManager:
         if uv_available:
             # 源码模式：询问是否自动安装
             try:
-                choice = print_input_prompt("是否使用 uv 自动安装? (Y/n): ")
+                print_info(f"检测到项目使用 uv 管理依赖，缺少库: {deps_str}")
+                choice = print_input_prompt("是否自动运行 `uv add` 安装? (Y/n): ")
                 if choice.lower() != "n":
-                    print_info("正在安装依赖...")
                     for dep in missing_deps:
+                        print_info(f"正在安装: {dep} ...")
                         subprocess.run(["uv", "add", dep], check=True)
-                    print_info("✅ 依赖安装完成")
+                    print_info("✅ 依赖安装完成，继续加载插件。")
                     return True
                 else:
-                    print_warning(f"跳过插件 {plugin_name}")
+                    print_warning(f"已跳过插件 {plugin_name} (依赖缺失)。")
                     return False
             except subprocess.CalledProcessError as e:
-                print_error(f"安装依赖失败: {e}")
+                print_error(f"❌ 安装依赖失败: {e}")
                 return False
             except Exception:
                 # 非交互模式，跳过
                 logger.warning(f"无法交互式安装依赖，跳过插件 {plugin_name}")
                 return False
         else:
-            # 打包模式：提示手动安装
-            print_warning("当前为打包模式，请手动安装后重新运行:")
-            print_info(f"  pip install {' '.join(missing_deps)}")
+            # 打包模式：无法动态安装，必须提示重新打包
+            print_error(f"❌ 插件 {plugin_name} 加载失败: 缺少依赖 {deps_str}")
+            print_warning("提示: 当前为[打包运行模式]，环境已锁定，无法动态安装。")
+            print_info("解决方案: 请将缺失的依赖加入 pyproject.toml 并重新构建项目。")
             return False
 
     def register_provider(
@@ -322,7 +353,7 @@ class PluginManager:
 
         display_name = name or provider_id
         if self._current_loading_version:
-            display_name = f"{display_name} (v{self._current_loading_version})"
+            display_name = f"{display_name} ([bright_cyan]v{self._current_loading_version}[/bright_cyan])"
 
         self.plugin_configs[provider_id] = {
             "name": display_name,
@@ -350,7 +381,7 @@ class PluginManager:
 
         display_name = name or provider_id
         if self._current_loading_version:
-            display_name = f"{display_name} (v{self._current_loading_version})"
+            display_name = f"{display_name} ([bright_cyan]v{self._current_loading_version}[/bright_cyan])"
 
         self.plugin_configs[provider_id] = {
             "name": display_name,
@@ -390,9 +421,18 @@ class PluginManager:
             logger.warning(f"注册菜单项失败: 缺少 label 字段 - {item}")
             return
 
-        # 自动生成 ID
+        # 自动生成 ID (如果是插件注册，我们通常会在 get_menu_items 中重新编号)
         if "id" not in item:
             item["id"] = f"plugin_item_{len(self._menu_registry[menu_id]) + 1}"
+
+        # 自动添加版本号
+        if self._current_loading_version:
+            # 统一使用 bright_cyan 颜色显示版本号
+            version_suffix = (
+                f" ([bright_cyan]v{self._current_loading_version}[/bright_cyan])"
+            )
+            if f"v{self._current_loading_version}" not in item["label"]:
+                item["label"] = f"{item['label']}{version_suffix}"
 
         self._menu_registry[menu_id].append(item)
         logger.debug(f"已注册插件菜单项 [{menu_id}]: {item['label']}")
@@ -416,16 +456,24 @@ class PluginManager:
         items = list(default_items) if default_items else []
 
         # 获取插件注册的项目
-        plugin_items = self._menu_registry.get(menu_id, [])
-        if plugin_items:
+        if menu_id in self._menu_registry:
             # 排序: order 小的在前 (默认放在最后)
-            plugin_items_sorted = sorted(
-                plugin_items, key=lambda x: x.get("order", 999)
+            plugin_items = sorted(
+                self._menu_registry[menu_id], key=lambda x: x.get("order", 999)
             )
 
-            # 这里简单策略：追加到默认列表后面
-            # 如果需要更复杂的插入逻辑（比如插入到中间），需要在 item 中指定 position
-            items.extend(plugin_items_sorted)
+            # 获取当前最大 ID (假设默认项都是数字 ID)
+            try:
+                max_id = max([int(i["id"]) for i in items if i["id"].isdigit()] + [0])
+            except (ValueError, KeyError):
+                max_id = len(items)
+
+            # 追加并重分配 ID
+            for i, p_item in enumerate(plugin_items, start=1):
+                # 创建副本以避免修改原始注册项
+                new_item = p_item.copy()
+                new_item["id"] = str(max_id + i)
+                items.append(new_item)
 
         return items
 

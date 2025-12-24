@@ -4,13 +4,32 @@
 """
 
 import os
-import time
-import threading
-import sys
 import select
+import sys
+import threading
+import time
 import warnings
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, as_completed, wait
 from datetime import datetime
+
+import openpyxl
+from rich.live import Live
+from rich.table import Table
+
+from dify_chat_tester.cli.terminal import (
+    Panel,
+    Text,
+    box,
+    console,
+    print_error,
+    print_file_list,
+    print_input_prompt,
+    print_statistics,
+    print_success,
+    print_warning,
+)
+from dify_chat_tester.config.loader import get_config
+from dify_chat_tester.utils.excel import init_excel_log, log_to_excel
 
 # 禁用 multiprocessing 资源警告（在导入前设置）
 warnings.filterwarnings("ignore", category=UserWarning, module="multiprocessing")
@@ -31,28 +50,6 @@ try:
 except Exception:
     pass
 
-import openpyxl
-
-from dify_chat_tester.cli.terminal import (
-    Panel,
-    Text,
-    box,
-    console,
-    print_error,
-    print_file_list,
-    print_input_prompt,
-    print_statistics,
-    print_success,
-    print_warning,
-)
-from dify_chat_tester.config.loader import get_config
-from dify_chat_tester.utils.excel import init_excel_log, log_to_excel
-
-# Rich 组件用于并发显示
-from rich.live import Live
-from rich.table import Table
-from concurrent.futures import wait, FIRST_COMPLETED
-
 # 从配置中获取批量保存间隔，默认每 10 条保存一次
 _config = get_config()
 SAVE_EVERY_N_QUERIES = _config.get_int("BATCH_SAVE_INTERVAL", 10) if _config else 10
@@ -64,6 +61,24 @@ def wait_for_any(futures: set, timeout: float = None):
         return set(), set()
     done, not_done = wait(futures, timeout=timeout, return_when=FIRST_COMPLETED)
     return done, not_done
+
+
+def get_real_max_row(sheet, col_idx):
+    """
+    通过反向扫描指定列，找到最后一个非空单元格的行号。
+
+    Args:
+        sheet: openpyxl worksheet 对象
+        col_idx: 1-indexed 列索引
+
+    Returns:
+        int: 最后一行非空数据的行号，如果没有数据则返回 1 (表头行)
+    """
+    for row in range(sheet.max_row, 1, -1):
+        cell_value = sheet.cell(row=row, column=col_idx).value
+        if cell_value is not None and str(cell_value).strip():
+            return row
+    return 1
 
 
 class KeyboardControl:
@@ -88,8 +103,8 @@ class KeyboardControl:
 
     def _listen(self):
         """后台监听键盘输入"""
-        import tty
         import termios
+        import tty
 
         old_settings = termios.tcgetattr(sys.stdin)
         try:
@@ -132,12 +147,12 @@ def _run_sequential_batch(
     failed_queries = 0
     queries_since_last_save = 0
     start_time = time.time()
-    total_rows = batch_worksheet.max_row - 1
+    # 计算真实总行数
+    real_max_row = get_real_max_row(batch_worksheet, question_col_index + 1)
+    total_rows = real_max_row - 1
 
     try:
-        for row_idx in range(
-            resume_from_row, batch_worksheet.max_row + 1
-        ):  # 从指定行开始读取数据
+        for row_idx in range(resume_from_row, real_max_row + 1):  # 从指定行开始读取数据
             # 获取文档名称（如果输入表中存在对应列）
             doc_name = ""
             if doc_name_col_index is not None:
@@ -465,7 +480,7 @@ def _generate_worker_table(
     bar = "█" * filled + "░" * (bar_width - filled)
 
     # 底部显示：进度条 + 百分比 + 预计剩余时间 + 平均耗时（同一行）
-    avg_display = f" ⏱{avg_task_text}" if avg_task_text else ""
+    avg_display = f"  ⏱ {avg_task_text}" if avg_task_text else ""
     caption = (
         f"[cyan]{bar}[/cyan] [bold]{percent:.1f}%[/bold]{eta_display}{avg_display}"
     )
@@ -541,13 +556,15 @@ def _run_concurrent_batch(
     failed_queries = 0
     queries_since_last_save = 0
     start_time = time.time()
+    # 计算真实总行数
+    real_max_row = get_real_max_row(batch_worksheet, question_col_index + 1)
 
     # 准备任务队列
     tasks = []
     console.print(f"\n[bold cyan]🚀 已启动并发模式 (并发数: {concurrency})[/bold cyan]")
 
     # 预读取所有待处理的问题
-    for row_idx in range(resume_from_row, batch_worksheet.max_row + 1):
+    for row_idx in range(resume_from_row, real_max_row + 1):
         doc_name = ""
         if doc_name_col_index is not None:
             doc_cell_value = batch_worksheet.cell(
@@ -1254,7 +1271,7 @@ def run_batch_query(
         f"{provider_name}响应",
         "是否成功",
         "错误信息",
-        "对话ID",
+        "sessions id",
     ]
     output_workbook, output_worksheet = init_excel_log(
         output_file_name, batch_log_headers
@@ -1262,10 +1279,12 @@ def run_batch_query(
 
     # 由子函数处理统计，这里只计算总行数
 
-    total_rows = batch_worksheet.max_row - 1
+    # 计算真实总行数
+    real_max_row = get_real_max_row(batch_worksheet, question_col_index + 1)
+    total_rows = real_max_row - 1
 
     # 如果上次已经处理到文件末尾，则直接结束
-    if resume_from_row > batch_worksheet.max_row:
+    if resume_from_row > real_max_row:
         print_success("检测到该文件的所有问题均已处理完成，无需继续。")
         return
 

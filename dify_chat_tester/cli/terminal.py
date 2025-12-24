@@ -81,11 +81,12 @@ def print_success(message: str):
         console.print(f"[SUCCESS] {message}")
         return
 
-    success_text = Text()
-    success_text.append(f"✅ {message}", style=f"bold {Colors.SUCCESS}")
-
     success_panel = Panel(
-        success_text, border_style=Colors.SUCCESS, box=box.ROUNDED, padding=(0, 1)
+        f"✅ {message}",
+        border_style=Colors.SUCCESS,
+        box=box.ROUNDED,
+        padding=(0, 1),
+        style=f"bold {Colors.SUCCESS}",
     )
     console.print(success_panel)
 
@@ -96,11 +97,12 @@ def print_error(message: str):
         console.print(f"[ERROR] {message}")
         return
 
-    error_text = Text()
-    error_text.append(f"❌ {message}", style=f"bold {Colors.ERROR}")
-
     error_panel = Panel(
-        error_text, border_style=Colors.ERROR, box=box.ROUNDED, padding=(0, 1)
+        f"❌ {message}",
+        border_style=Colors.ERROR,
+        box=box.ROUNDED,
+        padding=(0, 1),
+        style=f"bold {Colors.ERROR}",
     )
     console.print(error_panel)
 
@@ -111,11 +113,12 @@ def print_warning(message: str):
         console.print(f"[WARN] {message}")
         return
 
-    warning_text = Text()
-    warning_text.append(f"⚠️ {message}", style=f"bold {Colors.WARNING}")
-
     warning_panel = Panel(
-        warning_text, border_style=Colors.WARNING, box=box.ROUNDED, padding=(0, 1)
+        f"⚠️ {message}",
+        border_style=Colors.WARNING,
+        box=box.ROUNDED,
+        padding=(0, 1),
+        style=f"bold {Colors.WARNING}",
     )
     console.print(warning_panel)
 
@@ -126,11 +129,12 @@ def print_info(message: str):
         console.print(f"[INFO] {message}")
         return
 
-    info_text = Text()
-    info_text.append(f"ℹ️ {message}", style=f"bold {Colors.INFO}")
-
     info_panel = Panel(
-        info_text, border_style=Colors.INFO, box=box.ROUNDED, padding=(0, 1)
+        f"ℹ️ {message}",
+        border_style=Colors.INFO,
+        box=box.ROUNDED,
+        padding=(0, 1),
+        style=f"bold {Colors.INFO}",
     )
     console.print(info_panel)
 
@@ -196,6 +200,7 @@ def create_provider_menu(providers: dict) -> str:
     prompt_text.append("]", style="bold yellow")
     return Prompt.ask(prompt_text, choices=list(providers.keys()))
 
+
 def _format_duration(seconds: float) -> str:
     """将秒数格式化为人类可读的时间字符串"""
     if seconds < 60:
@@ -218,7 +223,7 @@ def print_statistics(total: int, success: int, failed: int, duration: float):
     success_rate = (success / total * 100) if total > 0 else 0
     failed_rate = (failed / total * 100) if total > 0 else 0
     avg_time = duration / total if total > 0 else 0
-    
+
     # 格式化之后的时长字符串
     formatted_duration = _format_duration(duration)
 
