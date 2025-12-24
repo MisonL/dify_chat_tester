@@ -195,8 +195,8 @@ another-package
 使用打包脚本生成可分发的插件包：
 
 ```bash
-./build/build_plugin.sh <plugin_name>  # 打包单个
-./build/build_plugin.sh all            # 打包所有
+./build/build_plugins.sh <plugin_name>  # 打包单个
+./build/build_plugins.sh all            # 打包所有
 ```
 
 ## 7. 发布插件

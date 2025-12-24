@@ -1,10 +1,22 @@
 #!/bin/bash
 
-# 插件打包脚本
-# 用法: ./build/build_plugin.sh <plugin_name|all> [plugin_dir]
-# 示例: 
-#   ./build/build_plugin.sh my_plugin      # 打包单个插件
-#   ./build/build_plugin.sh all            # 打包所有插件
+# ============================================================================
+# Dify Chat Tester 插件打包脚本
+# ============================================================================
+#
+# 功能：
+#   1. 将插件目录打包为可分发的 ZIP 文件
+#   2. 自动从 __init__.py 读取版本号
+#   3. 生成带版本号和时间戳的压缩包
+#
+# 使用示例：
+#   bash build/build_plugins.sh              # 交互式选择插件
+#   bash build/build_plugins.sh my_plugin    # 打包单个插件
+#   bash build/build_plugins.sh all          # 打包所有插件 (不含 demo_plugin)
+#
+# 输出：
+#   - <plugin_name>_v<version>_<timestamp>.zip
+# ============================================================================
 
 set -e
 

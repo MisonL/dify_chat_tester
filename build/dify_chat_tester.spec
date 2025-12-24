@@ -1,6 +1,23 @@
 # -*- mode: python ; coding: utf-8 -*-
 """
-AI 聊天客户端测试工具 - PyInstaller 打包配置文件
+============================================================================
+Dify Chat Tester PyInstaller 打包配置
+============================================================================
+
+功能：
+  定义 PyInstaller 打包行为，包括：
+  1. 主程序入口 (main.py)
+  2. 数据文件收集 (配置模板、Excel 模板)
+  3. 隐藏导入声明 (内置插件模块)
+  4. 单文件打包配置
+
+调用方式：
+  由 build_macos.sh 或 build_windows.bat 自动调用：
+    pyinstaller build/dify_chat_tester.spec
+
+输出：
+  - dist/dify_chat_tester (macOS) 或 dist/dify_chat_tester.exe (Windows)
+============================================================================
 """
 
 import os

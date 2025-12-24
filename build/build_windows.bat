@@ -1,9 +1,27 @@
 @echo off
 setlocal enabledelayedexpansion
 
-echo ==========================================
-echo Dify Chat Tester Windows Build Script
-echo ==========================================
+REM ============================================================================
+REM Dify Chat Tester Windows 打包脚本
+REM ============================================================================
+REM
+REM 功能：
+REM   1. 使用 PyInstaller 将项目打包为 Windows 可执行文件
+REM   2. 复制配置模板、文档、示例插件到发布目录
+REM   3. 生成带版本号和时间戳的 ZIP 压缩包
+REM
+REM 前置条件：
+REM   - Python 3.10+ (通过 py launcher 调用)
+REM   - uv 包管理器 (py -m pip install uv)
+REM
+REM 使用示例：
+REM   build\build_windows.bat
+REM
+REM 输出：
+REM   - release_windows\                      发布目录
+REM   - dify_chat_tester_windows_v*.zip       发布压缩包
+REM ============================================================================
+
 
 REM Get script directory
 set SCRIPT_DIR=%~dp0

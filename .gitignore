@@ -225,8 +225,8 @@ release_windows/
 *.exe
 
 # Local release helper scripts (do not sync to GitHub)
-build/publish_release.sh
-build/publish_plugin.sh
+# 发布脚本配置文件 (包含敏感信息)
+build/.env
 
 # uv lock files (keep only in root)
 dify_chat_tester/uv.lock
