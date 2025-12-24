@@ -5,6 +5,13 @@
 
 import sys
 
+# 导入 readline 模块以支持命令行编辑功能（方向键、删除键等）
+# 在 macOS/Linux 上，只需导入 readline 即可激活功能
+try:
+    import readline  # noqa: F401
+except ImportError:
+    pass  # Windows 上可能不可用，但 Windows 终端通常原生支持
+
 import colorama
 from rich import box
 from rich.console import Console, Group

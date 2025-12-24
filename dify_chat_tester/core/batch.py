@@ -607,7 +607,7 @@ def _run_concurrent_batch(
 
     try:
         with Live(
-            console=console, refresh_per_second=4, vertical_overflow="visible"
+            console=console, refresh_per_second=4
         ) as live:
             with ThreadPoolExecutor(max_workers=concurrency) as executor:
                 # 提交任务字典 {future: (task_info, worker_id)}
@@ -1141,12 +1141,37 @@ def run_batch_query(
                 f"将直接使用日志文件作为输入（可能导致重复处理已完成的内容）。"
             )
 
-    # 为当前输入文件构建固定的日志文件路径
+    # 为当前输入文件构建默认的日志文件路径
     # 规则：输入文件名（不含扩展名） + _log.xlsx
     # 注意：如果上面切换了文件，input_basename 已经更新
     input_dir = os.path.dirname(selected_excel_file) or "."
     input_basename = os.path.splitext(os.path.basename(selected_excel_file))[0]
-    output_file_name = os.path.join(input_dir, f"{input_basename}_log.xlsx")
+    default_output_name = f"{input_basename}_log.xlsx"
+
+    # 让用户确认或修改输出文件名
+    console.print(
+        Panel(
+            f"默认输出文件名: [bold cyan]{default_output_name}[/bold cyan]\n"
+            f"保存目录: [bold cyan]{os.path.abspath(input_dir)}[/bold cyan]",
+            title="[bold yellow]📁 输出文件设置[/bold yellow]",
+            border_style="yellow",
+            box=box.ROUNDED,
+        )
+    )
+
+    custom_name = print_input_prompt(
+        "请输入输出文件名，无需填写扩展名（直接回车使用默认名称）"
+    ).strip()
+
+    if custom_name:
+        # 确保文件名以 .xlsx 结尾
+        if not custom_name.lower().endswith(".xlsx"):
+            custom_name = f"{custom_name}.xlsx"
+        output_file_name = os.path.join(input_dir, custom_name)
+        print_success(f"输出文件已设置为: {output_file_name}")
+    else:
+        output_file_name = os.path.join(input_dir, default_output_name)
+        print_success(f"使用默认输出文件: {output_file_name}")
 
     # 默认从第二行开始（第一行为表头）
     resume_from_row = 2
