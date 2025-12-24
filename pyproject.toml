@@ -1,6 +1,6 @@
 [project]
 name = "dify-chat-tester"
-version = "1.4.4"
+version = "1.4.5"
 description = "AI 聊天客户端测试工具（支持多AI供应商）"
 authors = [
     {name = "Mison", email = "1360962086@qq.com"}

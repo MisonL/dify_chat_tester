@@ -1,5 +1,5 @@
 """版本和元数据信息"""
 
-__version__ = "1.4.4"
+__version__ = "1.4.5"
 __author__ = "Mison"
 __email__ = "1360962086@qq.com"
