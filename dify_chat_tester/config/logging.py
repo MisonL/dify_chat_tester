@@ -20,6 +20,7 @@ from loguru import logger
 from dify_chat_tester.config.loader import get_config
 
 _config = get_config()
+_console_handler_id = None
 
 
 class InterceptHandler(logging.Handler):
@@ -90,7 +91,15 @@ def get_logger(name: str = "dify_chat_tester"):
     log_to_file = _config.get_bool("LOG_TO_FILE", True)
 
     # 3. 配置控制台输出 (stderr)
-    logger.add(
+    global _console_handler_id
+    # 先尝试移除旧的 handler (如果存在)
+    if _console_handler_id is not None:
+        try:
+            logger.remove(_console_handler_id)
+        except ValueError:
+            pass
+            
+    _console_handler_id = logger.add(
         sys.stderr,
         level=level_str,
         format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>",
@@ -139,3 +148,28 @@ def get_logger(name: str = "dify_chat_tester"):
     setattr(sys, "_dify_loguru_configured", True)
 
     return logger.bind(name=name)
+
+
+def disable_console_logging():
+    """禁用控制台日志输出"""
+    global _console_handler_id
+    if _console_handler_id is not None:
+        try:
+            logger.remove(_console_handler_id)
+        except ValueError:
+            pass
+        _console_handler_id = None
+
+
+def enable_console_logging():
+    """启用控制台日志输出"""
+    global _console_handler_id
+    if _console_handler_id is not None:
+        return  # 已经启用
+
+    level_str = _config.get_str("LOG_LEVEL", "INFO").upper()
+    _console_handler_id = logger.add(
+        sys.stderr,
+        level=level_str,
+        format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>",
+    )

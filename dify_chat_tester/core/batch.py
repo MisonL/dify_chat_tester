@@ -605,6 +605,10 @@ def _run_concurrent_batch(
     kb_control.start()
     user_stopped = False  # 用户主动停止标志
 
+    # 临时禁用控制台日志，防止干扰 UI (修复重复 UI 问题)
+    from dify_chat_tester.config.logging import disable_console_logging, enable_console_logging
+    disable_console_logging()
+
     try:
         with Live(
             console=console, refresh_per_second=4
@@ -869,6 +873,8 @@ def _run_concurrent_batch(
         # 快速强制退出
         os._exit(0)
     finally:
+        # 恢复控制台日志
+        enable_console_logging()
         kb_control.stop()
 
     # 收集所有失败的任务进行批量重试
